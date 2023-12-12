@@ -1,0 +1,424 @@
+{
+  "id": "c5cd9c58e0e1c5e4f441e1a5e4ab7fbd",
+  "_format": "hh-sol-build-info-1",
+  "solcVersion": "0.6.11",
+  "solcLongVersion": "0.6.11+commit.5ef660b1",
+  "input": {
+    "language": "Solidity",
+    "sources": {
+      "contracts/rpc-utils/RetryableTicketCreator.sol": {
+        "content": "// SPDX-License-Identifier: Apache-2.0\n\npragma solidity >=0.4.21 <0.7.0;\n\ninterface RetryableTicketCreator {\n    /**\n    @notice Put an message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts\n    * @dev all msg.value will deposited to callValueRefundAddress on L2\n    * @param destAddr destination L2 contract address\n    * @param l2CallValue call value for retryable L2 message \n    * @param  maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee\n    * @param excessFeeRefundAddress maxgas x gasprice - execution cost gets credited here on L2 balance\n    * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled\n    * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution\n    * @param gasPriceBid price bid for L2 execution\n    * @param data ABI encoded data of L2 message \n     */\n    function createRetryableTicket(\n        address destAddr,\n        uint256 l2CallValue,\n        uint256 maxSubmissionCost,\n        address excessFeeRefundAddress,\n        address callValueRefundAddress,\n        uint256 maxGas,\n        uint256 gasPriceBid,\n        bytes calldata data\n    ) external payable;\n}\n"
+      }
+    },
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 100
+      },
+      "outputSelection": {
+        "*": {
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ],
+          "": [
+            "ast"
+          ]
+        }
+      }
+    }
+  },
+  "output": {
+    "contracts": {
+      "contracts/rpc-utils/RetryableTicketCreator.sol": {
+        "RetryableTicketCreator": {
+          "abi": [
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "destAddr",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "l2CallValue",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxSubmissionCost",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "excessFeeRefundAddress",
+                  "type": "address"
+                },
+                {
+                  "internalType": "address",
+                  "name": "callValueRefundAddress",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxGas",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "gasPriceBid",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "bytes",
+                  "name": "data",
+                  "type": "bytes"
+                }
+              ],
+              "name": "createRetryableTicket",
+              "outputs": [],
+              "stateMutability": "payable",
+              "type": "function"
+            }
+          ],
+          "evm": {
+            "bytecode": {
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "deployedBytecode": {
+              "immutableReferences": {},
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "methodIdentifiers": {
+              "createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)": "679b6ded"
+            }
+          },
+          "metadata": "{\"compiler\":{\"version\":\"0.6.11+commit.5ef660b1\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2CallValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxSubmissionCost\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"excessFeeRefundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"callValueRefundAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPriceBid\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"createRetryableTicket\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)\":{\"details\":\"all msg.value will deposited to callValueRefundAddress on L2\",\"params\":{\"callValueRefundAddress\":\"l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled\",\"data\":\"ABI encoded data of L2 message \",\"destAddr\":\"destination L2 contract address\",\"excessFeeRefundAddress\":\"maxgas x gasprice - execution cost gets credited here on L2 balance\",\"gasPriceBid\":\"price bid for L2 execution\",\"l2CallValue\":\"call value for retryable L2 message \",\"maxGas\":\"Max gas deducted from user's L2 balance to cover L2 execution\",\"maxSubmissionCost\":\"Max gas deducted from user's L2 balance to cover base submission fee\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)\":{\"notice\":\"Put an message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/rpc-utils/RetryableTicketCreator.sol\":\"RetryableTicketCreator\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"contracts/rpc-utils/RetryableTicketCreator.sol\":{\"keccak256\":\"0xa16b1f70ea3139716dba39e9ca5e22403e74a48e759e3f323c0fb33e83cd2569\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://2f546aca0ed7a0afe29f0876b37794eb21f38c5dd2b402553f8307a2fad1c8d6\",\"dweb:/ipfs/QmbD25uyN1qoj8ukU8cuE9gNVoh1C5mXKhNTsmS5jbQUed\"]}},\"version\":1}"
+        }
+      }
+    },
+    "sources": {
+      "contracts/rpc-utils/RetryableTicketCreator.sol": {
+        "ast": {
+          "absolutePath": "contracts/rpc-utils/RetryableTicketCreator.sol",
+          "exportedSymbols": {
+            "RetryableTicketCreator": [
+              22
+            ]
+          },
+          "id": 23,
+          "license": "Apache-2.0",
+          "nodeType": "SourceUnit",
+          "nodes": [
+            {
+              "id": 1,
+              "literals": [
+                "solidity",
+                ">=",
+                "0.4",
+                ".21",
+                "<",
+                "0.7",
+                ".0"
+              ],
+              "nodeType": "PragmaDirective",
+              "src": "40:32:0"
+            },
+            {
+              "abstract": false,
+              "baseContracts": [],
+              "contractDependencies": [],
+              "contractKind": "interface",
+              "documentation": null,
+              "fullyImplemented": false,
+              "id": 22,
+              "linearizedBaseContracts": [
+                22
+              ],
+              "name": "RetryableTicketCreator",
+              "nodeType": "ContractDefinition",
+              "nodes": [
+                {
+                  "body": null,
+                  "documentation": {
+                    "id": 2,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "113:816:0",
+                    "text": "@notice Put an message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts\n @dev all msg.value will deposited to callValueRefundAddress on L2\n @param destAddr destination L2 contract address\n @param l2CallValue call value for retryable L2 message \n @param  maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee\n @param excessFeeRefundAddress maxgas x gasprice - execution cost gets credited here on L2 balance\n @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled\n @param maxGas Max gas deducted from user's L2 balance to cover L2 execution\n @param gasPriceBid price bid for L2 execution\n @param data ABI encoded data of L2 message "
+                  },
+                  "functionSelector": "679b6ded",
+                  "id": 21,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "createRetryableTicket",
+                  "nodeType": "FunctionDefinition",
+                  "overrides": null,
+                  "parameters": {
+                    "id": 19,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 4,
+                        "mutability": "mutable",
+                        "name": "destAddr",
+                        "nodeType": "VariableDeclaration",
+                        "overrides": null,
+                        "scope": 21,
+                        "src": "974:16:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 3,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "974:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "value": null,
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 6,
+                        "mutability": "mutable",
+                        "name": "l2CallValue",
+                        "nodeType": "VariableDeclaration",
+                        "overrides": null,
+                        "scope": 21,
+                        "src": "1000:19:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 5,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1000:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "value": null,
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 8,
+                        "mutability": "mutable",
+                        "name": "maxSubmissionCost",
+                        "nodeType": "VariableDeclaration",
+                        "overrides": null,
+                        "scope": 21,
+                        "src": "1029:25:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 7,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1029:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "value": null,
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 10,
+                        "mutability": "mutable",
+                        "name": "excessFeeRefundAddress",
+                        "nodeType": "VariableDeclaration",
+                        "overrides": null,
+                        "scope": 21,
+                        "src": "1064:30:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 9,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1064:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "value": null,
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 12,
+                        "mutability": "mutable",
+                        "name": "callValueRefundAddress",
+                        "nodeType": "VariableDeclaration",
+                        "overrides": null,
+                        "scope": 21,
+                        "src": "1104:30:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 11,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1104:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "value": null,
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 14,
+                        "mutability": "mutable",
+                        "name": "maxGas",
+                        "nodeType": "VariableDeclaration",
+                        "overrides": null,
+                        "scope": 21,
+                        "src": "1144:14:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 13,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1144:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "value": null,
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 16,
+                        "mutability": "mutable",
+                        "name": "gasPriceBid",
+                        "nodeType": "VariableDeclaration",
+                        "overrides": null,
+                        "scope": 21,
+                        "src": "1168:19:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 15,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1168:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "value": null,
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 18,
+                        "mutability": "mutable",
+                        "name": "data",
+                        "nodeType": "VariableDeclaration",
+                        "overrides": null,
+                        "scope": 21,
+                        "src": "1197:19:0",
+                        "stateVariable": false,
+                        "storageLocation": "calldata",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes_calldata_ptr",
+                          "typeString": "bytes"
+                        },
+                        "typeName": {
+                          "id": 17,
+                          "name": "bytes",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1197:5:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes_storage_ptr",
+                            "typeString": "bytes"
+                          }
+                        },
+                        "value": null,
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "964:258:0"
+                  },
+                  "returnParameters": {
+                    "id": 20,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1239:0:0"
+                  },
+                  "scope": 22,
+                  "src": "934:306:0",
+                  "stateMutability": "payable",
+                  "virtual": false,
+                  "visibility": "external"
+                }
+              ],
+              "scope": 23,
+              "src": "74:1168:0"
+            }
+          ],
+          "src": "40:1203:0"
+        },
+        "id": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "id": "6f423b3714cc323f99e2324c5e6019df",
+  "_format": "hh-sol-build-info-1",
+  "solcVersion": "0.8.9",
+  "solcLongVersion": "0.8.9+commit.e5eed63a",
+  "input": {
+    "language": "Solidity",
+    "sources": {
+      "src/precompiles/ArbosTest.sol": {
+        "content": "// Copyright 2021-2022, Offchain Labs, Inc.\n// For license information, see https://github.com/nitro/blob/master/LICENSE\n// SPDX-License-Identifier: BUSL-1.1\n\npragma solidity >=0.4.21 <0.9.0;\n\n/// @title Deprecated - Provides a method of burning arbitrary amounts of gas,\n/// @notice This exists for historical reasons. Pre-Nitro, `ArbosTest` had additional methods only the zero address could call.\n/// These have been removed since users don't use them and calls to missing methods revert.\n/// Precompiled contract that exists in every Arbitrum chain at 0x0000000000000000000000000000000000000069.\ninterface ArbosTest {\n    /// @notice Unproductively burns the amount of L2 ArbGas\n    function burnArbGas(uint256 gasAmount) external pure;\n}\n"
+      }
+    },
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 100
+      },
+      "outputSelection": {
+        "*": {
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ],
+          "": [
+            "ast"
+          ]
+        }
+      }
+    }
+  },
+  "output": {
+    "contracts": {
+      "src/precompiles/ArbosTest.sol": {
+        "ArbosTest": {
+          "abi": [
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "gasAmount",
+                  "type": "uint256"
+                }
+              ],
+              "name": "burnArbGas",
+              "outputs": [],
+              "stateMutability": "pure",
+              "type": "function"
+            }
+          ],
+          "evm": {
+            "bytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "deployedBytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "immutableReferences": {},
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "methodIdentifiers": {
+              "burnArbGas(uint256)": "bb3480f9"
+            }
+          },
+          "metadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"gasAmount\",\"type\":\"uint256\"}],\"name\":\"burnArbGas\",\"outputs\":[],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"Deprecated - Provides a method of burning arbitrary amounts of gas,\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"burnArbGas(uint256)\":{\"notice\":\"Unproductively burns the amount of L2 ArbGas\"}},\"notice\":\"This exists for historical reasons. Pre-Nitro, `ArbosTest` had additional methods only the zero address could call. These have been removed since users don't use them and calls to missing methods revert. Precompiled contract that exists in every Arbitrum chain at 0x0000000000000000000000000000000000000069.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/precompiles/ArbosTest.sol\":\"ArbosTest\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"src/precompiles/ArbosTest.sol\":{\"keccak256\":\"0x5075377cb8e99e11bde05240cc31e32992e7f3c50f420f4ce33286a6acf47a7f\",\"license\":\"BUSL-1.1\",\"urls\":[\"bzz-raw://c9aaf01fe118a1bd11e9289f7c2303b87be3c825f705b5cc3e0c2a8f52c00dc1\",\"dweb:/ipfs/QmfDkSUvMUQwZZB8AkKuMMsELWHuMaAQNJbFLt9dKkboU5\"]}},\"version\":1}"
+        }
+      }
+    },
+    "sources": {
+      "src/precompiles/ArbosTest.sol": {
+        "ast": {
+          "absolutePath": "src/precompiles/ArbosTest.sol",
+          "exportedSymbols": {
+            "ArbosTest": [
+              9
+            ]
+          },
+          "id": 10,
+          "license": "BUSL-1.1",
+          "nodeType": "SourceUnit",
+          "nodes": [
+            {
+              "id": 1,
+              "literals": [
+                "solidity",
+                ">=",
+                "0.4",
+                ".21",
+                "<",
+                "0.9",
+                ".0"
+              ],
+              "nodeType": "PragmaDirective",
+              "src": "159:32:0"
+            },
+            {
+              "abstract": false,
+              "baseContracts": [],
+              "canonicalName": "ArbosTest",
+              "contractDependencies": [],
+              "contractKind": "interface",
+              "documentation": {
+                "id": 2,
+                "nodeType": "StructuredDocumentation",
+                "src": "193:407:0",
+                "text": "@title Deprecated - Provides a method of burning arbitrary amounts of gas,\n @notice This exists for historical reasons. Pre-Nitro, `ArbosTest` had additional methods only the zero address could call.\n These have been removed since users don't use them and calls to missing methods revert.\n Precompiled contract that exists in every Arbitrum chain at 0x0000000000000000000000000000000000000069."
+              },
+              "fullyImplemented": false,
+              "id": 9,
+              "linearizedBaseContracts": [
+                9
+              ],
+              "name": "ArbosTest",
+              "nameLocation": "610:9:0",
+              "nodeType": "ContractDefinition",
+              "nodes": [
+                {
+                  "documentation": {
+                    "id": 3,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "626:56:0",
+                    "text": "@notice Unproductively burns the amount of L2 ArbGas"
+                  },
+                  "functionSelector": "bb3480f9",
+                  "id": 8,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "burnArbGas",
+                  "nameLocation": "696:10:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 6,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 5,
+                        "mutability": "mutable",
+                        "name": "gasAmount",
+                        "nameLocation": "715:9:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 8,
+                        "src": "707:17:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 4,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "707:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "706:19:0"
+                  },
+                  "returnParameters": {
+                    "id": 7,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "739:0:0"
+                  },
+                  "scope": 9,
+                  "src": "687:53:0",
+                  "stateMutability": "pure",
+                  "virtual": false,
+                  "visibility": "external"
+                }
+              ],
+              "scope": 10,
+              "src": "600:142:0",
+              "usedErrors": []
+            }
+          ],
+          "src": "159:584:0"
+        },
+        "id": 0
+      }
+    }
+  }
+}

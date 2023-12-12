@@ -1,0 +1,1813 @@
+{
+  "id": "a46e8a53750a7cac5622ffd92f657db6",
+  "_format": "hh-sol-build-info-1",
+  "solcVersion": "0.8.9",
+  "solcLongVersion": "0.8.9+commit.e5eed63a",
+  "input": {
+    "language": "Solidity",
+    "sources": {
+      "src/node-interface/NodeInterface.sol": {
+        "content": "// Copyright 2021-2022, Offchain Labs, Inc.\n// For license information, see https://github.com/nitro/blob/master/LICENSE\n// SPDX-License-Identifier: BUSL-1.1\n\npragma solidity >=0.4.21 <0.9.0;\n\n/** @title Interface for providing gas estimation for retryable auto-redeems and constructing outbox proofs\n *  @notice This contract doesn't exist on-chain. Instead it is a virtual interface accessible at\n *  0x00000000000000000000000000000000000000C8\n *  This is a cute trick to allow an Arbitrum node to provide data without us having to implement additional RPCs\n */\ninterface NodeInterface {\n    /**\n     * @notice Simulate the execution of a retryable ticket\n     * @dev Use eth_estimateGas on this call to estimate gas usage of retryable ticket\n     *      Since gas usage is not yet known, you may need to add extra deposit (e.g. 1e18 wei) during estimation\n     * @param sender unaliased sender of the L1 and L2 transaction\n     * @param deposit amount to deposit to sender in L2\n     * @param to destination L2 contract address\n     * @param l2CallValue call value for retryable L2 message\n     * @param excessFeeRefundAddress gasLimit x maxFeePerGas - execution cost gets credited here on L2 balance\n     * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled\n     * @param data ABI encoded data of L2 message\n     */\n    function estimateRetryableTicket(\n        address sender,\n        uint256 deposit,\n        address to,\n        uint256 l2CallValue,\n        address excessFeeRefundAddress,\n        address callValueRefundAddress,\n        bytes calldata data\n    ) external;\n\n    /**\n     * @notice Constructs an outbox proof of an l2->l1 send's existence in the outbox accumulator.\n     * @dev Use eth_call to call.\n     * @param size the number of elements in the accumulator\n     * @param leaf the position of the send in the accumulator\n     * @return send the l2->l1 send's hash\n     * @return root the root of the outbox accumulator\n     * @return proof level-by-level branch hashes constituting a proof of the send's membership at the given size\n     */\n    function constructOutboxProof(uint64 size, uint64 leaf)\n        external\n        view\n        returns (\n            bytes32 send,\n            bytes32 root,\n            bytes32[] memory proof\n        );\n\n    /**\n     * @notice Finds the L1 batch containing a requested L2 block, reverting if none does.\n     * Use eth_call to call.\n     * Throws if block doesn't exist, or if block number is 0. Use eth_call\n     * @param blockNum The L2 block being queried\n     * @return batch The sequencer batch number containing the requested L2 block\n     */\n    function findBatchContainingBlock(uint64 blockNum) external view returns (uint64 batch);\n\n    /**\n     * @notice Gets the number of L1 confirmations of the sequencer batch producing the requested L2 block\n     * This gets the number of L1 confirmations for the input message producing the L2 block,\n     * which happens well before the L1 rollup contract confirms the L2 block.\n     * Throws if block doesnt exist in the L2 chain.\n     * @dev Use eth_call to call.\n     * @param blockHash The hash of the L2 block being queried\n     * @return confirmations The number of L1 confirmations the sequencer batch has. Returns 0 if block not yet included in an L1 batch.\n     */\n    function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations);\n\n    /**\n     * @notice Same as native gas estimation, but with additional info on the l1 costs.\n     * @dev Use eth_call to call.\n     * @param data the tx's calldata. Everything else like \"From\" and \"Gas\" are copied over\n     * @param to the tx's \"To\" (ignored when contractCreation is true)\n     * @param contractCreation whether \"To\" is omitted\n     * @return gasEstimate an estimate of the total amount of gas needed for this tx\n     * @return gasEstimateForL1 an estimate of the amount of gas needed for the l1 component of this tx\n     * @return baseFee the l2 base fee\n     * @return l1BaseFeeEstimate ArbOS's l1 estimate of the l1 base fee\n     */\n    function gasEstimateComponents(\n        address to,\n        bool contractCreation,\n        bytes calldata data\n    )\n        external\n        payable\n        returns (\n            uint64 gasEstimate,\n            uint64 gasEstimateForL1,\n            uint256 baseFee,\n            uint256 l1BaseFeeEstimate\n        );\n\n    /**\n     * @notice Estimates a transaction's l1 costs.\n     * @dev Use eth_call to call.\n     *      This method is exactly like gasEstimateComponents, but doesn't include the l2 component\n     *      so that the l1 component can be known even when the tx may fail.\n     * @param data the tx's calldata. Everything else like \"From\" and \"Gas\" are copied over\n     * @param to the tx's \"To\" (ignored when contractCreation is true)\n     * @param contractCreation whether \"To\" is omitted\n     * @return gasEstimateForL1 an estimate of the amount of gas needed for the l1 component of this tx\n     * @return baseFee the l2 base fee\n     * @return l1BaseFeeEstimate ArbOS's l1 estimate of the l1 base fee\n     */\n    function gasEstimateL1Component(\n        address to,\n        bool contractCreation,\n        bytes calldata data\n    )\n        external\n        payable\n        returns (\n            uint64 gasEstimateForL1,\n            uint256 baseFee,\n            uint256 l1BaseFeeEstimate\n        );\n\n    /**\n     * @notice Returns the proof necessary to redeem a message\n     * @param batchNum index of outbox entry (i.e., outgoing messages Merkle root) in array of outbox entries\n     * @param index index of outgoing message in outbox entry\n     * @return proof Merkle proof of message inclusion in outbox entry\n     * @return path Merkle path to message\n     * @return l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)\n     * @return l1Dest destination address for L1 contract call\n     * @return l2Block l2 block number at which sendTxToL1 call was made\n     * @return l1Block l1 block number at which sendTxToL1 call was made\n     * @return timestamp l2 Timestamp at which sendTxToL1 call was made\n     * @return amount value in L1 message in wei\n     * @return calldataForL1 abi-encoded L1 message data\n     */\n    function legacyLookupMessageBatchProof(uint256 batchNum, uint64 index)\n        external\n        view\n        returns (\n            bytes32[] memory proof,\n            uint256 path,\n            address l2Sender,\n            address l1Dest,\n            uint256 l2Block,\n            uint256 l1Block,\n            uint256 timestamp,\n            uint256 amount,\n            bytes memory calldataForL1\n        );\n\n    // @notice Returns the first block produced using the Nitro codebase\n    // @dev returns 0 for chains like Nova that don't contain classic blocks\n    // @return number the block number\n    function nitroGenesisBlock() external pure returns (uint256 number);\n}\n"
+      }
+    },
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 100
+      },
+      "outputSelection": {
+        "*": {
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ],
+          "": [
+            "ast"
+          ]
+        }
+      }
+    }
+  },
+  "output": {
+    "contracts": {
+      "src/node-interface/NodeInterface.sol": {
+        "NodeInterface": {
+          "abi": [
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "size",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "leaf",
+                  "type": "uint64"
+                }
+              ],
+              "name": "constructOutboxProof",
+              "outputs": [
+                {
+                  "internalType": "bytes32",
+                  "name": "send",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "root",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "bytes32[]",
+                  "name": "proof",
+                  "type": "bytes32[]"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "sender",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "deposit",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "to",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "l2CallValue",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "excessFeeRefundAddress",
+                  "type": "address"
+                },
+                {
+                  "internalType": "address",
+                  "name": "callValueRefundAddress",
+                  "type": "address"
+                },
+                {
+                  "internalType": "bytes",
+                  "name": "data",
+                  "type": "bytes"
+                }
+              ],
+              "name": "estimateRetryableTicket",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "blockNum",
+                  "type": "uint64"
+                }
+              ],
+              "name": "findBatchContainingBlock",
+              "outputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "batch",
+                  "type": "uint64"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "to",
+                  "type": "address"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "contractCreation",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bytes",
+                  "name": "data",
+                  "type": "bytes"
+                }
+              ],
+              "name": "gasEstimateComponents",
+              "outputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "gasEstimate",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "gasEstimateForL1",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "baseFee",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "l1BaseFeeEstimate",
+                  "type": "uint256"
+                }
+              ],
+              "stateMutability": "payable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "to",
+                  "type": "address"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "contractCreation",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bytes",
+                  "name": "data",
+                  "type": "bytes"
+                }
+              ],
+              "name": "gasEstimateL1Component",
+              "outputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "gasEstimateForL1",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "baseFee",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "l1BaseFeeEstimate",
+                  "type": "uint256"
+                }
+              ],
+              "stateMutability": "payable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "bytes32",
+                  "name": "blockHash",
+                  "type": "bytes32"
+                }
+              ],
+              "name": "getL1Confirmations",
+              "outputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "confirmations",
+                  "type": "uint64"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "batchNum",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "index",
+                  "type": "uint64"
+                }
+              ],
+              "name": "legacyLookupMessageBatchProof",
+              "outputs": [
+                {
+                  "internalType": "bytes32[]",
+                  "name": "proof",
+                  "type": "bytes32[]"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "path",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "l2Sender",
+                  "type": "address"
+                },
+                {
+                  "internalType": "address",
+                  "name": "l1Dest",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "l2Block",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "l1Block",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "timestamp",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "amount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "bytes",
+                  "name": "calldataForL1",
+                  "type": "bytes"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "nitroGenesisBlock",
+              "outputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "number",
+                  "type": "uint256"
+                }
+              ],
+              "stateMutability": "pure",
+              "type": "function"
+            }
+          ],
+          "evm": {
+            "bytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "deployedBytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "immutableReferences": {},
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "methodIdentifiers": {
+              "constructOutboxProof(uint64,uint64)": "42696350",
+              "estimateRetryableTicket(address,uint256,address,uint256,address,address,bytes)": "c3dc5879",
+              "findBatchContainingBlock(uint64)": "81f1adaf",
+              "gasEstimateComponents(address,bool,bytes)": "c94e6eeb",
+              "gasEstimateL1Component(address,bool,bytes)": "77d488a2",
+              "getL1Confirmations(bytes32)": "e5ca238c",
+              "legacyLookupMessageBatchProof(uint256,uint64)": "89496270",
+              "nitroGenesisBlock()": "93a2fe21"
+            }
+          },
+          "metadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"size\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"leaf\",\"type\":\"uint64\"}],\"name\":\"constructOutboxProof\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"send\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deposit\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2CallValue\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"excessFeeRefundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"callValueRefundAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"estimateRetryableTicket\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"blockNum\",\"type\":\"uint64\"}],\"name\":\"findBatchContainingBlock\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"batch\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"contractCreation\",\"type\":\"bool\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"gasEstimateComponents\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gasEstimate\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"gasEstimateForL1\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"baseFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"l1BaseFeeEstimate\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"contractCreation\",\"type\":\"bool\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"gasEstimateL1Component\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gasEstimateForL1\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"baseFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"l1BaseFeeEstimate\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"blockHash\",\"type\":\"bytes32\"}],\"name\":\"getL1Confirmations\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"confirmations\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"batchNum\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"index\",\"type\":\"uint64\"}],\"name\":\"legacyLookupMessageBatchProof\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"path\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"l2Sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"l1Dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"l1Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nitroGenesisBlock\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"constructOutboxProof(uint64,uint64)\":{\"details\":\"Use eth_call to call.\",\"params\":{\"leaf\":\"the position of the send in the accumulator\",\"size\":\"the number of elements in the accumulator\"},\"returns\":{\"proof\":\"level-by-level branch hashes constituting a proof of the send's membership at the given size\",\"root\":\"the root of the outbox accumulator\",\"send\":\"the l2->l1 send's hash\"}},\"estimateRetryableTicket(address,uint256,address,uint256,address,address,bytes)\":{\"details\":\"Use eth_estimateGas on this call to estimate gas usage of retryable ticket      Since gas usage is not yet known, you may need to add extra deposit (e.g. 1e18 wei) during estimation\",\"params\":{\"callValueRefundAddress\":\"l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled\",\"data\":\"ABI encoded data of L2 message\",\"deposit\":\"amount to deposit to sender in L2\",\"excessFeeRefundAddress\":\"gasLimit x maxFeePerGas - execution cost gets credited here on L2 balance\",\"l2CallValue\":\"call value for retryable L2 message\",\"sender\":\"unaliased sender of the L1 and L2 transaction\",\"to\":\"destination L2 contract address\"}},\"findBatchContainingBlock(uint64)\":{\"params\":{\"blockNum\":\"The L2 block being queried\"},\"returns\":{\"batch\":\"The sequencer batch number containing the requested L2 block\"}},\"gasEstimateComponents(address,bool,bytes)\":{\"details\":\"Use eth_call to call.\",\"params\":{\"contractCreation\":\"whether \\\"To\\\" is omitted\",\"data\":\"the tx's calldata. Everything else like \\\"From\\\" and \\\"Gas\\\" are copied over\",\"to\":\"the tx's \\\"To\\\" (ignored when contractCreation is true)\"},\"returns\":{\"baseFee\":\"the l2 base fee\",\"gasEstimate\":\"an estimate of the total amount of gas needed for this tx\",\"gasEstimateForL1\":\"an estimate of the amount of gas needed for the l1 component of this tx\",\"l1BaseFeeEstimate\":\"ArbOS's l1 estimate of the l1 base fee\"}},\"gasEstimateL1Component(address,bool,bytes)\":{\"details\":\"Use eth_call to call.      This method is exactly like gasEstimateComponents, but doesn't include the l2 component      so that the l1 component can be known even when the tx may fail.\",\"params\":{\"contractCreation\":\"whether \\\"To\\\" is omitted\",\"data\":\"the tx's calldata. Everything else like \\\"From\\\" and \\\"Gas\\\" are copied over\",\"to\":\"the tx's \\\"To\\\" (ignored when contractCreation is true)\"},\"returns\":{\"baseFee\":\"the l2 base fee\",\"gasEstimateForL1\":\"an estimate of the amount of gas needed for the l1 component of this tx\",\"l1BaseFeeEstimate\":\"ArbOS's l1 estimate of the l1 base fee\"}},\"getL1Confirmations(bytes32)\":{\"details\":\"Use eth_call to call.\",\"params\":{\"blockHash\":\"The hash of the L2 block being queried\"},\"returns\":{\"confirmations\":\"The number of L1 confirmations the sequencer batch has. Returns 0 if block not yet included in an L1 batch.\"}},\"legacyLookupMessageBatchProof(uint256,uint64)\":{\"params\":{\"batchNum\":\"index of outbox entry (i.e., outgoing messages Merkle root) in array of outbox entries\",\"index\":\"index of outgoing message in outbox entry\"},\"returns\":{\"amount\":\"value in L1 message in wei\",\"calldataForL1\":\"abi-encoded L1 message data\",\"l1Block\":\"l1 block number at which sendTxToL1 call was made\",\"l1Dest\":\"destination address for L1 contract call\",\"l2Block\":\"l2 block number at which sendTxToL1 call was made\",\"l2Sender\":\"sender if original message (i.e., caller of ArbSys.sendTxToL1)\",\"path\":\"Merkle path to message\",\"proof\":\"Merkle proof of message inclusion in outbox entry\",\"timestamp\":\"l2 Timestamp at which sendTxToL1 call was made\"}}},\"title\":\"Interface for providing gas estimation for retryable auto-redeems and constructing outbox proofs\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"constructOutboxProof(uint64,uint64)\":{\"notice\":\"Constructs an outbox proof of an l2->l1 send's existence in the outbox accumulator.\"},\"estimateRetryableTicket(address,uint256,address,uint256,address,address,bytes)\":{\"notice\":\"Simulate the execution of a retryable ticket\"},\"findBatchContainingBlock(uint64)\":{\"notice\":\"Finds the L1 batch containing a requested L2 block, reverting if none does. Use eth_call to call. Throws if block doesn't exist, or if block number is 0. Use eth_call\"},\"gasEstimateComponents(address,bool,bytes)\":{\"notice\":\"Same as native gas estimation, but with additional info on the l1 costs.\"},\"gasEstimateL1Component(address,bool,bytes)\":{\"notice\":\"Estimates a transaction's l1 costs.\"},\"getL1Confirmations(bytes32)\":{\"notice\":\"Gets the number of L1 confirmations of the sequencer batch producing the requested L2 block This gets the number of L1 confirmations for the input message producing the L2 block, which happens well before the L1 rollup contract confirms the L2 block. Throws if block doesnt exist in the L2 chain.\"},\"legacyLookupMessageBatchProof(uint256,uint64)\":{\"notice\":\"Returns the proof necessary to redeem a message\"}},\"notice\":\"This contract doesn't exist on-chain. Instead it is a virtual interface accessible at  0x00000000000000000000000000000000000000C8  This is a cute trick to allow an Arbitrum node to provide data without us having to implement additional RPCs\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/node-interface/NodeInterface.sol\":\"NodeInterface\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"src/node-interface/NodeInterface.sol\":{\"keccak256\":\"0xedbdd1b647bf51eb895aa8c7517dc6e805dd323a04379abafa32389535f18700\",\"license\":\"BUSL-1.1\",\"urls\":[\"bzz-raw://d034036058e9decd3d95dff54858630e98983eb5b676bd0b289cbb94266a3d39\",\"dweb:/ipfs/QmTd4a79gggp1a8B25VEk4iAQ74mLeyUQhjQZLwJahcuJC\"]}},\"version\":1}"
+        }
+      }
+    },
+    "sources": {
+      "src/node-interface/NodeInterface.sol": {
+        "ast": {
+          "absolutePath": "src/node-interface/NodeInterface.sol",
+          "exportedSymbols": {
+            "NodeInterface": [
+              118
+            ]
+          },
+          "id": 119,
+          "license": "BUSL-1.1",
+          "nodeType": "SourceUnit",
+          "nodes": [
+            {
+              "id": 1,
+              "literals": [
+                "solidity",
+                ">=",
+                "0.4",
+                ".21",
+                "<",
+                "0.9",
+                ".0"
+              ],
+              "nodeType": "PragmaDirective",
+              "src": "159:32:0"
+            },
+            {
+              "abstract": false,
+              "baseContracts": [],
+              "canonicalName": "NodeInterface",
+              "contractDependencies": [],
+              "contractKind": "interface",
+              "documentation": {
+                "id": 2,
+                "nodeType": "StructuredDocumentation",
+                "src": "193:370:0",
+                "text": "@title Interface for providing gas estimation for retryable auto-redeems and constructing outbox proofs\n  @notice This contract doesn't exist on-chain. Instead it is a virtual interface accessible at\n  0x00000000000000000000000000000000000000C8\n  This is a cute trick to allow an Arbitrum node to provide data without us having to implement additional RPCs"
+              },
+              "fullyImplemented": false,
+              "id": 118,
+              "linearizedBaseContracts": [
+                118
+              ],
+              "name": "NodeInterface",
+              "nameLocation": "574:13:0",
+              "nodeType": "ContractDefinition",
+              "nodes": [
+                {
+                  "documentation": {
+                    "id": 3,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "594:786:0",
+                    "text": " @notice Simulate the execution of a retryable ticket\n @dev Use eth_estimateGas on this call to estimate gas usage of retryable ticket\n      Since gas usage is not yet known, you may need to add extra deposit (e.g. 1e18 wei) during estimation\n @param sender unaliased sender of the L1 and L2 transaction\n @param deposit amount to deposit to sender in L2\n @param to destination L2 contract address\n @param l2CallValue call value for retryable L2 message\n @param excessFeeRefundAddress gasLimit x maxFeePerGas - execution cost gets credited here on L2 balance\n @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled\n @param data ABI encoded data of L2 message"
+                  },
+                  "functionSelector": "c3dc5879",
+                  "id": 20,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "estimateRetryableTicket",
+                  "nameLocation": "1394:23:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 18,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 5,
+                        "mutability": "mutable",
+                        "name": "sender",
+                        "nameLocation": "1435:6:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 20,
+                        "src": "1427:14:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 4,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1427:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 7,
+                        "mutability": "mutable",
+                        "name": "deposit",
+                        "nameLocation": "1459:7:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 20,
+                        "src": "1451:15:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 6,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1451:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 9,
+                        "mutability": "mutable",
+                        "name": "to",
+                        "nameLocation": "1484:2:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 20,
+                        "src": "1476:10:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 8,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1476:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 11,
+                        "mutability": "mutable",
+                        "name": "l2CallValue",
+                        "nameLocation": "1504:11:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 20,
+                        "src": "1496:19:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 10,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1496:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 13,
+                        "mutability": "mutable",
+                        "name": "excessFeeRefundAddress",
+                        "nameLocation": "1533:22:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 20,
+                        "src": "1525:30:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 12,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1525:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 15,
+                        "mutability": "mutable",
+                        "name": "callValueRefundAddress",
+                        "nameLocation": "1573:22:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 20,
+                        "src": "1565:30:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 14,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1565:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 17,
+                        "mutability": "mutable",
+                        "name": "data",
+                        "nameLocation": "1620:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 20,
+                        "src": "1605:19:0",
+                        "stateVariable": false,
+                        "storageLocation": "calldata",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes_calldata_ptr",
+                          "typeString": "bytes"
+                        },
+                        "typeName": {
+                          "id": 16,
+                          "name": "bytes",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1605:5:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes_storage_ptr",
+                            "typeString": "bytes"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1417:213:0"
+                  },
+                  "returnParameters": {
+                    "id": 19,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1639:0:0"
+                  },
+                  "scope": 118,
+                  "src": "1385:255:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 21,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1646:480:0",
+                    "text": " @notice Constructs an outbox proof of an l2->l1 send's existence in the outbox accumulator.\n @dev Use eth_call to call.\n @param size the number of elements in the accumulator\n @param leaf the position of the send in the accumulator\n @return send the l2->l1 send's hash\n @return root the root of the outbox accumulator\n @return proof level-by-level branch hashes constituting a proof of the send's membership at the given size"
+                  },
+                  "functionSelector": "42696350",
+                  "id": 35,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "constructOutboxProof",
+                  "nameLocation": "2140:20:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 26,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 23,
+                        "mutability": "mutable",
+                        "name": "size",
+                        "nameLocation": "2168:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 35,
+                        "src": "2161:11:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 22,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2161:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 25,
+                        "mutability": "mutable",
+                        "name": "leaf",
+                        "nameLocation": "2181:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 35,
+                        "src": "2174:11:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 24,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2174:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2160:26:0"
+                  },
+                  "returnParameters": {
+                    "id": 34,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 28,
+                        "mutability": "mutable",
+                        "name": "send",
+                        "nameLocation": "2255:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 35,
+                        "src": "2247:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        },
+                        "typeName": {
+                          "id": 27,
+                          "name": "bytes32",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2247:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes32",
+                            "typeString": "bytes32"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 30,
+                        "mutability": "mutable",
+                        "name": "root",
+                        "nameLocation": "2281:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 35,
+                        "src": "2273:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        },
+                        "typeName": {
+                          "id": 29,
+                          "name": "bytes32",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2273:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes32",
+                            "typeString": "bytes32"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 33,
+                        "mutability": "mutable",
+                        "name": "proof",
+                        "nameLocation": "2316:5:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 35,
+                        "src": "2299:22:0",
+                        "stateVariable": false,
+                        "storageLocation": "memory",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_array$_t_bytes32_$dyn_memory_ptr",
+                          "typeString": "bytes32[]"
+                        },
+                        "typeName": {
+                          "baseType": {
+                            "id": 31,
+                            "name": "bytes32",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "2299:7:0",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes32",
+                              "typeString": "bytes32"
+                            }
+                          },
+                          "id": 32,
+                          "nodeType": "ArrayTypeName",
+                          "src": "2299:9:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_array$_t_bytes32_$dyn_storage_ptr",
+                            "typeString": "bytes32[]"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2233:98:0"
+                  },
+                  "scope": 118,
+                  "src": "2131:201:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 36,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2338:339:0",
+                    "text": " @notice Finds the L1 batch containing a requested L2 block, reverting if none does.\n Use eth_call to call.\n Throws if block doesn't exist, or if block number is 0. Use eth_call\n @param blockNum The L2 block being queried\n @return batch The sequencer batch number containing the requested L2 block"
+                  },
+                  "functionSelector": "81f1adaf",
+                  "id": 43,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "findBatchContainingBlock",
+                  "nameLocation": "2691:24:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 39,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 38,
+                        "mutability": "mutable",
+                        "name": "blockNum",
+                        "nameLocation": "2723:8:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 43,
+                        "src": "2716:15:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 37,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2716:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2715:17:0"
+                  },
+                  "returnParameters": {
+                    "id": 42,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 41,
+                        "mutability": "mutable",
+                        "name": "batch",
+                        "nameLocation": "2763:5:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 43,
+                        "src": "2756:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 40,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2756:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2755:14:0"
+                  },
+                  "scope": 118,
+                  "src": "2682:88:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 44,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2776:578:0",
+                    "text": " @notice Gets the number of L1 confirmations of the sequencer batch producing the requested L2 block\n This gets the number of L1 confirmations for the input message producing the L2 block,\n which happens well before the L1 rollup contract confirms the L2 block.\n Throws if block doesnt exist in the L2 chain.\n @dev Use eth_call to call.\n @param blockHash The hash of the L2 block being queried\n @return confirmations The number of L1 confirmations the sequencer batch has. Returns 0 if block not yet included in an L1 batch."
+                  },
+                  "functionSelector": "e5ca238c",
+                  "id": 51,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "getL1Confirmations",
+                  "nameLocation": "3368:18:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 47,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 46,
+                        "mutability": "mutable",
+                        "name": "blockHash",
+                        "nameLocation": "3395:9:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 51,
+                        "src": "3387:17:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        },
+                        "typeName": {
+                          "id": 45,
+                          "name": "bytes32",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3387:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes32",
+                            "typeString": "bytes32"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3386:19:0"
+                  },
+                  "returnParameters": {
+                    "id": 50,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 49,
+                        "mutability": "mutable",
+                        "name": "confirmations",
+                        "nameLocation": "3436:13:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 51,
+                        "src": "3429:20:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 48,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3429:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3428:22:0"
+                  },
+                  "scope": 118,
+                  "src": "3359:92:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 52,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "3457:651:0",
+                    "text": " @notice Same as native gas estimation, but with additional info on the l1 costs.\n @dev Use eth_call to call.\n @param data the tx's calldata. Everything else like \"From\" and \"Gas\" are copied over\n @param to the tx's \"To\" (ignored when contractCreation is true)\n @param contractCreation whether \"To\" is omitted\n @return gasEstimate an estimate of the total amount of gas needed for this tx\n @return gasEstimateForL1 an estimate of the amount of gas needed for the l1 component of this tx\n @return baseFee the l2 base fee\n @return l1BaseFeeEstimate ArbOS's l1 estimate of the l1 base fee"
+                  },
+                  "functionSelector": "c94e6eeb",
+                  "id": 69,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "gasEstimateComponents",
+                  "nameLocation": "4122:21:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 59,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 54,
+                        "mutability": "mutable",
+                        "name": "to",
+                        "nameLocation": "4161:2:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 69,
+                        "src": "4153:10:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 53,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4153:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 56,
+                        "mutability": "mutable",
+                        "name": "contractCreation",
+                        "nameLocation": "4178:16:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 69,
+                        "src": "4173:21:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        "typeName": {
+                          "id": 55,
+                          "name": "bool",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4173:4:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bool",
+                            "typeString": "bool"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 58,
+                        "mutability": "mutable",
+                        "name": "data",
+                        "nameLocation": "4219:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 69,
+                        "src": "4204:19:0",
+                        "stateVariable": false,
+                        "storageLocation": "calldata",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes_calldata_ptr",
+                          "typeString": "bytes"
+                        },
+                        "typeName": {
+                          "id": 57,
+                          "name": "bytes",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4204:5:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes_storage_ptr",
+                            "typeString": "bytes"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "4143:86:0"
+                  },
+                  "returnParameters": {
+                    "id": 68,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 61,
+                        "mutability": "mutable",
+                        "name": "gasEstimate",
+                        "nameLocation": "4300:11:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 69,
+                        "src": "4293:18:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 60,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4293:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 63,
+                        "mutability": "mutable",
+                        "name": "gasEstimateForL1",
+                        "nameLocation": "4332:16:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 69,
+                        "src": "4325:23:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 62,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4325:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 65,
+                        "mutability": "mutable",
+                        "name": "baseFee",
+                        "nameLocation": "4370:7:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 69,
+                        "src": "4362:15:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 64,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4362:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 67,
+                        "mutability": "mutable",
+                        "name": "l1BaseFeeEstimate",
+                        "nameLocation": "4399:17:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 69,
+                        "src": "4391:25:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 66,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4391:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "4279:147:0"
+                  },
+                  "scope": 118,
+                  "src": "4113:314:0",
+                  "stateMutability": "payable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 70,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "4433:706:0",
+                    "text": " @notice Estimates a transaction's l1 costs.\n @dev Use eth_call to call.\n      This method is exactly like gasEstimateComponents, but doesn't include the l2 component\n      so that the l1 component can be known even when the tx may fail.\n @param data the tx's calldata. Everything else like \"From\" and \"Gas\" are copied over\n @param to the tx's \"To\" (ignored when contractCreation is true)\n @param contractCreation whether \"To\" is omitted\n @return gasEstimateForL1 an estimate of the amount of gas needed for the l1 component of this tx\n @return baseFee the l2 base fee\n @return l1BaseFeeEstimate ArbOS's l1 estimate of the l1 base fee"
+                  },
+                  "functionSelector": "77d488a2",
+                  "id": 85,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "gasEstimateL1Component",
+                  "nameLocation": "5153:22:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 77,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 72,
+                        "mutability": "mutable",
+                        "name": "to",
+                        "nameLocation": "5193:2:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 85,
+                        "src": "5185:10:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 71,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "5185:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 74,
+                        "mutability": "mutable",
+                        "name": "contractCreation",
+                        "nameLocation": "5210:16:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 85,
+                        "src": "5205:21:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        "typeName": {
+                          "id": 73,
+                          "name": "bool",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "5205:4:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bool",
+                            "typeString": "bool"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 76,
+                        "mutability": "mutable",
+                        "name": "data",
+                        "nameLocation": "5251:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 85,
+                        "src": "5236:19:0",
+                        "stateVariable": false,
+                        "storageLocation": "calldata",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes_calldata_ptr",
+                          "typeString": "bytes"
+                        },
+                        "typeName": {
+                          "id": 75,
+                          "name": "bytes",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "5236:5:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes_storage_ptr",
+                            "typeString": "bytes"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "5175:86:0"
+                  },
+                  "returnParameters": {
+                    "id": 84,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 79,
+                        "mutability": "mutable",
+                        "name": "gasEstimateForL1",
+                        "nameLocation": "5332:16:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 85,
+                        "src": "5325:23:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 78,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "5325:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 81,
+                        "mutability": "mutable",
+                        "name": "baseFee",
+                        "nameLocation": "5370:7:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 85,
+                        "src": "5362:15:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 80,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "5362:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 83,
+                        "mutability": "mutable",
+                        "name": "l1BaseFeeEstimate",
+                        "nameLocation": "5399:17:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 85,
+                        "src": "5391:25:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 82,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "5391:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "5311:115:0"
+                  },
+                  "scope": 118,
+                  "src": "5144:283:0",
+                  "stateMutability": "payable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 86,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "5433:834:0",
+                    "text": " @notice Returns the proof necessary to redeem a message\n @param batchNum index of outbox entry (i.e., outgoing messages Merkle root) in array of outbox entries\n @param index index of outgoing message in outbox entry\n @return proof Merkle proof of message inclusion in outbox entry\n @return path Merkle path to message\n @return l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)\n @return l1Dest destination address for L1 contract call\n @return l2Block l2 block number at which sendTxToL1 call was made\n @return l1Block l1 block number at which sendTxToL1 call was made\n @return timestamp l2 Timestamp at which sendTxToL1 call was made\n @return amount value in L1 message in wei\n @return calldataForL1 abi-encoded L1 message data"
+                  },
+                  "functionSelector": "89496270",
+                  "id": 112,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "legacyLookupMessageBatchProof",
+                  "nameLocation": "6281:29:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 91,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 88,
+                        "mutability": "mutable",
+                        "name": "batchNum",
+                        "nameLocation": "6319:8:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6311:16:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 87,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6311:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 90,
+                        "mutability": "mutable",
+                        "name": "index",
+                        "nameLocation": "6336:5:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6329:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 89,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6329:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "6310:32:0"
+                  },
+                  "returnParameters": {
+                    "id": 111,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 94,
+                        "mutability": "mutable",
+                        "name": "proof",
+                        "nameLocation": "6420:5:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6403:22:0",
+                        "stateVariable": false,
+                        "storageLocation": "memory",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_array$_t_bytes32_$dyn_memory_ptr",
+                          "typeString": "bytes32[]"
+                        },
+                        "typeName": {
+                          "baseType": {
+                            "id": 92,
+                            "name": "bytes32",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "6403:7:0",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes32",
+                              "typeString": "bytes32"
+                            }
+                          },
+                          "id": 93,
+                          "nodeType": "ArrayTypeName",
+                          "src": "6403:9:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_array$_t_bytes32_$dyn_storage_ptr",
+                            "typeString": "bytes32[]"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 96,
+                        "mutability": "mutable",
+                        "name": "path",
+                        "nameLocation": "6447:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6439:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 95,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6439:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 98,
+                        "mutability": "mutable",
+                        "name": "l2Sender",
+                        "nameLocation": "6473:8:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6465:16:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 97,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6465:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 100,
+                        "mutability": "mutable",
+                        "name": "l1Dest",
+                        "nameLocation": "6503:6:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6495:14:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 99,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6495:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 102,
+                        "mutability": "mutable",
+                        "name": "l2Block",
+                        "nameLocation": "6531:7:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6523:15:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 101,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6523:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 104,
+                        "mutability": "mutable",
+                        "name": "l1Block",
+                        "nameLocation": "6560:7:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6552:15:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 103,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6552:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 106,
+                        "mutability": "mutable",
+                        "name": "timestamp",
+                        "nameLocation": "6589:9:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6581:17:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 105,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6581:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 108,
+                        "mutability": "mutable",
+                        "name": "amount",
+                        "nameLocation": "6620:6:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6612:14:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 107,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6612:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 110,
+                        "mutability": "mutable",
+                        "name": "calldataForL1",
+                        "nameLocation": "6653:13:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 112,
+                        "src": "6640:26:0",
+                        "stateVariable": false,
+                        "storageLocation": "memory",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes_memory_ptr",
+                          "typeString": "bytes"
+                        },
+                        "typeName": {
+                          "id": 109,
+                          "name": "bytes",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6640:5:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes_storage_ptr",
+                            "typeString": "bytes"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "6389:287:0"
+                  },
+                  "scope": 118,
+                  "src": "6272:405:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "functionSelector": "93a2fe21",
+                  "id": 117,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "nitroGenesisBlock",
+                  "nameLocation": "6881:17:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 113,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "6898:2:0"
+                  },
+                  "returnParameters": {
+                    "id": 116,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 115,
+                        "mutability": "mutable",
+                        "name": "number",
+                        "nameLocation": "6932:6:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 117,
+                        "src": "6924:14:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 114,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "6924:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "6923:16:0"
+                  },
+                  "scope": 118,
+                  "src": "6872:68:0",
+                  "stateMutability": "pure",
+                  "virtual": false,
+                  "visibility": "external"
+                }
+              ],
+              "scope": 119,
+              "src": "564:6378:0",
+              "usedErrors": []
+            }
+          ],
+          "src": "159:6784:0"
+        },
+        "id": 0
+      }
+    }
+  }
+}

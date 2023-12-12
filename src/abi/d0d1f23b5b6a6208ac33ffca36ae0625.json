@@ -1,0 +1,472 @@
+{
+  "id": "d0d1f23b5b6a6208ac33ffca36ae0625",
+  "_format": "hh-sol-build-info-1",
+  "solcVersion": "0.8.9",
+  "solcLongVersion": "0.8.9+commit.e5eed63a",
+  "input": {
+    "language": "Solidity",
+    "sources": {
+      "src/precompiles/ArbOwnerPublic.sol": {
+        "content": "// Copyright 2021-2022, Offchain Labs, Inc.\n// For license information, see https://github.com/nitro/blob/master/LICENSE\n// SPDX-License-Identifier: BUSL-1.1\n\npragma solidity >=0.4.21 <0.9.0;\n\n/// @title Provides non-owners with info about the current chain owners.\n/// @notice Precompiled contract that exists in every Arbitrum chain at 0x000000000000000000000000000000000000006b.\ninterface ArbOwnerPublic {\n    /// @notice See if the user is a chain owner\n    function isChainOwner(address addr) external view returns (bool);\n\n    /// @notice Retrieves the list of chain owners\n    function getAllChainOwners() external view returns (address[] memory);\n\n    /// @notice Gets the network fee collector\n    function getNetworkFeeAccount() external view returns (address);\n\n    /// @notice Get the infrastructure fee collector\n    function getInfraFeeAccount() external view returns (address);\n}\n"
+      }
+    },
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 100
+      },
+      "outputSelection": {
+        "*": {
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ],
+          "": [
+            "ast"
+          ]
+        }
+      }
+    }
+  },
+  "output": {
+    "contracts": {
+      "src/precompiles/ArbOwnerPublic.sol": {
+        "ArbOwnerPublic": {
+          "abi": [
+            {
+              "inputs": [],
+              "name": "getAllChainOwners",
+              "outputs": [
+                {
+                  "internalType": "address[]",
+                  "name": "",
+                  "type": "address[]"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "getInfraFeeAccount",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "getNetworkFeeAccount",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "addr",
+                  "type": "address"
+                }
+              ],
+              "name": "isChainOwner",
+              "outputs": [
+                {
+                  "internalType": "bool",
+                  "name": "",
+                  "type": "bool"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            }
+          ],
+          "evm": {
+            "bytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "deployedBytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "immutableReferences": {},
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "methodIdentifiers": {
+              "getAllChainOwners()": "516b4e0f",
+              "getInfraFeeAccount()": "ee95a824",
+              "getNetworkFeeAccount()": "2d9125e9",
+              "isChainOwner(address)": "26ef7f68"
+            }
+          },
+          "metadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"getAllChainOwners\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getInfraFeeAccount\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getNetworkFeeAccount\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isChainOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"Provides non-owners with info about the current chain owners.\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getAllChainOwners()\":{\"notice\":\"Retrieves the list of chain owners\"},\"getInfraFeeAccount()\":{\"notice\":\"Get the infrastructure fee collector\"},\"getNetworkFeeAccount()\":{\"notice\":\"Gets the network fee collector\"},\"isChainOwner(address)\":{\"notice\":\"See if the user is a chain owner\"}},\"notice\":\"Precompiled contract that exists in every Arbitrum chain at 0x000000000000000000000000000000000000006b.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/precompiles/ArbOwnerPublic.sol\":\"ArbOwnerPublic\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"src/precompiles/ArbOwnerPublic.sol\":{\"keccak256\":\"0xfe5b3685ed7ea690b2afca3ae2594860940261adbeb9822fe08f298e34320b8b\",\"license\":\"BUSL-1.1\",\"urls\":[\"bzz-raw://41fe991c188222071fbb6b8d40f5eebdb3bdfd70c27b6273505369e4fb5ebb0d\",\"dweb:/ipfs/QmQ3JLFV6KUtS4thQgBxw9ETNxVMH1LAftRL1Mpfgu1srW\"]}},\"version\":1}"
+        }
+      }
+    },
+    "sources": {
+      "src/precompiles/ArbOwnerPublic.sol": {
+        "ast": {
+          "absolutePath": "src/precompiles/ArbOwnerPublic.sol",
+          "exportedSymbols": {
+            "ArbOwnerPublic": [
+              30
+            ]
+          },
+          "id": 31,
+          "license": "BUSL-1.1",
+          "nodeType": "SourceUnit",
+          "nodes": [
+            {
+              "id": 1,
+              "literals": [
+                "solidity",
+                ">=",
+                "0.4",
+                ".21",
+                "<",
+                "0.9",
+                ".0"
+              ],
+              "nodeType": "PragmaDirective",
+              "src": "159:32:0"
+            },
+            {
+              "abstract": false,
+              "baseContracts": [],
+              "canonicalName": "ArbOwnerPublic",
+              "contractDependencies": [],
+              "contractKind": "interface",
+              "documentation": {
+                "id": 2,
+                "nodeType": "StructuredDocumentation",
+                "src": "193:189:0",
+                "text": "@title Provides non-owners with info about the current chain owners.\n @notice Precompiled contract that exists in every Arbitrum chain at 0x000000000000000000000000000000000000006b."
+              },
+              "fullyImplemented": false,
+              "id": 30,
+              "linearizedBaseContracts": [
+                30
+              ],
+              "name": "ArbOwnerPublic",
+              "nameLocation": "392:14:0",
+              "nodeType": "ContractDefinition",
+              "nodes": [
+                {
+                  "documentation": {
+                    "id": 3,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "413:44:0",
+                    "text": "@notice See if the user is a chain owner"
+                  },
+                  "functionSelector": "26ef7f68",
+                  "id": 10,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "isChainOwner",
+                  "nameLocation": "471:12:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 6,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 5,
+                        "mutability": "mutable",
+                        "name": "addr",
+                        "nameLocation": "492:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 10,
+                        "src": "484:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 4,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "484:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "483:14:0"
+                  },
+                  "returnParameters": {
+                    "id": 9,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 8,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 10,
+                        "src": "521:4:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        "typeName": {
+                          "id": 7,
+                          "name": "bool",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "521:4:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bool",
+                            "typeString": "bool"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "520:6:0"
+                  },
+                  "scope": 30,
+                  "src": "462:65:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 11,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "533:46:0",
+                    "text": "@notice Retrieves the list of chain owners"
+                  },
+                  "functionSelector": "516b4e0f",
+                  "id": 17,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "getAllChainOwners",
+                  "nameLocation": "593:17:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 12,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "610:2:0"
+                  },
+                  "returnParameters": {
+                    "id": 16,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 15,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 17,
+                        "src": "636:16:0",
+                        "stateVariable": false,
+                        "storageLocation": "memory",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_array$_t_address_$dyn_memory_ptr",
+                          "typeString": "address[]"
+                        },
+                        "typeName": {
+                          "baseType": {
+                            "id": 13,
+                            "name": "address",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "636:7:0",
+                            "stateMutability": "nonpayable",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_address",
+                              "typeString": "address"
+                            }
+                          },
+                          "id": 14,
+                          "nodeType": "ArrayTypeName",
+                          "src": "636:9:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_array$_t_address_$dyn_storage_ptr",
+                            "typeString": "address[]"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "635:18:0"
+                  },
+                  "scope": 30,
+                  "src": "584:70:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 18,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "660:42:0",
+                    "text": "@notice Gets the network fee collector"
+                  },
+                  "functionSelector": "2d9125e9",
+                  "id": 23,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "getNetworkFeeAccount",
+                  "nameLocation": "716:20:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 19,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "736:2:0"
+                  },
+                  "returnParameters": {
+                    "id": 22,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 21,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 23,
+                        "src": "762:7:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 20,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "762:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "761:9:0"
+                  },
+                  "scope": 30,
+                  "src": "707:64:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 24,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "777:48:0",
+                    "text": "@notice Get the infrastructure fee collector"
+                  },
+                  "functionSelector": "ee95a824",
+                  "id": 29,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "getInfraFeeAccount",
+                  "nameLocation": "839:18:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 25,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "857:2:0"
+                  },
+                  "returnParameters": {
+                    "id": 28,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 27,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 29,
+                        "src": "883:7:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 26,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "883:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "882:9:0"
+                  },
+                  "scope": 30,
+                  "src": "830:62:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                }
+              ],
+              "scope": 31,
+              "src": "382:512:0",
+              "usedErrors": []
+            }
+          ],
+          "src": "159:736:0"
+        },
+        "id": 0
+      }
+    }
+  }
+}

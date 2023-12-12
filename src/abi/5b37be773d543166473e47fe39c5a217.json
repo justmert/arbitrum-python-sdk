@@ -1,0 +1,2168 @@
+{
+  "id": "5b37be773d543166473e47fe39c5a217",
+  "_format": "hh-sol-build-info-1",
+  "solcVersion": "0.8.9",
+  "solcLongVersion": "0.8.9+commit.e5eed63a",
+  "input": {
+    "language": "Solidity",
+    "sources": {
+      "src/precompiles/ArbOwner.sol": {
+        "content": "// Copyright 2021-2022, Offchain Labs, Inc.\n// For license information, see https://github.com/nitro/blob/master/LICENSE\n// SPDX-License-Identifier: BUSL-1.1\n\npragma solidity >=0.4.21 <0.9.0;\n\n/// @title Provides owners with tools for managing the rollup.\n/// @notice Calls by non-owners will always revert.\n/// Most of Arbitrum Classic's owner methods have been removed since they no longer make sense in Nitro:\n/// - What were once chain parameters are now parts of ArbOS's state, and those that remain are set at genesis.\n/// - ArbOS upgrades happen with the rest of the system rather than being independent\n/// - Exemptions to address aliasing are no longer offered. Exemptions were intended to support backward compatibility for contracts deployed before aliasing was introduced, but no exemptions were ever requested.\n/// Precompiled contract that exists in every Arbitrum chain at 0x0000000000000000000000000000000000000070.\ninterface ArbOwner {\n    /// @notice Add account as a chain owner\n    function addChainOwner(address newOwner) external;\n\n    /// @notice Remove account from the list of chain owners\n    function removeChainOwner(address ownerToRemove) external;\n\n    /// @notice See if the user is a chain owner\n    function isChainOwner(address addr) external view returns (bool);\n\n    /// @notice Retrieves the list of chain owners\n    function getAllChainOwners() external view returns (address[] memory);\n\n    /// @notice Set how slowly ArbOS updates its estimate of the L1 basefee\n    function setL1BaseFeeEstimateInertia(uint64 inertia) external;\n\n    /// @notice Set the L2 basefee directly, bypassing the pool calculus\n    function setL2BaseFee(uint256 priceInWei) external;\n\n    /// @notice Set the minimum basefee needed for a transaction to succeed\n    function setMinimumL2BaseFee(uint256 priceInWei) external;\n\n    /// @notice Set the computational speed limit for the chain\n    function setSpeedLimit(uint64 limit) external;\n\n    /// @notice Set the maximum size a tx (and block) can be\n    function setMaxTxGasLimit(uint64 limit) external;\n\n    /// @notice Set the L2 gas pricing inertia\n    function setL2GasPricingInertia(uint64 sec) external;\n\n    /// @notice Set the L2 gas backlog tolerance\n    function setL2GasBacklogTolerance(uint64 sec) external;\n\n    /// @notice Get the network fee collector\n    function getNetworkFeeAccount() external view returns (address);\n\n    /// @notice Get the infrastructure fee collector\n    function getInfraFeeAccount() external view returns (address);\n\n    /// @notice Set the network fee collector\n    function setNetworkFeeAccount(address newNetworkFeeAccount) external;\n\n    /// @notice Set the infrastructure fee collector\n    function setInfraFeeAccount(address newInfraFeeAccount) external;\n\n    /// @notice Upgrades ArbOS to the requested version at the requested timestamp\n    function scheduleArbOSUpgrade(uint64 newVersion, uint64 timestamp) external;\n\n    /// @notice Sets equilibration units parameter for L1 price adjustment algorithm\n    function setL1PricingEquilibrationUnits(uint256 equilibrationUnits) external;\n\n    /// @notice Sets inertia parameter for L1 price adjustment algorithm\n    function setL1PricingInertia(uint64 inertia) external;\n\n    /// @notice Sets reward recipient address for L1 price adjustment algorithm\n    function setL1PricingRewardRecipient(address recipient) external;\n\n    /// @notice Sets reward amount for L1 price adjustment algorithm, in wei per unit\n    function setL1PricingRewardRate(uint64 weiPerUnit) external;\n\n    /// @notice Set how much ArbOS charges per L1 gas spent on transaction data.\n    function setL1PricePerUnit(uint256 pricePerUnit) external;\n\n    /// @notice Sets the base charge (in L1 gas) attributed to each data batch in the calldata pricer\n    function setPerBatchGasCharge(int64 cost) external;\n\n    /// @notice Sets the cost amortization cap in basis points\n    function setAmortizedCostCapBips(uint64 cap) external;\n\n    /// @notice Releases surplus funds from L1PricerFundsPoolAddress for use\n    function releaseL1PricerSurplusFunds(uint256 maxWeiToRelease) external returns (uint256);\n\n    // Emitted when a successful call is made to this precompile\n    event OwnerActs(bytes4 indexed method, address indexed owner, bytes data);\n}\n"
+      }
+    },
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 100
+      },
+      "outputSelection": {
+        "*": {
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ],
+          "": [
+            "ast"
+          ]
+        }
+      }
+    }
+  },
+  "output": {
+    "contracts": {
+      "src/precompiles/ArbOwner.sol": {
+        "ArbOwner": {
+          "abi": [
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "bytes4",
+                  "name": "method",
+                  "type": "bytes4"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "owner",
+                  "type": "address"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "bytes",
+                  "name": "data",
+                  "type": "bytes"
+                }
+              ],
+              "name": "OwnerActs",
+              "type": "event"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "addChainOwner",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "getAllChainOwners",
+              "outputs": [
+                {
+                  "internalType": "address[]",
+                  "name": "",
+                  "type": "address[]"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "getInfraFeeAccount",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "getNetworkFeeAccount",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "addr",
+                  "type": "address"
+                }
+              ],
+              "name": "isChainOwner",
+              "outputs": [
+                {
+                  "internalType": "bool",
+                  "name": "",
+                  "type": "bool"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "maxWeiToRelease",
+                  "type": "uint256"
+                }
+              ],
+              "name": "releaseL1PricerSurplusFunds",
+              "outputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "",
+                  "type": "uint256"
+                }
+              ],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "ownerToRemove",
+                  "type": "address"
+                }
+              ],
+              "name": "removeChainOwner",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "newVersion",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "timestamp",
+                  "type": "uint64"
+                }
+              ],
+              "name": "scheduleArbOSUpgrade",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "cap",
+                  "type": "uint64"
+                }
+              ],
+              "name": "setAmortizedCostCapBips",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newInfraFeeAccount",
+                  "type": "address"
+                }
+              ],
+              "name": "setInfraFeeAccount",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "inertia",
+                  "type": "uint64"
+                }
+              ],
+              "name": "setL1BaseFeeEstimateInertia",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "pricePerUnit",
+                  "type": "uint256"
+                }
+              ],
+              "name": "setL1PricePerUnit",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "equilibrationUnits",
+                  "type": "uint256"
+                }
+              ],
+              "name": "setL1PricingEquilibrationUnits",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "inertia",
+                  "type": "uint64"
+                }
+              ],
+              "name": "setL1PricingInertia",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "weiPerUnit",
+                  "type": "uint64"
+                }
+              ],
+              "name": "setL1PricingRewardRate",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "recipient",
+                  "type": "address"
+                }
+              ],
+              "name": "setL1PricingRewardRecipient",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "priceInWei",
+                  "type": "uint256"
+                }
+              ],
+              "name": "setL2BaseFee",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "sec",
+                  "type": "uint64"
+                }
+              ],
+              "name": "setL2GasBacklogTolerance",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "sec",
+                  "type": "uint64"
+                }
+              ],
+              "name": "setL2GasPricingInertia",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "limit",
+                  "type": "uint64"
+                }
+              ],
+              "name": "setMaxTxGasLimit",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "priceInWei",
+                  "type": "uint256"
+                }
+              ],
+              "name": "setMinimumL2BaseFee",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newNetworkFeeAccount",
+                  "type": "address"
+                }
+              ],
+              "name": "setNetworkFeeAccount",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "int64",
+                  "name": "cost",
+                  "type": "int64"
+                }
+              ],
+              "name": "setPerBatchGasCharge",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint64",
+                  "name": "limit",
+                  "type": "uint64"
+                }
+              ],
+              "name": "setSpeedLimit",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            }
+          ],
+          "evm": {
+            "bytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "deployedBytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "immutableReferences": {},
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "methodIdentifiers": {
+              "addChainOwner(address)": "481f8dbf",
+              "getAllChainOwners()": "516b4e0f",
+              "getInfraFeeAccount()": "ee95a824",
+              "getNetworkFeeAccount()": "2d9125e9",
+              "isChainOwner(address)": "26ef7f68",
+              "releaseL1PricerSurplusFunds(uint256)": "314bcf05",
+              "removeChainOwner(address)": "8792701a",
+              "scheduleArbOSUpgrade(uint64,uint64)": "e388b381",
+              "setAmortizedCostCapBips(uint64)": "56191cc3",
+              "setInfraFeeAccount(address)": "57f585db",
+              "setL1BaseFeeEstimateInertia(uint64)": "718f7805",
+              "setL1PricePerUnit(uint256)": "2b352fae",
+              "setL1PricingEquilibrationUnits(uint256)": "152db696",
+              "setL1PricingInertia(uint64)": "775a82e9",
+              "setL1PricingRewardRate(uint64)": "f6739500",
+              "setL1PricingRewardRecipient(address)": "934be07d",
+              "setL2BaseFee(uint256)": "d99bc80e",
+              "setL2GasBacklogTolerance(uint64)": "198e7157",
+              "setL2GasPricingInertia(uint64)": "3fd62a29",
+              "setMaxTxGasLimit(uint64)": "39673611",
+              "setMinimumL2BaseFee(uint256)": "a0188cdb",
+              "setNetworkFeeAccount(address)": "fcdde2b4",
+              "setPerBatchGasCharge(int64)": "fad7f20b",
+              "setSpeedLimit(uint64)": "4d7a060d"
+            }
+          },
+          "metadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes4\",\"name\":\"method\",\"type\":\"bytes4\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"OwnerActs\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"addChainOwner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllChainOwners\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getInfraFeeAccount\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getNetworkFeeAccount\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isChainOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"maxWeiToRelease\",\"type\":\"uint256\"}],\"name\":\"releaseL1PricerSurplusFunds\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"ownerToRemove\",\"type\":\"address\"}],\"name\":\"removeChainOwner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newVersion\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"timestamp\",\"type\":\"uint64\"}],\"name\":\"scheduleArbOSUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"cap\",\"type\":\"uint64\"}],\"name\":\"setAmortizedCostCapBips\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newInfraFeeAccount\",\"type\":\"address\"}],\"name\":\"setInfraFeeAccount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"inertia\",\"type\":\"uint64\"}],\"name\":\"setL1BaseFeeEstimateInertia\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"pricePerUnit\",\"type\":\"uint256\"}],\"name\":\"setL1PricePerUnit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"equilibrationUnits\",\"type\":\"uint256\"}],\"name\":\"setL1PricingEquilibrationUnits\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"inertia\",\"type\":\"uint64\"}],\"name\":\"setL1PricingInertia\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"weiPerUnit\",\"type\":\"uint64\"}],\"name\":\"setL1PricingRewardRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"}],\"name\":\"setL1PricingRewardRecipient\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"priceInWei\",\"type\":\"uint256\"}],\"name\":\"setL2BaseFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"sec\",\"type\":\"uint64\"}],\"name\":\"setL2GasBacklogTolerance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"sec\",\"type\":\"uint64\"}],\"name\":\"setL2GasPricingInertia\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"limit\",\"type\":\"uint64\"}],\"name\":\"setMaxTxGasLimit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"priceInWei\",\"type\":\"uint256\"}],\"name\":\"setMinimumL2BaseFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newNetworkFeeAccount\",\"type\":\"address\"}],\"name\":\"setNetworkFeeAccount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int64\",\"name\":\"cost\",\"type\":\"int64\"}],\"name\":\"setPerBatchGasCharge\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"limit\",\"type\":\"uint64\"}],\"name\":\"setSpeedLimit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"Provides owners with tools for managing the rollup.\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"addChainOwner(address)\":{\"notice\":\"Add account as a chain owner\"},\"getAllChainOwners()\":{\"notice\":\"Retrieves the list of chain owners\"},\"getInfraFeeAccount()\":{\"notice\":\"Get the infrastructure fee collector\"},\"getNetworkFeeAccount()\":{\"notice\":\"Get the network fee collector\"},\"isChainOwner(address)\":{\"notice\":\"See if the user is a chain owner\"},\"releaseL1PricerSurplusFunds(uint256)\":{\"notice\":\"Releases surplus funds from L1PricerFundsPoolAddress for use\"},\"removeChainOwner(address)\":{\"notice\":\"Remove account from the list of chain owners\"},\"scheduleArbOSUpgrade(uint64,uint64)\":{\"notice\":\"Upgrades ArbOS to the requested version at the requested timestamp\"},\"setAmortizedCostCapBips(uint64)\":{\"notice\":\"Sets the cost amortization cap in basis points\"},\"setInfraFeeAccount(address)\":{\"notice\":\"Set the infrastructure fee collector\"},\"setL1BaseFeeEstimateInertia(uint64)\":{\"notice\":\"Set how slowly ArbOS updates its estimate of the L1 basefee\"},\"setL1PricePerUnit(uint256)\":{\"notice\":\"Set how much ArbOS charges per L1 gas spent on transaction data.\"},\"setL1PricingEquilibrationUnits(uint256)\":{\"notice\":\"Sets equilibration units parameter for L1 price adjustment algorithm\"},\"setL1PricingInertia(uint64)\":{\"notice\":\"Sets inertia parameter for L1 price adjustment algorithm\"},\"setL1PricingRewardRate(uint64)\":{\"notice\":\"Sets reward amount for L1 price adjustment algorithm, in wei per unit\"},\"setL1PricingRewardRecipient(address)\":{\"notice\":\"Sets reward recipient address for L1 price adjustment algorithm\"},\"setL2BaseFee(uint256)\":{\"notice\":\"Set the L2 basefee directly, bypassing the pool calculus\"},\"setL2GasBacklogTolerance(uint64)\":{\"notice\":\"Set the L2 gas backlog tolerance\"},\"setL2GasPricingInertia(uint64)\":{\"notice\":\"Set the L2 gas pricing inertia\"},\"setMaxTxGasLimit(uint64)\":{\"notice\":\"Set the maximum size a tx (and block) can be\"},\"setMinimumL2BaseFee(uint256)\":{\"notice\":\"Set the minimum basefee needed for a transaction to succeed\"},\"setNetworkFeeAccount(address)\":{\"notice\":\"Set the network fee collector\"},\"setPerBatchGasCharge(int64)\":{\"notice\":\"Sets the base charge (in L1 gas) attributed to each data batch in the calldata pricer\"},\"setSpeedLimit(uint64)\":{\"notice\":\"Set the computational speed limit for the chain\"}},\"notice\":\"Calls by non-owners will always revert. Most of Arbitrum Classic's owner methods have been removed since they no longer make sense in Nitro: - What were once chain parameters are now parts of ArbOS's state, and those that remain are set at genesis. - ArbOS upgrades happen with the rest of the system rather than being independent - Exemptions to address aliasing are no longer offered. Exemptions were intended to support backward compatibility for contracts deployed before aliasing was introduced, but no exemptions were ever requested. Precompiled contract that exists in every Arbitrum chain at 0x0000000000000000000000000000000000000070.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/precompiles/ArbOwner.sol\":\"ArbOwner\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"src/precompiles/ArbOwner.sol\":{\"keccak256\":\"0xde559ebe2cbcd64eada11a17e44bcfd8cd49c1d94d034b720b27991649bc9c03\",\"license\":\"BUSL-1.1\",\"urls\":[\"bzz-raw://3e3b8f3988dcb7189e327d793ff118bdce545d2c063e3032cc959183919c98e3\",\"dweb:/ipfs/QmX1wZ3BvDxbyWSvEdVd5fsBSdahUNCNbDSHuoUnivZfnP\"]}},\"version\":1}"
+        }
+      }
+    },
+    "sources": {
+      "src/precompiles/ArbOwner.sol": {
+        "ast": {
+          "absolutePath": "src/precompiles/ArbOwner.sol",
+          "exportedSymbols": {
+            "ArbOwner": [
+              162
+            ]
+          },
+          "id": 163,
+          "license": "BUSL-1.1",
+          "nodeType": "SourceUnit",
+          "nodes": [
+            {
+              "id": 1,
+              "literals": [
+                "solidity",
+                ">=",
+                "0.4",
+                ".21",
+                "<",
+                "0.9",
+                ".0"
+              ],
+              "nodeType": "PragmaDirective",
+              "src": "159:32:0"
+            },
+            {
+              "abstract": false,
+              "baseContracts": [],
+              "canonicalName": "ArbOwner",
+              "contractDependencies": [],
+              "contractKind": "interface",
+              "documentation": {
+                "id": 2,
+                "nodeType": "StructuredDocumentation",
+                "src": "193:739:0",
+                "text": "@title Provides owners with tools for managing the rollup.\n @notice Calls by non-owners will always revert.\n Most of Arbitrum Classic's owner methods have been removed since they no longer make sense in Nitro:\n - What were once chain parameters are now parts of ArbOS's state, and those that remain are set at genesis.\n - ArbOS upgrades happen with the rest of the system rather than being independent\n - Exemptions to address aliasing are no longer offered. Exemptions were intended to support backward compatibility for contracts deployed before aliasing was introduced, but no exemptions were ever requested.\n Precompiled contract that exists in every Arbitrum chain at 0x0000000000000000000000000000000000000070."
+              },
+              "fullyImplemented": false,
+              "id": 162,
+              "linearizedBaseContracts": [
+                162
+              ],
+              "name": "ArbOwner",
+              "nameLocation": "942:8:0",
+              "nodeType": "ContractDefinition",
+              "nodes": [
+                {
+                  "documentation": {
+                    "id": 3,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "957:40:0",
+                    "text": "@notice Add account as a chain owner"
+                  },
+                  "functionSelector": "481f8dbf",
+                  "id": 8,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "addChainOwner",
+                  "nameLocation": "1011:13:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 6,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 5,
+                        "mutability": "mutable",
+                        "name": "newOwner",
+                        "nameLocation": "1033:8:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 8,
+                        "src": "1025:16:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 4,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1025:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1024:18:0"
+                  },
+                  "returnParameters": {
+                    "id": 7,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1051:0:0"
+                  },
+                  "scope": 162,
+                  "src": "1002:50:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 9,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1058:56:0",
+                    "text": "@notice Remove account from the list of chain owners"
+                  },
+                  "functionSelector": "8792701a",
+                  "id": 14,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "removeChainOwner",
+                  "nameLocation": "1128:16:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 12,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 11,
+                        "mutability": "mutable",
+                        "name": "ownerToRemove",
+                        "nameLocation": "1153:13:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 14,
+                        "src": "1145:21:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 10,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1145:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1144:23:0"
+                  },
+                  "returnParameters": {
+                    "id": 13,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1176:0:0"
+                  },
+                  "scope": 162,
+                  "src": "1119:58:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 15,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1183:44:0",
+                    "text": "@notice See if the user is a chain owner"
+                  },
+                  "functionSelector": "26ef7f68",
+                  "id": 22,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "isChainOwner",
+                  "nameLocation": "1241:12:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 18,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 17,
+                        "mutability": "mutable",
+                        "name": "addr",
+                        "nameLocation": "1262:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 22,
+                        "src": "1254:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 16,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1254:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1253:14:0"
+                  },
+                  "returnParameters": {
+                    "id": 21,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 20,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 22,
+                        "src": "1291:4:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        "typeName": {
+                          "id": 19,
+                          "name": "bool",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1291:4:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bool",
+                            "typeString": "bool"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1290:6:0"
+                  },
+                  "scope": 162,
+                  "src": "1232:65:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 23,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1303:46:0",
+                    "text": "@notice Retrieves the list of chain owners"
+                  },
+                  "functionSelector": "516b4e0f",
+                  "id": 29,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "getAllChainOwners",
+                  "nameLocation": "1363:17:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 24,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1380:2:0"
+                  },
+                  "returnParameters": {
+                    "id": 28,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 27,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 29,
+                        "src": "1406:16:0",
+                        "stateVariable": false,
+                        "storageLocation": "memory",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_array$_t_address_$dyn_memory_ptr",
+                          "typeString": "address[]"
+                        },
+                        "typeName": {
+                          "baseType": {
+                            "id": 25,
+                            "name": "address",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "1406:7:0",
+                            "stateMutability": "nonpayable",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_address",
+                              "typeString": "address"
+                            }
+                          },
+                          "id": 26,
+                          "nodeType": "ArrayTypeName",
+                          "src": "1406:9:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_array$_t_address_$dyn_storage_ptr",
+                            "typeString": "address[]"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1405:18:0"
+                  },
+                  "scope": 162,
+                  "src": "1354:70:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 30,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1430:71:0",
+                    "text": "@notice Set how slowly ArbOS updates its estimate of the L1 basefee"
+                  },
+                  "functionSelector": "718f7805",
+                  "id": 35,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL1BaseFeeEstimateInertia",
+                  "nameLocation": "1515:27:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 33,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 32,
+                        "mutability": "mutable",
+                        "name": "inertia",
+                        "nameLocation": "1550:7:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 35,
+                        "src": "1543:14:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 31,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1543:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1542:16:0"
+                  },
+                  "returnParameters": {
+                    "id": 34,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1567:0:0"
+                  },
+                  "scope": 162,
+                  "src": "1506:62:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 36,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1574:68:0",
+                    "text": "@notice Set the L2 basefee directly, bypassing the pool calculus"
+                  },
+                  "functionSelector": "d99bc80e",
+                  "id": 41,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL2BaseFee",
+                  "nameLocation": "1656:12:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 39,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 38,
+                        "mutability": "mutable",
+                        "name": "priceInWei",
+                        "nameLocation": "1677:10:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 41,
+                        "src": "1669:18:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 37,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1669:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1668:20:0"
+                  },
+                  "returnParameters": {
+                    "id": 40,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1697:0:0"
+                  },
+                  "scope": 162,
+                  "src": "1647:51:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 42,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1704:71:0",
+                    "text": "@notice Set the minimum basefee needed for a transaction to succeed"
+                  },
+                  "functionSelector": "a0188cdb",
+                  "id": 47,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setMinimumL2BaseFee",
+                  "nameLocation": "1789:19:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 45,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 44,
+                        "mutability": "mutable",
+                        "name": "priceInWei",
+                        "nameLocation": "1817:10:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 47,
+                        "src": "1809:18:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 43,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1809:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1808:20:0"
+                  },
+                  "returnParameters": {
+                    "id": 46,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1837:0:0"
+                  },
+                  "scope": 162,
+                  "src": "1780:58:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 48,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1844:59:0",
+                    "text": "@notice Set the computational speed limit for the chain"
+                  },
+                  "functionSelector": "4d7a060d",
+                  "id": 53,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setSpeedLimit",
+                  "nameLocation": "1917:13:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 51,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 50,
+                        "mutability": "mutable",
+                        "name": "limit",
+                        "nameLocation": "1938:5:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 53,
+                        "src": "1931:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 49,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "1931:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "1930:14:0"
+                  },
+                  "returnParameters": {
+                    "id": 52,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "1953:0:0"
+                  },
+                  "scope": 162,
+                  "src": "1908:46:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 54,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "1960:56:0",
+                    "text": "@notice Set the maximum size a tx (and block) can be"
+                  },
+                  "functionSelector": "39673611",
+                  "id": 59,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setMaxTxGasLimit",
+                  "nameLocation": "2030:16:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 57,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 56,
+                        "mutability": "mutable",
+                        "name": "limit",
+                        "nameLocation": "2054:5:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 59,
+                        "src": "2047:12:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 55,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2047:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2046:14:0"
+                  },
+                  "returnParameters": {
+                    "id": 58,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "2069:0:0"
+                  },
+                  "scope": 162,
+                  "src": "2021:49:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 60,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2076:42:0",
+                    "text": "@notice Set the L2 gas pricing inertia"
+                  },
+                  "functionSelector": "3fd62a29",
+                  "id": 65,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL2GasPricingInertia",
+                  "nameLocation": "2132:22:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 63,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 62,
+                        "mutability": "mutable",
+                        "name": "sec",
+                        "nameLocation": "2162:3:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 65,
+                        "src": "2155:10:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 61,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2155:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2154:12:0"
+                  },
+                  "returnParameters": {
+                    "id": 64,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "2175:0:0"
+                  },
+                  "scope": 162,
+                  "src": "2123:53:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 66,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2182:44:0",
+                    "text": "@notice Set the L2 gas backlog tolerance"
+                  },
+                  "functionSelector": "198e7157",
+                  "id": 71,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL2GasBacklogTolerance",
+                  "nameLocation": "2240:24:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 69,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 68,
+                        "mutability": "mutable",
+                        "name": "sec",
+                        "nameLocation": "2272:3:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 71,
+                        "src": "2265:10:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 67,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2265:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2264:12:0"
+                  },
+                  "returnParameters": {
+                    "id": 70,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "2285:0:0"
+                  },
+                  "scope": 162,
+                  "src": "2231:55:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 72,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2292:41:0",
+                    "text": "@notice Get the network fee collector"
+                  },
+                  "functionSelector": "2d9125e9",
+                  "id": 77,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "getNetworkFeeAccount",
+                  "nameLocation": "2347:20:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 73,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "2367:2:0"
+                  },
+                  "returnParameters": {
+                    "id": 76,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 75,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 77,
+                        "src": "2393:7:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 74,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2393:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2392:9:0"
+                  },
+                  "scope": 162,
+                  "src": "2338:64:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 78,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2408:48:0",
+                    "text": "@notice Get the infrastructure fee collector"
+                  },
+                  "functionSelector": "ee95a824",
+                  "id": 83,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "getInfraFeeAccount",
+                  "nameLocation": "2470:18:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 79,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "2488:2:0"
+                  },
+                  "returnParameters": {
+                    "id": 82,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 81,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 83,
+                        "src": "2514:7:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 80,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2514:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2513:9:0"
+                  },
+                  "scope": 162,
+                  "src": "2461:62:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 84,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2529:41:0",
+                    "text": "@notice Set the network fee collector"
+                  },
+                  "functionSelector": "fcdde2b4",
+                  "id": 89,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setNetworkFeeAccount",
+                  "nameLocation": "2584:20:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 87,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 86,
+                        "mutability": "mutable",
+                        "name": "newNetworkFeeAccount",
+                        "nameLocation": "2613:20:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 89,
+                        "src": "2605:28:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 85,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2605:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2604:30:0"
+                  },
+                  "returnParameters": {
+                    "id": 88,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "2643:0:0"
+                  },
+                  "scope": 162,
+                  "src": "2575:69:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 90,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2650:48:0",
+                    "text": "@notice Set the infrastructure fee collector"
+                  },
+                  "functionSelector": "57f585db",
+                  "id": 95,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setInfraFeeAccount",
+                  "nameLocation": "2712:18:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 93,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 92,
+                        "mutability": "mutable",
+                        "name": "newInfraFeeAccount",
+                        "nameLocation": "2739:18:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 95,
+                        "src": "2731:26:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 91,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2731:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2730:28:0"
+                  },
+                  "returnParameters": {
+                    "id": 94,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "2767:0:0"
+                  },
+                  "scope": 162,
+                  "src": "2703:65:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 96,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2774:78:0",
+                    "text": "@notice Upgrades ArbOS to the requested version at the requested timestamp"
+                  },
+                  "functionSelector": "e388b381",
+                  "id": 103,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "scheduleArbOSUpgrade",
+                  "nameLocation": "2866:20:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 101,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 98,
+                        "mutability": "mutable",
+                        "name": "newVersion",
+                        "nameLocation": "2894:10:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 103,
+                        "src": "2887:17:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 97,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2887:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 100,
+                        "mutability": "mutable",
+                        "name": "timestamp",
+                        "nameLocation": "2913:9:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 103,
+                        "src": "2906:16:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 99,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "2906:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "2886:37:0"
+                  },
+                  "returnParameters": {
+                    "id": 102,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "2932:0:0"
+                  },
+                  "scope": 162,
+                  "src": "2857:76:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 104,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "2939:80:0",
+                    "text": "@notice Sets equilibration units parameter for L1 price adjustment algorithm"
+                  },
+                  "functionSelector": "152db696",
+                  "id": 109,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL1PricingEquilibrationUnits",
+                  "nameLocation": "3033:30:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 107,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 106,
+                        "mutability": "mutable",
+                        "name": "equilibrationUnits",
+                        "nameLocation": "3072:18:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 109,
+                        "src": "3064:26:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 105,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3064:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3063:28:0"
+                  },
+                  "returnParameters": {
+                    "id": 108,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "3100:0:0"
+                  },
+                  "scope": 162,
+                  "src": "3024:77:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 110,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "3107:68:0",
+                    "text": "@notice Sets inertia parameter for L1 price adjustment algorithm"
+                  },
+                  "functionSelector": "775a82e9",
+                  "id": 115,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL1PricingInertia",
+                  "nameLocation": "3189:19:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 113,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 112,
+                        "mutability": "mutable",
+                        "name": "inertia",
+                        "nameLocation": "3216:7:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 115,
+                        "src": "3209:14:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 111,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3209:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3208:16:0"
+                  },
+                  "returnParameters": {
+                    "id": 114,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "3233:0:0"
+                  },
+                  "scope": 162,
+                  "src": "3180:54:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 116,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "3240:75:0",
+                    "text": "@notice Sets reward recipient address for L1 price adjustment algorithm"
+                  },
+                  "functionSelector": "934be07d",
+                  "id": 121,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL1PricingRewardRecipient",
+                  "nameLocation": "3329:27:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 119,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 118,
+                        "mutability": "mutable",
+                        "name": "recipient",
+                        "nameLocation": "3365:9:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 121,
+                        "src": "3357:17:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 117,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3357:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3356:19:0"
+                  },
+                  "returnParameters": {
+                    "id": 120,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "3384:0:0"
+                  },
+                  "scope": 162,
+                  "src": "3320:65:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 122,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "3391:81:0",
+                    "text": "@notice Sets reward amount for L1 price adjustment algorithm, in wei per unit"
+                  },
+                  "functionSelector": "f6739500",
+                  "id": 127,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL1PricingRewardRate",
+                  "nameLocation": "3486:22:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 125,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 124,
+                        "mutability": "mutable",
+                        "name": "weiPerUnit",
+                        "nameLocation": "3516:10:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 127,
+                        "src": "3509:17:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 123,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3509:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3508:19:0"
+                  },
+                  "returnParameters": {
+                    "id": 126,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "3536:0:0"
+                  },
+                  "scope": 162,
+                  "src": "3477:60:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 128,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "3543:76:0",
+                    "text": "@notice Set how much ArbOS charges per L1 gas spent on transaction data."
+                  },
+                  "functionSelector": "2b352fae",
+                  "id": 133,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setL1PricePerUnit",
+                  "nameLocation": "3633:17:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 131,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 130,
+                        "mutability": "mutable",
+                        "name": "pricePerUnit",
+                        "nameLocation": "3659:12:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 133,
+                        "src": "3651:20:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 129,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3651:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3650:22:0"
+                  },
+                  "returnParameters": {
+                    "id": 132,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "3681:0:0"
+                  },
+                  "scope": 162,
+                  "src": "3624:58:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 134,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "3688:97:0",
+                    "text": "@notice Sets the base charge (in L1 gas) attributed to each data batch in the calldata pricer"
+                  },
+                  "functionSelector": "fad7f20b",
+                  "id": 139,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setPerBatchGasCharge",
+                  "nameLocation": "3799:20:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 137,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 136,
+                        "mutability": "mutable",
+                        "name": "cost",
+                        "nameLocation": "3826:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 139,
+                        "src": "3820:10:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_int64",
+                          "typeString": "int64"
+                        },
+                        "typeName": {
+                          "id": 135,
+                          "name": "int64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3820:5:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_int64",
+                            "typeString": "int64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3819:12:0"
+                  },
+                  "returnParameters": {
+                    "id": 138,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "3840:0:0"
+                  },
+                  "scope": 162,
+                  "src": "3790:51:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 140,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "3847:58:0",
+                    "text": "@notice Sets the cost amortization cap in basis points"
+                  },
+                  "functionSelector": "56191cc3",
+                  "id": 145,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "setAmortizedCostCapBips",
+                  "nameLocation": "3919:23:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 143,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 142,
+                        "mutability": "mutable",
+                        "name": "cap",
+                        "nameLocation": "3950:3:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 145,
+                        "src": "3943:10:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        },
+                        "typeName": {
+                          "id": 141,
+                          "name": "uint64",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "3943:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint64",
+                            "typeString": "uint64"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "3942:12:0"
+                  },
+                  "returnParameters": {
+                    "id": 144,
+                    "nodeType": "ParameterList",
+                    "parameters": [],
+                    "src": "3963:0:0"
+                  },
+                  "scope": 162,
+                  "src": "3910:54:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "documentation": {
+                    "id": 146,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "3970:72:0",
+                    "text": "@notice Releases surplus funds from L1PricerFundsPoolAddress for use"
+                  },
+                  "functionSelector": "314bcf05",
+                  "id": 153,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "releaseL1PricerSurplusFunds",
+                  "nameLocation": "4056:27:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 149,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 148,
+                        "mutability": "mutable",
+                        "name": "maxWeiToRelease",
+                        "nameLocation": "4092:15:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 153,
+                        "src": "4084:23:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 147,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4084:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "4083:25:0"
+                  },
+                  "returnParameters": {
+                    "id": 152,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 151,
+                        "mutability": "mutable",
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 153,
+                        "src": "4127:7:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "typeName": {
+                          "id": 150,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4127:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "4126:9:0"
+                  },
+                  "scope": 162,
+                  "src": "4047:89:0",
+                  "stateMutability": "nonpayable",
+                  "virtual": false,
+                  "visibility": "external"
+                },
+                {
+                  "anonymous": false,
+                  "id": 161,
+                  "name": "OwnerActs",
+                  "nameLocation": "4213:9:0",
+                  "nodeType": "EventDefinition",
+                  "parameters": {
+                    "id": 160,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 155,
+                        "indexed": true,
+                        "mutability": "mutable",
+                        "name": "method",
+                        "nameLocation": "4238:6:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 161,
+                        "src": "4223:21:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes4",
+                          "typeString": "bytes4"
+                        },
+                        "typeName": {
+                          "id": 154,
+                          "name": "bytes4",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4223:6:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes4",
+                            "typeString": "bytes4"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 157,
+                        "indexed": true,
+                        "mutability": "mutable",
+                        "name": "owner",
+                        "nameLocation": "4262:5:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 161,
+                        "src": "4246:21:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "typeName": {
+                          "id": 156,
+                          "name": "address",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4246:7:0",
+                          "stateMutability": "nonpayable",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "visibility": "internal"
+                      },
+                      {
+                        "constant": false,
+                        "id": 159,
+                        "indexed": false,
+                        "mutability": "mutable",
+                        "name": "data",
+                        "nameLocation": "4275:4:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 161,
+                        "src": "4269:10:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes_memory_ptr",
+                          "typeString": "bytes"
+                        },
+                        "typeName": {
+                          "id": 158,
+                          "name": "bytes",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "4269:5:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes_storage_ptr",
+                            "typeString": "bytes"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "4222:58:0"
+                  },
+                  "src": "4207:74:0"
+                }
+              ],
+              "scope": 163,
+              "src": "932:3351:0",
+              "usedErrors": []
+            }
+          ],
+          "src": "159:4125:0"
+        },
+        "id": 0
+      }
+    }
+  }
+}

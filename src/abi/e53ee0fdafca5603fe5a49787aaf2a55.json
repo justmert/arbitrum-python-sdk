@@ -1,0 +1,482 @@
+{
+  "id": "e53ee0fdafca5603fe5a49787aaf2a55",
+  "_format": "hh-sol-build-info-1",
+  "solcVersion": "0.8.9",
+  "solcLongVersion": "0.8.9+commit.e5eed63a",
+  "input": {
+    "language": "Solidity",
+    "sources": {
+      "src/node-interface/NodeInterfaceDebug.sol": {
+        "content": "// Copyright 2021-2022, Offchain Labs, Inc.\n// For license information, see https://github.com/nitro/blob/master/LICENSE\n// SPDX-License-Identifier: BUSL-1.1\n\npragma solidity >=0.4.21 <0.9.0;\n\n/** @title An extension to NodeInterface not meant for public consumption. Do not call.\n *  @notice This contract doesn't exist on-chain. Instead it is a virtual interface accessible at 0xc9.\n *  These methods add additional debugging and network monitoring instruments not intended for end users and\n *  as such may change without notice.\n */\n\ninterface NodeInterfaceDebug {\n    struct RetryableInfo {\n        uint64 timeout;\n        address from;\n        address to;\n        uint256 value;\n        address beneficiary;\n        uint64 tries;\n        bytes data;\n    }\n\n    /**\n     * @notice gets a retryable\n     * @param ticket the retryable's id\n     * @return retryable the serialized retryable\n     */\n    function getRetryable(bytes32 ticket) external view returns (RetryableInfo memory retryable);\n}\n"
+      }
+    },
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 100
+      },
+      "outputSelection": {
+        "*": {
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ],
+          "": [
+            "ast"
+          ]
+        }
+      }
+    }
+  },
+  "output": {
+    "contracts": {
+      "src/node-interface/NodeInterfaceDebug.sol": {
+        "NodeInterfaceDebug": {
+          "abi": [
+            {
+              "inputs": [
+                {
+                  "internalType": "bytes32",
+                  "name": "ticket",
+                  "type": "bytes32"
+                }
+              ],
+              "name": "getRetryable",
+              "outputs": [
+                {
+                  "components": [
+                    {
+                      "internalType": "uint64",
+                      "name": "timeout",
+                      "type": "uint64"
+                    },
+                    {
+                      "internalType": "address",
+                      "name": "from",
+                      "type": "address"
+                    },
+                    {
+                      "internalType": "address",
+                      "name": "to",
+                      "type": "address"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "value",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "address",
+                      "name": "beneficiary",
+                      "type": "address"
+                    },
+                    {
+                      "internalType": "uint64",
+                      "name": "tries",
+                      "type": "uint64"
+                    },
+                    {
+                      "internalType": "bytes",
+                      "name": "data",
+                      "type": "bytes"
+                    }
+                  ],
+                  "internalType": "struct NodeInterfaceDebug.RetryableInfo",
+                  "name": "retryable",
+                  "type": "tuple"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            }
+          ],
+          "evm": {
+            "bytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "deployedBytecode": {
+              "functionDebugData": {},
+              "generatedSources": [],
+              "immutableReferences": {},
+              "linkReferences": {},
+              "object": "",
+              "opcodes": "",
+              "sourceMap": ""
+            },
+            "methodIdentifiers": {
+              "getRetryable(bytes32)": "4d7953ad"
+            }
+          },
+          "metadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"ticket\",\"type\":\"bytes32\"}],\"name\":\"getRetryable\",\"outputs\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"timeout\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"beneficiary\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"tries\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"internalType\":\"struct NodeInterfaceDebug.RetryableInfo\",\"name\":\"retryable\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"getRetryable(bytes32)\":{\"params\":{\"ticket\":\"the retryable's id\"},\"returns\":{\"retryable\":\"the serialized retryable\"}}},\"title\":\"An extension to NodeInterface not meant for public consumption. Do not call.\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getRetryable(bytes32)\":{\"notice\":\"gets a retryable\"}},\"notice\":\"This contract doesn't exist on-chain. Instead it is a virtual interface accessible at 0xc9.  These methods add additional debugging and network monitoring instruments not intended for end users and  as such may change without notice.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/node-interface/NodeInterfaceDebug.sol\":\"NodeInterfaceDebug\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"src/node-interface/NodeInterfaceDebug.sol\":{\"keccak256\":\"0x5747bef534cbade65dfb8f1b9d55077ac38c6b0501ca426849d0f1643ddcb265\",\"license\":\"BUSL-1.1\",\"urls\":[\"bzz-raw://327715eecfea77fe7b8104a90513f4f6e34e5a3bf86e65775cdfbc1c64bfa729\",\"dweb:/ipfs/Qmdwjek6AyZduBhbpQu3LjzCPmpqMtJJnjYg76Mr6qUWNz\"]}},\"version\":1}"
+        }
+      }
+    },
+    "sources": {
+      "src/node-interface/NodeInterfaceDebug.sol": {
+        "ast": {
+          "absolutePath": "src/node-interface/NodeInterfaceDebug.sol",
+          "exportedSymbols": {
+            "NodeInterfaceDebug": [
+              27
+            ]
+          },
+          "id": 28,
+          "license": "BUSL-1.1",
+          "nodeType": "SourceUnit",
+          "nodes": [
+            {
+              "id": 1,
+              "literals": [
+                "solidity",
+                ">=",
+                "0.4",
+                ".21",
+                "<",
+                "0.9",
+                ".0"
+              ],
+              "nodeType": "PragmaDirective",
+              "src": "159:32:0"
+            },
+            {
+              "abstract": false,
+              "baseContracts": [],
+              "canonicalName": "NodeInterfaceDebug",
+              "contractDependencies": [],
+              "contractKind": "interface",
+              "documentation": {
+                "id": 2,
+                "nodeType": "StructuredDocumentation",
+                "src": "193:343:0",
+                "text": "@title An extension to NodeInterface not meant for public consumption. Do not call.\n  @notice This contract doesn't exist on-chain. Instead it is a virtual interface accessible at 0xc9.\n  These methods add additional debugging and network monitoring instruments not intended for end users and\n  as such may change without notice."
+              },
+              "fullyImplemented": false,
+              "id": 27,
+              "linearizedBaseContracts": [
+                27
+              ],
+              "name": "NodeInterfaceDebug",
+              "nameLocation": "548:18:0",
+              "nodeType": "ContractDefinition",
+              "nodes": [
+                {
+                  "canonicalName": "NodeInterfaceDebug.RetryableInfo",
+                  "id": 17,
+                  "members": [
+                    {
+                      "constant": false,
+                      "id": 4,
+                      "mutability": "mutable",
+                      "name": "timeout",
+                      "nameLocation": "611:7:0",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 17,
+                      "src": "604:14:0",
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint64",
+                        "typeString": "uint64"
+                      },
+                      "typeName": {
+                        "id": 3,
+                        "name": "uint64",
+                        "nodeType": "ElementaryTypeName",
+                        "src": "604:6:0",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        }
+                      },
+                      "visibility": "internal"
+                    },
+                    {
+                      "constant": false,
+                      "id": 6,
+                      "mutability": "mutable",
+                      "name": "from",
+                      "nameLocation": "636:4:0",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 17,
+                      "src": "628:12:0",
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      },
+                      "typeName": {
+                        "id": 5,
+                        "name": "address",
+                        "nodeType": "ElementaryTypeName",
+                        "src": "628:7:0",
+                        "stateMutability": "nonpayable",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        }
+                      },
+                      "visibility": "internal"
+                    },
+                    {
+                      "constant": false,
+                      "id": 8,
+                      "mutability": "mutable",
+                      "name": "to",
+                      "nameLocation": "658:2:0",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 17,
+                      "src": "650:10:0",
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      },
+                      "typeName": {
+                        "id": 7,
+                        "name": "address",
+                        "nodeType": "ElementaryTypeName",
+                        "src": "650:7:0",
+                        "stateMutability": "nonpayable",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        }
+                      },
+                      "visibility": "internal"
+                    },
+                    {
+                      "constant": false,
+                      "id": 10,
+                      "mutability": "mutable",
+                      "name": "value",
+                      "nameLocation": "678:5:0",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 17,
+                      "src": "670:13:0",
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      },
+                      "typeName": {
+                        "id": 9,
+                        "name": "uint256",
+                        "nodeType": "ElementaryTypeName",
+                        "src": "670:7:0",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      },
+                      "visibility": "internal"
+                    },
+                    {
+                      "constant": false,
+                      "id": 12,
+                      "mutability": "mutable",
+                      "name": "beneficiary",
+                      "nameLocation": "701:11:0",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 17,
+                      "src": "693:19:0",
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      },
+                      "typeName": {
+                        "id": 11,
+                        "name": "address",
+                        "nodeType": "ElementaryTypeName",
+                        "src": "693:7:0",
+                        "stateMutability": "nonpayable",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        }
+                      },
+                      "visibility": "internal"
+                    },
+                    {
+                      "constant": false,
+                      "id": 14,
+                      "mutability": "mutable",
+                      "name": "tries",
+                      "nameLocation": "729:5:0",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 17,
+                      "src": "722:12:0",
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint64",
+                        "typeString": "uint64"
+                      },
+                      "typeName": {
+                        "id": 13,
+                        "name": "uint64",
+                        "nodeType": "ElementaryTypeName",
+                        "src": "722:6:0",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint64",
+                          "typeString": "uint64"
+                        }
+                      },
+                      "visibility": "internal"
+                    },
+                    {
+                      "constant": false,
+                      "id": 16,
+                      "mutability": "mutable",
+                      "name": "data",
+                      "nameLocation": "750:4:0",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 17,
+                      "src": "744:10:0",
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_bytes_storage_ptr",
+                        "typeString": "bytes"
+                      },
+                      "typeName": {
+                        "id": 15,
+                        "name": "bytes",
+                        "nodeType": "ElementaryTypeName",
+                        "src": "744:5:0",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes_storage_ptr",
+                          "typeString": "bytes"
+                        }
+                      },
+                      "visibility": "internal"
+                    }
+                  ],
+                  "name": "RetryableInfo",
+                  "nameLocation": "580:13:0",
+                  "nodeType": "StructDefinition",
+                  "scope": 27,
+                  "src": "573:188:0",
+                  "visibility": "public"
+                },
+                {
+                  "documentation": {
+                    "id": 18,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "767:133:0",
+                    "text": " @notice gets a retryable\n @param ticket the retryable's id\n @return retryable the serialized retryable"
+                  },
+                  "functionSelector": "4d7953ad",
+                  "id": 26,
+                  "implemented": false,
+                  "kind": "function",
+                  "modifiers": [],
+                  "name": "getRetryable",
+                  "nameLocation": "914:12:0",
+                  "nodeType": "FunctionDefinition",
+                  "parameters": {
+                    "id": 21,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 20,
+                        "mutability": "mutable",
+                        "name": "ticket",
+                        "nameLocation": "935:6:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 26,
+                        "src": "927:14:0",
+                        "stateVariable": false,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        },
+                        "typeName": {
+                          "id": 19,
+                          "name": "bytes32",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "927:7:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes32",
+                            "typeString": "bytes32"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "926:16:0"
+                  },
+                  "returnParameters": {
+                    "id": 25,
+                    "nodeType": "ParameterList",
+                    "parameters": [
+                      {
+                        "constant": false,
+                        "id": 24,
+                        "mutability": "mutable",
+                        "name": "retryable",
+                        "nameLocation": "987:9:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 26,
+                        "src": "966:30:0",
+                        "stateVariable": false,
+                        "storageLocation": "memory",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_RetryableInfo_$17_memory_ptr",
+                          "typeString": "struct NodeInterfaceDebug.RetryableInfo"
+                        },
+                        "typeName": {
+                          "id": 23,
+                          "nodeType": "UserDefinedTypeName",
+                          "pathNode": {
+                            "id": 22,
+                            "name": "RetryableInfo",
+                            "nodeType": "IdentifierPath",
+                            "referencedDeclaration": 17,
+                            "src": "966:13:0"
+                          },
+                          "referencedDeclaration": 17,
+                          "src": "966:13:0",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_struct$_RetryableInfo_$17_storage_ptr",
+                            "typeString": "struct NodeInterfaceDebug.RetryableInfo"
+                          }
+                        },
+                        "visibility": "internal"
+                      }
+                    ],
+                    "src": "965:32:0"
+                  },
+                  "scope": 27,
+                  "src": "905:93:0",
+                  "stateMutability": "view",
+                  "virtual": false,
+                  "visibility": "external"
+                }
+              ],
+              "scope": 28,
+              "src": "538:462:0",
+              "usedErrors": []
+            }
+          ],
+          "src": "159:842:0"
+        },
+        "id": 0
+      }
+    }
+  }
+}
