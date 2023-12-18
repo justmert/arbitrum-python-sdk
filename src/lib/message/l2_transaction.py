@@ -4,13 +4,13 @@ from decimal import Decimal
 from typing import List, Optional, Any, Callable
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.data_entities.signer_or_provider import (
-    SignerProviderUtils,
-    SignerOrProvider,
+    SignerProviderUtils, SignerOrProvider
 )
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.utils.helper import load_contract
 from src.lib.utils.arb_provider import ArbitrumProvider
+from src.lib.message.l2_to_l1_message import L2ToL1Message
 
 
 class RedeemTransaction:
