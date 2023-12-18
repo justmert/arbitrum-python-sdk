@@ -1,16 +1,12 @@
 import asyncio
-from web3 import Web3, HTTPProvider
+from web3 import Web3
 from web3.exceptions import TimeExhausted
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import l2_networks
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS
 from .arb_provider import ArbitrumProvider
-from web3.contract import Contract
 import json
 
-# Assuming you have the ABI for ArbSys in a JSON file
-with open('path_to_your_abi_file.json') as f:
-    ARBSYS_ABI = json.load(f)
 
 # Create a contract instance
 def get_contract_instance(web3_provider: Web3, contract_address: str, contract_abi: dict):
@@ -44,14 +40,15 @@ def is_defined(val):
 
 async def is_arbitrum_chain(web3_instance):
     try:
-        arb_sys_contract = web3_instance.eth.contract(address=Web3.toChecksumAddress(ARB_SYS_ADDRESS), abi=ArbSysABI)
+        # Assuming you have the ABI for ArbSys in a JSON file
+        with open('src/abi/ArbSys.json') as f:
+            ARBSYS_ABI = json.load(f)
+        arb_sys_contract = web3_instance.eth.contract(address=Web3.toChecksumAddress(ARB_SYS_ADDRESS), abi=ARBSYS_ABI)
         await arb_sys_contract.functions.arbOSVersion().call()
         return True
     except Exception:
         return False
 
-
-from web3 import Web3
 
 async def get_first_block_for_l1_block(provider, for_l1_block, allow_greater=False, min_l2_block=None, max_l2_block='latest'):
     if not await is_arbitrum_chain(provider):

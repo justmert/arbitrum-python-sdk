@@ -2,6 +2,12 @@ from web3 import Web3
 from web3.providers import BaseProvider
 from eth_account.signers.local import LocalAccount
 from .errors import ArbSdkError, MissingProviderArbSdkError
+from web3.providers import BaseProvider
+from eth_account.signers.local import LocalAccount
+from typing import Union
+
+SignerOrProvider = Union[LocalAccount, BaseProvider]
+
 
 class SignerProviderUtils:
     @staticmethod
@@ -21,7 +27,7 @@ class SignerProviderUtils:
     def get_provider_or_throw(signer_or_provider):
         provider = SignerProviderUtils.get_provider(signer_or_provider)
         if not provider:
-            raise MissingProviderArbSdkError('signerOrProvider')
+            raise MissingProviderArbSdkError('signer_or_provider')
         return provider
 
     @staticmethod
@@ -32,7 +38,7 @@ class SignerProviderUtils:
     async def check_network_matches(signer_or_provider, chain_id):
         provider = SignerProviderUtils.get_provider(signer_or_provider)
         if not provider:
-            raise MissingProviderArbSdkError('signerOrProvider')
+            raise MissingProviderArbSdkError('signer_or_provider')
 
         provider_chain_id = await Web3(provider).eth.chain_id
         if provider_chain_id != chain_id:

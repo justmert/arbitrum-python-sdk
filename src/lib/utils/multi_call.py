@@ -1,6 +1,5 @@
 import json
 from web3 import Web3
-from web3.contract import Contract
 from src.lib.data_entities.networks import l1_networks, l2_networks
 from src.lib.data_entities.errors import ArbSdkError
 
@@ -12,29 +11,28 @@ class MultiCaller:
 
     @staticmethod
     async def from_provider(provider: Web3):
-        chain_id = await provider.eth.chain_id
+        chain_id = provider.eth.chain_id
 
         # Determine whether the network is L1 or L2 and find the network data
         l2_network = l2_networks.get(chain_id)
         l1_network = l1_networks.get(chain_id) if not l2_network else None
-
         if not l2_network and not l1_network:
             raise ArbSdkError(f"Unexpected network id: {chain_id}. Ensure that chain {chain_id} has been added as a network.")
 
         # Find the multicall address based on the network
         if l1_network:
-            partner_chain_id = l1_network['partnerChainIDs'][0]
+            partner_chain_id = l1_network.partner_chain_ids[0]
             first_l2 = l2_networks.get(partner_chain_id)
             if not first_l2:
-                raise ArbSdkError(f"No partner chain found for L1 network: {chain_id}. Partner chain IDs: {l1_network['partnerChainIDs']}")
-            multi_call_addr = first_l2['tokenBridge']['l1MultiCall']
+                raise ArbSdkError(f"No partner chain found for L1 network: {chain_id}. Partner chain IDs: {l1_network.partner_chain_ids}")
+            multi_call_addr = first_l2.token_bridge.l1_multi_call
         else:
-            multi_call_addr = l2_network['tokenBridge']['l2Multicall']
+            multi_call_addr = l2_network.token_bridge.l2_multi_call
 
         return MultiCaller(provider, multi_call_addr)
 
     def get_block_number_input(self):
-        with open('path/to/Multicall2.json', 'r') as file:
+        with open('src/abi/classic/Multicall2.json', 'r') as file:
             contract_data = json.load(file)
             abi = contract_data['abi']
             contract = self.provider.eth.contract(address=self.address, abi=abi)
@@ -46,7 +44,7 @@ class MultiCaller:
         }
 
     def get_current_block_timestamp_input(self):
-        with open('path/to/Multicall2.json', 'r') as file:
+        with open('src/abi/classic/Multicall2.json', 'r') as file:
             contract_data = json.load(file)
             abi = contract_data['abi']
             contract = self.provider.eth.contract(address=self.address, abi=abi)
@@ -58,7 +56,7 @@ class MultiCaller:
         }
 
     async def multi_call(self, params, require_success=False):
-        with open('path/to/Multicall2.json', 'r') as file:
+        with open('src/abi/classic/Multicall2.json', 'r') as file:
             contract_data = json.load(file)
             abi = contract_data['abi']
             contract = self.provider.eth.contract(address=self.address, abi=abi)
@@ -73,12 +71,13 @@ class MultiCaller:
             options = {'name': True}
 
         # Load ERC20 contract ABI
-        with open('path/to/ERC20.json', 'r') as file:
+        with open('src/abi/classic/ERC20.json', 'r') as file:
             erc20_abi = json.load(file)['abi']
         
         erc20_contract = self.provider.eth.contract(abi=erc20_abi)
 
         inputs = []
+        print("tttt",erc20_contract)
         for address in erc20_addresses:
             if options.get('balanceOf'):
                 account = options['balanceOf']['account']

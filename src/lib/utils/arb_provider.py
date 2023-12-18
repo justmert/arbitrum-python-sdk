@@ -1,7 +1,6 @@
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
-from web3.types import TxReceipt, BlockData, BlockDataWithTx
-from rpc import ArbBlock, ArbBlockWithTransactions, ArbTransactionReceipt
+from src.lib.data_entities.rpc import ArbBlock, ArbBlockWithTransactions, ArbTransactionReceipt
 
 class ArbFormatter:
     def receipt(self, value):
@@ -17,8 +16,8 @@ class ArbFormatter:
         return ArbBlockWithTransactions(**block)
 
 class ArbitrumProvider:
-    def __init__(self, provider_url, network=None):
-        self.w3 = Web3(Web3.HTTPProvider(provider_url))
+    def __init__(self, provider, network=None):
+        self.w3 = provider
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         self.formatter = ArbFormatter()
 

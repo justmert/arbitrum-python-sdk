@@ -64,8 +64,8 @@ class TokenBridge:
         l1_weth,
         l1_proxy_admin,
         l2_proxy_admin,
-        l1_multicall,
-        l2_multicall,
+        l1_multi_call,
+        l2_multi_call,
     ):
         self.l1_gateway_router = l1_gateway_router
         self.l2_gateway_router = l2_gateway_router
@@ -79,8 +79,8 @@ class TokenBridge:
         self.l1_weth = l1_weth
         self.l1_proxy_admin = l1_proxy_admin
         self.l2_proxy_admin = l2_proxy_admin
-        self.l1_multicall = l1_multicall
-        self.l2_multicall = l2_multicall
+        self.l1_multi_call = l1_multi_call
+        self.l2_multi_call = l2_multi_call
 
 
 class EthBridge:
@@ -109,8 +109,8 @@ mainnet_token_bridge = TokenBridge(
     l1_weth="0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     l1_proxy_admin="0x9aD46fac0Cf7f790E5be05A0F15223935A0c0aDa",
     l2_proxy_admin="0xd570aCE65C43af47101fC6250FD6fC63D1c22a86",
-    l1_multicall="0x5ba1e12693dc8f9c48aad8770482f4739beed696",
-    l2_multicall="0x842eC2c7D803033Edf55E478F461FC547Bc54EB2",
+    l1_multi_call="0x5ba1e12693dc8f9c48aad8770482f4739beed696",
+    l2_multi_call="0x842eC2c7D803033Edf55E478F461FC547Bc54EB2",
 )
 
 mainnet_eth_bridge = EthBridge(
@@ -200,8 +200,8 @@ l2_networks = {
             l1_weth="0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
             l1_proxy_admin="0x16101A84B00344221E2983190718bFAba30D9CeE",
             l2_proxy_admin="0xeC377B42712608B0356CC54Da81B2be1A4982bAb",
-            l1_multicall="0xa0A8537a683B49ba4bbE23883d984d4684e0acdD",
-            l2_multicall="0x108B25170319f38DbED14cA9716C54E5D1FF4623",
+            l1_multi_call="0xa0A8537a683B49ba4bbE23883d984d4684e0acdD",
+            l2_multi_call="0x108B25170319f38DbED14cA9716C54E5D1FF4623",
         ),
         eth_bridge=EthBridge(
             bridge="0xaf4159A80B6Cc41ED517DB1c453d1Ef5C2e4dB72",
@@ -236,8 +236,8 @@ l2_networks = {
             l1_weth="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
             l1_proxy_admin="0xa8f7DdEd54a726eB873E98bFF2C95ABF2d03e560",
             l2_proxy_admin="0xada790b026097BfB36a5ed696859b97a96CEd92C",
-            l1_multicall="0x8896D23AfEA159a5e9b72C9Eb3DC4E2684A38EA3",
-            l2_multicall="0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86",
+            l1_multi_call="0x8896D23AfEA159a5e9b72C9Eb3DC4E2684A38EA3",
+            l2_multi_call="0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86",
         ),
         eth_bridge=EthBridge(
             bridge="0xaf4159A80B6Cc41ED517DB1c453d1Ef5C2e4dB72",
@@ -272,8 +272,8 @@ l2_networks = {
             l1_weth="0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
             l1_proxy_admin="0xDBFC2FfB44A5D841aB42b0882711ed6e5A9244b0",
             l2_proxy_admin="0x715D99480b77A8d9D603638e593a539E21345FdF",
-            l1_multicall="0xded9AD2E65F3c4315745dD915Dbe0A4Df61b2320",
-            l2_multicall="0xA115146782b7143fAdB3065D86eACB54c169d092",
+            l1_multi_call="0xded9AD2E65F3c4315745dD915Dbe0A4Df61b2320",
+            l2_multi_call="0xA115146782b7143fAdB3065D86eACB54c169d092",
         ),
         eth_bridge=EthBridge(
             bridge="0x38f918D0E9F1b721EDaA41302E399fa1B79333a9",
@@ -308,8 +308,8 @@ l2_networks = {
             l1_weth="0x980B62Da83eFf3D4576C647993b0c1D7faf17c73",
             l1_proxy_admin="0xB9E77732f32831f09e2a50D6E71B2Cca227544bf",
             l2_proxy_admin="0xE914c0d417E8250d0237d2F4827ed3612e6A9C3B",
-            l1_multicall="0xBEbe3BfBF52FFEA965efdb3f14F2101c0264c940",
-            l2_multicall="0xEb4A260FD16aaf18c04B1aeaDFE20E622e549bd3",
+            l1_multi_call="0xBEbe3BfBF52FFEA965efdb3f14F2101c0264c940",
+            l2_multi_call="0xEb4A260FD16aaf18c04B1aeaDFE20E622e549bd3",
         ),
         eth_bridge=EthBridge(
             bridge="0x35aa95ac4747D928E2Cd42FE4461F6D9d1826346",
