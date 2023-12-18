@@ -1,5 +1,7 @@
+from mock import call
 from web3 import Web3
 from eth_utils import to_checksum_address, big_endian_to_int
+from eth_abi import decode_abi
 
 
 class SubmitRetryableMessageDataParser:
@@ -10,19 +12,9 @@ class SubmitRetryableMessageDataParser:
     @staticmethod
     def parse(event_data):
         # Assuming event_data is a hex string
-        decoded_data = Web3.solidity_decode(
-            [
-                'uint256',  # dest
-                'uint256',  # l2 call value
-                'uint256',  # msg val
-                'uint256',  # max submission
-                'uint256',  # excess fee refund addr
-                'uint256',  # call value refund addr
-                'uint256',  # max gas
-                'uint256',  # gas price bid
-                'uint256',  # data length
-            ],
-            event_data
+        decoded_data = decode_abi(
+            ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+            Web3.toBytes(hexstr=event_data)
         )
 
         def address_from_big_number(bn):
@@ -38,10 +30,8 @@ class SubmitRetryableMessageDataParser:
         gas_limit = decoded_data[6]
         max_fee_per_gas = decoded_data[7]
         call_data_length = decoded_data[8]
-
-        # Extracting call data
-        data = '0x' + event_data[-call_data_length * 2:]
-
+        data_offset = len(event_data) - 2 * call_data_length  # 2 characters per byte
+        data = '0x' + event_data[data_offset:]
         return {
             'destAddress': dest_address,
             'l2CallValue': l2_call_value,

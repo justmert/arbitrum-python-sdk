@@ -4,6 +4,7 @@ from web3 import Web3
 import json
 import asyncio
 from .signer_or_provider import SignerProviderUtils
+import os
 
 class Network:
     def __init__(self, chain_id, name, explorer_url, is_custom, gif=None):
@@ -354,32 +355,24 @@ def get_l2_network(signer_or_provider_or_chain_id):
 def get_eth_bridge_information(rollup_contract_address, l1_signer_or_provider):
     
     # Load ABI from JSON file
-    
-    with open('../../abi/RollupAdminLogic.json', 'r') as file:
+    with open('src/abi/RollupAdminLogic.json', 'r') as file:
         contract_data = json.load(file)
         abi = contract_data['abi']
 
-    # Create a Web3 instance and contract
-    web3_instance = Web3(Web3.HTTPProvider('http://127.0.0.1:7545'))  # Adjust provider as necessary
-    rollup = web3_instance.eth.contract(address=rollup_contract_address, abi=abi)
+    rollup = l1_signer_or_provider.eth.contract(address=rollup_contract_address, abi=abi)
 
+    bridge = rollup.functions.bridge().call()
+    inbox = rollup.functions.inbox().call()
+    sequencer_inbox = rollup.functions.sequencerInbox().call()
+    outbox = rollup.functions.outbox().call()
 
-    bridge = rollup.bridge()
-    inbox = rollup.inbox()
-    sequencer_inbox = rollup.sequencer_inbox()
-    outbox = rollup.outbox()
-
-    # , inbox, sequencer_inbox, outbox = 
-    #     , rollup.inbox(), rollup.sequencer_inbox(), rollup.outbox()
-    # )
-
-    return {
-        "bridge": bridge,
-        "inbox": inbox,
-        "sequencer_inbox": sequencer_inbox,
-        "outbox": outbox,
-        "rollup": rollup_contract_address,
-    }
+    return EthBridge(
+        bridge=bridge,
+        inbox=inbox,
+        sequencer_inbox=sequencer_inbox,
+        outbox=outbox,
+        rollup=rollup_contract_address,
+    )
 
 
 def add_custom_network(custom_l1_network, custom_l2_network):
