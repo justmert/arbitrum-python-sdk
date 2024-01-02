@@ -1,7 +1,7 @@
 # Import necessary libraries
 from web3 import Web3
 from web3.contract import Contract
-from web3.types import TxReceipt, Log, TxParams
+from web3.types import TxReceipt, TxParams
 from typing import List, Optional, Tuple, Type
 from decimal import Decimal
 from eth_typing.evm import ChecksumAddress
@@ -9,14 +9,9 @@ from eth_typing.evm import ChecksumAddress
 # Assuming the existence of relevant modules and classes in the same project structure
 from .l1_to_l2_message import (
     L1ToL2Message,
-    L1ToL2MessageReaderOrWriter,
-    L1ToL2MessageReader,
     L1ToL2MessageReaderClassic,
-    L1ToL2MessageWriter,
     L1ToL2MessageStatus,
-    L1ToL2MessageWaitResult,
     EthDepositMessage,
-    EthDepositMessageWaitResult,
 )
 
 
@@ -36,12 +31,12 @@ from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.lib import is_defined
 
 
-class L1TransactionReceipt(TxReceipt):
+class L1TransactionReceipt():
     """
     A Python equivalent of the TypeScript L1TransactionReceipt class.
     """
 
-    def __init__(self, tx: TxReceipt, event_fetcher: EventFetcher):
+    def __init__(self, tx, event_fetcher: EventFetcher):
         self.to: Optional[ChecksumAddress] = tx.get("to")
         self.from_: Optional[ChecksumAddress] = tx.get("from")
         self.contract_address: Optional[ChecksumAddress] = tx.get("contractAddress")
@@ -51,7 +46,7 @@ class L1TransactionReceipt(TxReceipt):
         self.logs_bloom: str = tx.get("logsBloom")
         self.block_hash: str = tx.get("blockHash")
         self.transaction_hash: str = tx.get("transactionHash")
-        self.logs: List[Log] = tx.get("logs")
+        self.logs = tx.get("logs")
         self.block_number: int = tx.get("blockNumber")
         self.confirmations: int = tx.get("confirmations")
         self.cumulative_gas_used: Decimal = tx.get("cumulativeGasUsed")
@@ -61,15 +56,39 @@ class L1TransactionReceipt(TxReceipt):
         self.status: Optional[int] = tx.get("status")
         self.event_fetcher = event_fetcher
 
+
+    async def get_l1_to_l2_messages_classic(
+        self, l2_provider: Web3
+    ) -> List[L1ToL2MessageReaderClassic]:
+        network = get_l2_network(l2_provider)
+        chain_id = network.chain_id
+        is_classic = await self.is_classic(l2_provider)
+
+        if not is_classic:
+            raise Exception(
+                "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
+            )
+
+        message_nums = [
+            msg["messageNum"] for msg in self.get_inbox_message_delivered_events()
+        ]
+
+        return [
+            L1ToL2MessageReaderClassic(l2_provider, chain_id, message_num)
+            for message_num in message_nums
+        ]
+
     async def is_classic(self, l2_signer_or_provider: SignerOrProvider) -> bool:
         provider = SignerProviderUtils.get_provider_or_throw(l2_signer_or_provider)
-        network = await get_l2_network(provider)
+        network = get_l2_network(provider)
         return self.block_number < network.nitro_genesis_l1_block
 
     def get_message_delivered_events(self) -> List[Dict[str, Any]]:
-        return self.event_fetcher.parse_typed_logs(
+        
+        return  self.event_fetcher.parse_typed_logs(
             "Bridge", self.logs, "MessageDelivered"
         )
+        
 
     def get_inbox_message_delivered_events(self) -> List[Dict[str, Any]]:
         return self.event_fetcher.parse_typed_logs(
@@ -78,7 +97,7 @@ class L1TransactionReceipt(TxReceipt):
 
     def get_message_events(self):
         bridge_messages = self.get_message_delivered_events()
-        inbox_messages = self.getInbox_message_delivered_events()
+        inbox_messages = self.get_inbox_message_delivered_events()
 
         if len(bridge_messages) != len(inbox_messages):
             raise ArbSdkError(
@@ -112,7 +131,7 @@ class L1TransactionReceipt(TxReceipt):
         for e in messages:
             if (
                 e["bridgeMessageEvent"]["kind"]
-                == InboxMessageKind.L1MessageType_ethDeposit
+                == InboxMessageKind.L1MessageType_ethDeposit.value
             ):
                 eth_deposit_message = EthDepositMessage.from_event_components(
                     l2_provider,
@@ -124,32 +143,11 @@ class L1TransactionReceipt(TxReceipt):
 
         return eth_deposit_messages
 
-    async def get_l1_to_l2_messages_classic(
-        self, l2_provider: Web3
-    ) -> List[L1ToL2MessageReaderClassic]:
-        network = await get_l2_network(l2_provider)
-        chain_id = network.chain_id
-        is_classic = await self.is_classic(l2_provider)
-
-        if not is_classic:
-            raise Exception(
-                "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
-            )
-
-        message_nums = [
-            msg["messageNum"] for msg in self.get_inbox_message_delivered_events()
-        ]
-
-        return [
-            L1ToL2MessageReaderClassic(l2_provider, chain_id, message_num)
-            for message_num in message_nums
-        ]
-
     async def get_l1_to_l2_messages(
         self, l2_signer_or_provider: SignerOrProvider
-    ) -> List[L1ToL2MessageReaderOrWriter]:
+    ):
         provider = SignerProviderUtils.get_provider_or_throw(l2_signer_or_provider)
-        network = await get_l2_network(provider)
+        network = get_l2_network(provider)
         chain_id = network.chain_id
         is_classic = await self.is_classic(provider)
 
@@ -159,7 +157,7 @@ class L1TransactionReceipt(TxReceipt):
             )
 
         events = self.get_message_events()
-        return [
+        return  [
             L1ToL2Message.from_event_components(
                 l2_signer_or_provider,
                 chain_id,
@@ -172,10 +170,11 @@ class L1TransactionReceipt(TxReceipt):
             )
             for event in events
             if event["bridgeMessageEvent"]["kind"]
-            == InboxMessageKind.L1MessageType_submitRetryableTx
+            == InboxMessageKind.L1MessageType_submitRetryableTx.value
             and event["bridgeMessageEvent"]["inbox"].lower()
             == network.eth_bridge.inbox.lower()
         ]
+        
 
     def get_token_deposit_events(self) -> List[Dict[str, Any]]:
         return self.event_fetcher.parse_typed_logs(

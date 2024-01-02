@@ -49,7 +49,7 @@ class L1ToL2MessageCreator:
             parsed_params, l1_provider, l2_provider, options
         )
 
-        l2_network = await get_l2_network(l2_provider)
+        l2_network = get_l2_network(l2_provider)
         inbox_contract = load_contract(
             "Inbox", l2_network.eth_bridge.inbox, l1_provider
         )

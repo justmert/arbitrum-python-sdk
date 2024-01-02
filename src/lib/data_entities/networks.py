@@ -335,14 +335,20 @@ def get_network(signer_or_provider_or_chain_id, layer):
         provider = SignerProviderUtils.get_provider_or_throw(
             signer_or_provider_or_chain_id
         )
-        chain_id = provider.get_network()
+        chain_id = provider.net.version
 
     networks = l1_networks if layer == 1 else l2_networks
+    if isinstance(chain_id, str):
+        try:
+            chain_id = int(chain_id)
+        except ValueError:
+            raise ArbSdkError(f"Unrecognized network {chain_id}.")
+        
     if chain_id in networks:
         return networks[chain_id]
     else:
         raise ArbSdkError(f"Unrecognized network {chain_id}.")
-
+        
 
 def get_l1_network(signer_or_provider_or_chain_id):
     return get_network(signer_or_provider_or_chain_id, 1)
@@ -426,7 +432,7 @@ def add_default_local_network():
             inbox="0xfF4a24b22F94979E9ba5f3eb35838AA814bAD6F1",
             outbox="0x49940929c7cA9b50Ff57a01d3a92817A414E6B9B",
             rollup="0x65a59D67Da8e710Ef9A01eCa37f83f84AEdeC416",
-            sequencerInbox="0xE7362D0787b51d8C72D504803E5B1d6DcdA89540",
+            sequencer_inbox="0xE7362D0787b51d8C72D504803E5B1d6DcdA89540",
         ),
         token_bridge=TokenBridge(
             l1_custom_gateway="0x3DF948c956e14175f43670407d5796b95Bb219D8",
@@ -449,13 +455,18 @@ def add_default_local_network():
         nitro_genesis_l1_block=0,
         deposit_timeout=900000,
         is_custom=True,
+        is_arbitrum= True
     )
 
     add_custom_network(default_local_l1_network, default_local_l2_network)
     return {
-        "l1Network": default_local_l1_network,
-        "l2Network": default_local_l2_network,
+        "l1_network": default_local_l1_network,
+        "l2_network": default_local_l2_network,
     }
+
+default_local_networks = add_default_local_network()
+l1_network = default_local_networks["l1_network"]
+l2_network = default_local_networks["l2_network"]
 
 
 def is_l1_network(network):

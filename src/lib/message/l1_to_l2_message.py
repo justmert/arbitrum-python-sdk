@@ -9,7 +9,7 @@ from eth_utils import keccak, encode_hex
 import asyncio
 from web3.exceptions import TransactionNotFound
 import rlp
-from eth_utils import keccak, to_bytes, to_checksum_address, pad_left
+from eth_utils import keccak, to_bytes, to_checksum_address
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.data_entities.errors import ArbSdkError
@@ -19,9 +19,11 @@ import math
 from src.lib.data_entities.constants import ARB_RETRYABLE_TX_ADDRESS
 from web3.contract import Contract
 from src.lib.utils.helper import load_contract
-from eth_utils import keccak, to_bytes, pad_left
+from eth_utils import keccak, to_bytes
 from src.lib.message.l2_transaction import L2TransactionReceipt
+
 # Additional imports and utility functions might be required.
+from eth_utils import to_checksum_address, keccak, to_bytes
 
 
 def int_to_bytes(value: int) -> bytes:
@@ -33,9 +35,35 @@ def hex_to_bytes(value: str) -> bytes:
     return bytes.fromhex(value[2:] if value.startswith("0x") else value)
 
 
-def zero_pad(value: bytes, length: int) -> bytes:
-    # Pad the value to the left to make it the specified length
-    return pad_left(value, length, b"\0")
+# # Define your own zero padding function
+# def zero_pad(value: bytes, length: int) -> bytes:
+#     return value.rjust(length, b'\0')
+
+
+def zero_pad(value, length):
+    # Ensure value is in bytes format
+    value_bytes = to_bytes(value)
+
+    # Check if the provided value is longer than the specified length
+    if len(value_bytes) > length:
+        raise ValueError("value out of range")
+
+    # Create a byte array of the specified length filled with zeros
+    result = bytearray(length)
+
+    # Set the value at the end of the array, maintaining leading zeros
+    result[-len(value_bytes) :] = value_bytes
+
+    return bytes(result)  # Convert back to an immutable bytes object
+
+
+def format_number(value: int) -> bytes:
+    # Convert the integer to a hexadecimal string, strip leading zeros and the '0x' prefix
+    hex_value = hex(value).lstrip("0x")
+    # Convert the hexadecimal string back to an integer
+    int_value = int(hex_value, 16) if hex_value else 0
+    # Convert the integer to a byte array, adjusting for length and endianness
+    return to_bytes(int_value)
 
 
 def concat(*args) -> bytes:
@@ -87,6 +115,14 @@ class L1ToL2Message:
         )
 
     @staticmethod
+    def normalize_address(dest_address):
+        # Check if the destination address is the zero address
+        if dest_address.lower() == "0x0" or dest_address.lower() == "0x" + "0" * 40:
+            return "0x"
+        else:
+            return Web3.to_checksum_address(dest_address)
+
+    @staticmethod
     def calculate_submit_retryable_id(
         l2_chain_id,
         from_address,
@@ -102,36 +138,48 @@ class L1ToL2Message:
         max_fee_per_gas,
         data,
     ):
-        def format_number(value):
-            return to_bytes(value)
-
         chain_id = format_number(l2_chain_id)
-        msg_num = format_number(message_number)
+        msg_num = zero_pad(format_number(message_number), 32)  # 20556
+        from_addr = to_checksum_address(from_address)
+        dest_addr = "0x" if dest_address == "0x0" else to_checksum_address(dest_address)
+        call_value_refund_addr = to_checksum_address(call_value_refund_address)
+        excess_fee_refund_addr = to_checksum_address(excess_fee_refund_address)
 
+        # Prepare the list of fields for RLP encoding
         fields = [
-            pad_left(chain_id, 32, b"\0"),
-            pad_left(msg_num, 32, b"\0"),
-            to_checksum_address(from_address),
-            format_number(l1_base_fee),
-            format_number(l1_value),
-            format_number(max_fee_per_gas),
-            format_number(gas_limit),
-            "0x"
-            if dest_address == Web3.toChecksumAddress("0x0")
-            else to_checksum_address(dest_address),
-            format_number(l2_call_value),
-            to_checksum_address(call_value_refund_address),
-            format_number(max_submission_fee),
-            to_checksum_address(excess_fee_refund_address),
-            data.encode("utf-8") if isinstance(data, str) else data,
+            chain_id,
+            msg_num,
+            bytes.fromhex(from_addr[2:]),
+            format_number(l1_base_fee),  # 25249467480
+            format_number(l1_value),  # 600360471887006336
+            format_number(max_fee_per_gas),  # 300000000
+            format_number(gas_limit),  # 120166
+            bytes.fromhex(dest_addr[2:]),
+            format_number(l2_call_value),  # 600000000000000000
+            bytes.fromhex(call_value_refund_addr[2:]),
+            format_number(max_submission_fee),  # 324422087006336
+            bytes.fromhex(excess_fee_refund_addr[2:]),
+            bytes.fromhex(data[2:]),
         ]
 
-        # RLP encode the fields and prepend the type byte (0x69 for Arbitrum submit retry transactions)
+        def hex_concat(items):
+            # Concatenate items into a single hex string
+            result = "0x"
+            for item in items:
+                # Ensure each item is a hex string and strip the leading '0x'
+                item_hex = encode_hex(item) if isinstance(item, bytes) else item
+                result += item_hex[2:]
+            return result
+
+        # RLP encode the fields
         rlp_encoded = rlp.encode(fields)
-        rlp_enc_with_type = b"\x69" + rlp_encoded
+        # Concatenate '0x69' with the RLP-encoded fields
+
+        rlp_enc_with_type = hex_concat([b"\x69", rlp_encoded])
 
         # Compute the keccak256 hash
-        return keccak(rlp_enc_with_type).hex()
+        retryable_tx_id = "0x" + keccak(to_bytes(hexstr=rlp_enc_with_type)).hex()
+        return retryable_tx_id
 
     @staticmethod
     def from_event_components(
@@ -236,7 +284,7 @@ class L1ToL2MessageReader(L1ToL2Message):
             queried_range.append(outer_block_range)
 
             arb_retryable_tx_contract = self.l2_provider.eth.contract(
-                address=Web3.toChecksumAddress(ARB_RETRYABLE_TX_ADDRESS),
+                address=Web3.to_checksum_address(ARB_RETRYABLE_TX_ADDRESS),
                 abi=self.arb_retryable_tx_abi,
             )
 
@@ -317,7 +365,7 @@ class L1ToL2MessageReader(L1ToL2Message):
     async def wait_for_status(
         self, confirmations: Optional[int] = None, timeout: Optional[int] = None
     ) -> Dict[str, Union[int, Optional[TxReceipt]]]:
-        l2_network = await get_l2_network(
+        l2_network = get_l2_network(
             self.chain_id
         )  # Assuming get_l2_network is implemented
 
@@ -538,8 +586,8 @@ class EthDepositMessage:
     ):
         chain_id = Web3.toBytes(l2_chain_id).rjust(32, b"\0")
         msg_num = Web3.toBytes(message_number).rjust(32, b"\0")
-        from_addr = Web3.toBytes(hexstr=Web3.toChecksumAddress(from_address))
-        to_addr = Web3.toBytes(hexstr=Web3.toChecksumAddress(to_address))
+        from_addr = Web3.toBytes(hexstr=Web3.to_checksum_address(from_address))
+        to_addr = Web3.toBytes(hexstr=Web3.to_checksum_address(to_address))
         value_bytes = Web3.toBytes(value).rjust(32, b"\0")
 
         fields = [chain_id, msg_num, from_addr, to_addr, value_bytes]
@@ -567,7 +615,7 @@ class EthDepositMessage:
     @staticmethod
     def parse_eth_deposit_data(event_data):
         address_end = 2 + 20 * 2
-        to_address = Web3.toChecksumAddress("0x" + event_data[2:address_end])
+        to_address = Web3.to_checksum_address("0x" + event_data[2:address_end])
         value = Web3.toBytes(hexstr="0x" + event_data[address_end:])
         return {"to": to_address, "value": value}
 

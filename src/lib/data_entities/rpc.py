@@ -1,4 +1,4 @@
-from web3.types import BlockData, TxReceipt, BlockDataWithTx
+from web3.types import TxReceipt
 
 class ArbBlockProps:
     def __init__(self, send_root: str, send_count: int, l1_block_number: int):
@@ -7,12 +7,12 @@ class ArbBlockProps:
         self.l1_block_number = l1_block_number
 
 class ArbBlock(ArbBlockProps):
-    def __init__(self, send_root: str, send_count: int, l1_block_number: int, block_data: BlockData):
+    def __init__(self, send_root: str, send_count: int, l1_block_number: int, block_data):
         super().__init__(send_root, send_count, l1_block_number)
         self.block_data = block_data
 
 class ArbBlockWithTransactions(ArbBlockProps):
-    def __init__(self, send_root: str, send_count: int, l1_block_number: int, block_data_with_tx: BlockDataWithTx):
+    def __init__(self, send_root: str, send_count: int, l1_block_number: int, block_data_with_tx):
         super().__init__(send_root, send_count, l1_block_number)
         self.block_data_with_tx = block_data_with_tx
 

@@ -25,10 +25,10 @@ class SignerProviderUtils:
 
     @staticmethod
     def get_provider_or_throw(signer_or_provider):
-        provider = SignerProviderUtils.get_provider(signer_or_provider)
-        if not provider:
-            raise MissingProviderArbSdkError('signer_or_provider')
-        return provider
+        # provider = SignerProviderUtils.get_provider(signer_or_provider)
+        # if not provider:
+        #     raise MissingProviderArbSdkError('signer_or_provider')
+        return signer_or_provider
 
     @staticmethod
     def signer_has_provider(signer):

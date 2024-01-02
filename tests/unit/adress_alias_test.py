@@ -1,9 +1,8 @@
 from web3 import Web3
 import pytest
-
 # Assuming Address class is defined as needed
-from src.data_entities.address import Address
-from src.data_entities.constants import ADDRESS_ALIAS_OFFSET
+from src.lib.data_entities.address import Address
+from src.lib.data_entities.constants import ADDRESS_ALIAS_OFFSET
 
 ADDRESS_ALIAS_OFFSET_INT = int(ADDRESS_ALIAS_OFFSET, 16)
 MAX_ADDR_INT = 2**160 - 1
@@ -25,38 +24,38 @@ def apply_undo_test(addr, expected_apply, expected_undo):
 
 def test_alias_below_offset():
     below_offset_int = (MAX_ADDR_INT - ADDRESS_ALIAS_OFFSET_INT - 10) & MAX_ADDR_INT
-    below_offset_hex = Web3.toHex(below_offset_int)
+    below_offset_hex = Web3.to_hex(below_offset_int)
 
     apply_undo_test(
-        Web3.toChecksumAddress(below_offset_hex),
-        Web3.toChecksumAddress('0xfffffffffffffffffffffffffffffffffffffff5'),
-        Web3.toChecksumAddress('0xddddffffffffffffffffffffffffffffffffddd3')
+        Web3.to_checksum_address(below_offset_hex),
+        Web3.to_checksum_address('0xfffffffffffffffffffffffffffffffffffffff5'),
+        Web3.to_checksum_address('0xddddffffffffffffffffffffffffffffffffddd3')
     )
 
 def test_alias_on_offset():
     on_offset_int = (MAX_ADDR_INT - ADDRESS_ALIAS_OFFSET_INT) & MAX_ADDR_INT
-    on_offset_hex = Web3.toHex(on_offset_int)
+    on_offset_hex = Web3.to_hex(on_offset_int)
 
     apply_undo_test(
-        Web3.toChecksumAddress(on_offset_hex),
-        Web3.toChecksumAddress('0xffffffffffffffffffffffffffffffffffffffff'),
-        Web3.toChecksumAddress('0xddddffffffffffffffffffffffffffffffffdddd')
+        Web3.to_checksum_address(on_offset_hex),
+        Web3.to_checksum_address('0xffffffffffffffffffffffffffffffffffffffff'),
+        Web3.to_checksum_address('0xddddffffffffffffffffffffffffffffffffdddd')
     )
 
 def test_alias_above_offset():
     above_offset_int = (MAX_ADDR_INT - ADDRESS_ALIAS_OFFSET_INT + 10) & MAX_ADDR_INT
-    above_offset_hex = Web3.toHex(above_offset_int)
+    above_offset_hex = Web3.to_hex(above_offset_int)
 
     apply_undo_test(
-        Web3.toChecksumAddress(above_offset_hex),
-        Web3.toChecksumAddress('0x0000000000000000000000000000000000000009'),
-        Web3.toChecksumAddress('0xddddffffffffffffffffffffffffffffffffdde7')
+        Web3.to_checksum_address(above_offset_hex),
+        Web3.to_checksum_address('0x0000000000000000000000000000000000000009'),
+        Web3.to_checksum_address('0xddddffffffffffffffffffffffffffffffffdde7')
     )
 
 def test_alias_special_case():
     special = '0xFfC98231ef2fd1F77106E10581A1faC14E29d014'
     apply_undo_test(
-        Web3.toChecksumAddress(special),
-        Web3.toChecksumAddress('0x10da8231ef2fd1f77106e10581a1fac14e29e125'),
-        Web3.toChecksumAddress('0xeeb88231ef2fd1f77106e10581a1fac14e29bf03')
+        Web3.to_checksum_address(special),
+        Web3.to_checksum_address('0x10da8231ef2fd1f77106e10581a1fac14e29e125'),
+        Web3.to_checksum_address('0xeeb88231ef2fd1f77106e10581a1fac14e29bf03')
     )

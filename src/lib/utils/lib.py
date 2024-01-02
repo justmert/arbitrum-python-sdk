@@ -43,7 +43,7 @@ async def is_arbitrum_chain(web3_instance):
         # Assuming you have the ABI for ArbSys in a JSON file
         with open('src/abi/ArbSys.json') as f:
             ARBSYS_ABI = json.load(f)
-        arb_sys_contract = web3_instance.eth.contract(address=Web3.toChecksumAddress(ARB_SYS_ADDRESS), abi=ARBSYS_ABI)
+        arb_sys_contract = web3_instance.eth.contract(address=Web3.to_checksum_address(ARB_SYS_ADDRESS), abi=ARBSYS_ABI)
         await arb_sys_contract.functions.arbOSVersion().call()
         return True
     except Exception:

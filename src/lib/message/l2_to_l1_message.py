@@ -5,11 +5,13 @@ from web3.providers import BaseProvider
 # Import necessary modules and classes
 # from signer_or_provider import SignerOrProvider, is_signer
 from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
-import classic
-import nitro
+import src.lib.message.l2_to_l1_message_classic as classic
+import src.lib.message.l2_to_l1_message_nitro as nitro
 # from arbsys import ClassicL2ToL1TransactionEvent, NitroL2ToL1TransactionEvent
-from utils import is_defined
-from message import L2ToL1MessageStatus
+from src.lib.utils.lib import is_defined
+# from utils import is_defined
+# from message import L2ToL1MessageStatus
+from src.lib.data_entities.message import L2ToL1MessageStatus
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.errors import ArbSdkError
 import asyncio
@@ -59,26 +61,26 @@ class L2ToL1Message:
 
     @staticmethod
     async def get_l2_to_l1_events(l2_provider: BaseProvider, filter: Dict[str, BlockIdentifier], position: Optional[int] = None, destination: Optional[str] = None, hash: Optional[int] = None, index_in_batch: Optional[int] = None) -> List[Dict[str, Union[int, str]]]:
-        l2_network = await get_l2_network(l2_provider)
+        l2_network = get_l2_network(l2_provider)
 
         classic_filter = {
-            'fromBlock': in_classic_range(filter['fromBlock'], l2_network['nitro_genesis_block']),
-            'toBlock': in_classic_range(filter['toBlock'], l2_network['nitro_genesis_block'])
+            'fromBlock': in_classic_range(filter['fromBlock'], l2_network.nitro_genesis_block),
+            'toBlock': in_classic_range(filter['toBlock'], l2_network.nitro_genesis_block)
         }
 
         nitro_filter = {
-            'fromBlock': in_nitro_range(filter['fromBlock'], l2_network['nitro_genesis_block']),
-            'toBlock': in_nitro_range(filter['toBlock'], l2_network['nitro_genesis_block'])
+            'fromBlock': in_nitro_range(filter['fromBlock'], l2_network.nitro_genesis_block),
+            'toBlock': in_nitro_range(filter['toBlock'], l2_network.nitro_genesis_block)
         }
 
         log_queries = []
         if classic_filter['fromBlock'] != classic_filter['toBlock']:
-            log_queries.append(classic.get_l2_to_l1_events(l2_provider, classic_filter, position, destination, hash, index_in_batch))
+            log_queries.append(classic.L2ToL1MessageClassic.get_l2_to_l1_events(l2_provider, classic_filter, position, destination, hash, index_in_batch))
 
         if nitro_filter['fromBlock'] != nitro_filter['toBlock']:
-            log_queries.append(nitro.get_l2_to_l1_events(l2_provider, nitro_filter, position, destination, hash))
+            log_queries.append(nitro.L2ToL1MessageNitro.get_l2_to_l1_events(l2_provider, nitro_filter, position, destination, hash))
 
-        results = await asyncio.gather(*log_queries)
+        results = log_queries
         return [event for sublist in results for event in sublist]  # Flattening the list
 
 

@@ -21,7 +21,7 @@ class Address:
             offset = address_int - self.ADDRESS_ALIAS_OFFSET_BIG_INT
         aliased_address = hex(offset & ((1 << self.ADDRESS_BIT_LENGTH) - 1))[2:]  # Remove '0x' prefix
         padded_address = aliased_address.zfill(self.ADDRESS_NIBBLE_LENGTH)
-        return Web3.toChecksumAddress('0x' + padded_address)
+        return Web3.to_checksum_address('0x' + padded_address)
 
     def apply_alias(self):
         return Address(self.alias(self.value, True))

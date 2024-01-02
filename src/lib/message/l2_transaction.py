@@ -1,5 +1,5 @@
 from web3 import Web3
-from web3.types import TxReceipt, Log
+from web3.types import TxReceipt
 from decimal import Decimal
 from typing import List, Optional, Any, Callable
 from src.lib.utils.event_fetcher import EventFetcher
