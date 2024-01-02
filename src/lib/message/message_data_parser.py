@@ -12,11 +12,17 @@ class SubmitRetryableMessageDataParser:
     @staticmethod
     def parse(event_data):
         # Assuming event_data is a hex string
-        decoded_data = decode(
-            ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
-            # Web3.toBytes(hexstr=event_data)
-            event_data
-        )
+        if isinstance(event_data, str):
+            decoded_data = decode(
+                ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+                Web3.to_bytes(hexstr=event_data)
+            )
+        else:
+            decoded_data = decode(
+                ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+                event_data
+            )
+
         def address_from_big_number(bn):
             # Convert BigNumber to address
             return to_checksum_address(bn.to_bytes(20, byteorder='big'))
@@ -30,12 +36,18 @@ class SubmitRetryableMessageDataParser:
         gas_limit = decoded_data[6]
         max_fee_per_gas = decoded_data[7]
         call_data_length = decoded_data[8]
-        # Convert call data length to the number of characters in the hex string
-        data_length_chars = call_data_length
-        # Slice the event data from the end based on the call data length
-        data_bytes = event_data[-data_length_chars:]
-        # Convert the bytes to a hex string and prepend with '0x'
-        data_hex = '0x' + data_bytes.hex()
+
+        if isinstance(event_data, str):
+            data_offset = len(event_data) - 2 * call_data_length  # 2 characters per byte
+            data = '0x' + event_data[data_offset:]
+        else:
+            # Convert call data length to the number of characters in the hex string
+            data_length_chars = call_data_length
+            # Slice the event data from the end based on the call data length
+            data_bytes = event_data[-data_length_chars:]
+            # Convert the bytes to a hex string and prepend with '0x'
+            data = '0x' + data_bytes.hex()
+
         return {
             'destAddress': dest_address,
             'l2CallValue': l2_call_value,
@@ -45,5 +57,5 @@ class SubmitRetryableMessageDataParser:
             'callValueRefundAddress': call_value_refund_address,
             'gasLimit': gas_limit,
             'maxFeePerGas': max_fee_per_gas,
-            'data': data_hex,
+            'data': data,
         }

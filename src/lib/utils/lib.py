@@ -42,9 +42,18 @@ async def is_arbitrum_chain(web3_instance):
     try:
         # Assuming you have the ABI for ArbSys in a JSON file
         with open('src/abi/ArbSys.json') as f:
-            ARBSYS_ABI = json.load(f)
-        arb_sys_contract = web3_instance.eth.contract(address=Web3.to_checksum_address(ARB_SYS_ADDRESS), abi=ARBSYS_ABI)
-        await arb_sys_contract.functions.arbOSVersion().call()
+            abi_content = json.load(f)
+            ARBSYS_ABI = abi_content['abi'] if 'abi' in abi_content else abi_content
+
+            
+
+        if isinstance(web3_instance, ArbitrumProvider):
+            provider = web3_instance.w3
+        else:
+            provider = web3_instance
+
+        arb_sys_contract = provider.eth.contract(address=Web3.to_checksum_address(ARB_SYS_ADDRESS), abi=ARBSYS_ABI)
+        arb_sys_contract.functions.arbOSVersion().call()
         return True
     except Exception:
         return False
@@ -54,14 +63,18 @@ async def get_first_block_for_l1_block(provider, for_l1_block, allow_greater=Fal
     if not await is_arbitrum_chain(provider):
         return for_l1_block
 
-    arb_provider = ArbitrumProvider(provider)
-    current_arb_block = await arb_provider.get_block_number()
-    arbitrum_chain_id = (await arb_provider.get_network()).chainId
-    nitro_genesis_block = l2_networks[arbitrum_chain_id]["nitroGenesisBlock"]
+    if isinstance(provider, ArbitrumProvider):
+        arb_provider = provider
+    else:
+        arb_provider = ArbitrumProvider(provider)
+    
+    current_arb_block = arb_provider.w3.eth.get_block_number()
+    arbitrum_chain_id = int(arb_provider.w3.net.version)
+    nitro_genesis_block = l2_networks[arbitrum_chain_id].nitro_genesis_block
 
     async def get_l1_block(for_l2_block):
         block = await arb_provider.get_block(for_l2_block)
-        return block["l1BlockNumber"]
+        return int(block["l1BlockNumber"], 16)
 
     if not min_l2_block:
         min_l2_block = nitro_genesis_block
@@ -85,6 +98,10 @@ async def get_first_block_for_l1_block(provider, for_l1_block, allow_greater=Fal
         mid = start + (end - start) // 2
         l1_block = await get_l1_block(mid)
 
+        print(type(l1_block))
+        print(l1_block)
+        print(type(for_l1_block))
+        print(for_l1_block)
         if l1_block == for_l1_block:
             result_for_target_block = mid
             end = mid - 1
@@ -99,9 +116,14 @@ async def get_first_block_for_l1_block(provider, for_l1_block, allow_greater=Fal
 
 
 
-async def get_block_ranges_for_l1_block(provider, for_l1_block, allow_greater=False, min_l2_block=None, max_l2_block='latest'):
-    arb_provider = ArbitrumProvider(provider)
-    current_l2_block = await arb_provider.get_block_number()
+async def get_block_ranges_for_l1_block(provider, for_l1_block, allow_greater=False, min_l2_block=None, max_l2_block='latest'):# -> list[None] | list:
+    # arb_provider = ArbitrumProvider(provider)
+    if isinstance(provider, ArbitrumProvider):
+        arb_provider = provider
+    else:
+        arb_provider = ArbitrumProvider(provider)
+
+    current_l2_block = arb_provider.w3.eth.get_block_number()
 
     if not max_l2_block or max_l2_block == 'latest':
         max_l2_block = current_l2_block

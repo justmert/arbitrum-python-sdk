@@ -55,6 +55,7 @@ class EventFetcher:
                     raise e
                 else:
                     pass
+        print(parsed_logs)
         return parsed_logs
 
 

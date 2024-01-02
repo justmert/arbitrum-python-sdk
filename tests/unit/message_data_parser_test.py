@@ -15,11 +15,11 @@ def test_does_parse_l1_to_l2_message():
     assert res['data'] == '0x2E567B360000000000000000000000006B175474E89094C44DA98B954EEDEAC495271D0F0000000000000000000000007F869DC59A96E798E759030B3C39398BA584F0870000000000000000000000007F869DC59A96E798E759030B3C39398BA584F08700000000000000000000000000000000000000000000003871022F1082344C7700000000000000000000000000000000000000000000000000000000000000A000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
     assert res['destAddress'] == '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65'
     assert res['excessFeeRefundAddress'] == '0x7F869dC59A96e798e759030b3c39398ba584F087'
-    assert Web3.to_hex(Web3.toBytes(res['gasLimit'])) == '0x0210f1'
-    assert Web3.to_hex(Web3.toBytes(res['l1Value'])) == '0x30346f1c785e'
+    assert Web3.to_hex(Web3.to_bytes(res['gasLimit'])) == '0x0210f1'
+    assert Web3.to_hex(Web3.to_bytes(res['l1Value'])) == '0x30346f1c785e'
     assert res['l2CallValue'] == 0
-    assert Web3.to_hex(Web3.toBytes(res['maxFeePerGas'])) == '0x172c5865'
-    assert Web3.to_hex(Web3.toBytes(res['maxSubmissionFee'])) == '0x53280cf149'
+    assert Web3.to_hex(Web3.to_bytes(res['maxFeePerGas'])) == '0x172c5865'
+    assert Web3.to_hex(Web3.to_bytes(res['maxSubmissionFee'])) == '0x53280cf149'
 
 def test_does_parse_eth_deposit_in_l1_to_l2_message():
     message_data_parser = SubmitRetryableMessageDataParser()
@@ -33,10 +33,10 @@ def test_does_parse_eth_deposit_in_l1_to_l2_message():
     assert res['excessFeeRefundAddress'] == '0xf71946496600e1e1d47b8A77EB2f109Fd82dc86a'
     assert res['gasLimit'] == 0
     
-    expected_l1_value_wei = Web3.toWei('30.01', 'ether')
-    assert int(Web3.to_hex(Web3.toBytes(res['l1Value'])), 16) == int(expected_l1_value_wei)
+    expected_l1_value_wei = Web3.to_wei('30.01', 'ether')
+    assert int(Web3.to_hex(Web3.to_bytes(res['l1Value'])), 16) == int(expected_l1_value_wei)
 
 
     assert res['l2CallValue'] == 0
     assert res['maxFeePerGas'] == 0
-    assert Web3.to_hex(Web3.toBytes(res['maxSubmissionFee'])) == '0x370e285a0c'
+    assert Web3.to_hex(Web3.to_bytes(res['maxSubmissionFee'])) == '0x370e285a0c'

@@ -584,11 +584,11 @@ class EthDepositMessage:
     def calculate_deposit_tx_id(
         l2_chain_id, message_number, from_address, to_address, value
     ):
-        chain_id = Web3.toBytes(l2_chain_id).rjust(32, b"\0")
-        msg_num = Web3.toBytes(message_number).rjust(32, b"\0")
-        from_addr = Web3.toBytes(hexstr=Web3.to_checksum_address(from_address))
-        to_addr = Web3.toBytes(hexstr=Web3.to_checksum_address(to_address))
-        value_bytes = Web3.toBytes(value).rjust(32, b"\0")
+        chain_id = Web3.to_bytes(l2_chain_id).rjust(32, b"\0")
+        msg_num = Web3.to_bytes(message_number).rjust(32, b"\0")
+        from_addr = Web3.to_bytes(hexstr=Web3.to_checksum_address(from_address))
+        to_addr = Web3.to_bytes(hexstr=Web3.to_checksum_address(to_address))
+        value_bytes = Web3.to_bytes(value).rjust(32, b"\0")
 
         fields = [chain_id, msg_num, from_addr, to_addr, value_bytes]
 
@@ -616,7 +616,7 @@ class EthDepositMessage:
     def parse_eth_deposit_data(event_data):
         address_end = 2 + 20 * 2
         to_address = Web3.to_checksum_address("0x" + event_data[2:address_end])
-        value = Web3.toBytes(hexstr="0x" + event_data[address_end:])
+        value = Web3.to_bytes(hexstr="0x" + event_data[address_end:])
         return {"to": to_address, "value": value}
 
     async def status(self):

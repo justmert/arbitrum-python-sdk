@@ -10,13 +10,13 @@ class RetryableMessageParams:
                  excess_fee_refund_address, call_value_refund_address, gas_limit,
                  max_fee_per_gas, data):
         self.dest_address = dest_address
-        self.l2_call_value = Web3.toWei(l2_call_value, 'ether')
-        self.l1_value = Web3.toWei(l1_value, 'ether')
-        self.max_submission_fee = Web3.toWei(max_submission_fee, 'ether')
+        self.l2_call_value = Web3.to_wei(l2_call_value, 'ether')
+        self.l1_value = Web3.to_wei(l1_value, 'ether')
+        self.max_submission_fee = Web3.to_wei(max_submission_fee, 'ether')
         self.excess_fee_refund_address = excess_fee_refund_address
         self.call_value_refund_address = call_value_refund_address
         self.gas_limit = gas_limit
-        self.max_fee_per_gas = Web3.toWei(max_fee_per_gas, 'gwei')
+        self.max_fee_per_gas = Web3.to_wei(max_fee_per_gas, 'gwei')
         self.data = data
 
 class InboxMessageKind(Enum):

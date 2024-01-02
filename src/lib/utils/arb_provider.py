@@ -9,6 +9,7 @@ class ArbFormatter:
 
     def block(self, block):
         # Transform the block data as needed
+        print(block)
         return ArbBlock(**block)
 
     def block_with_transactions(self, block):
