@@ -71,7 +71,7 @@ async def get_first_block_for_l1_block(provider, for_l1_block, allow_greater=Fal
     current_arb_block = arb_provider.w3.eth.get_block_number()
     arbitrum_chain_id = int(arb_provider.w3.net.version)
     nitro_genesis_block = l2_networks[arbitrum_chain_id].nitro_genesis_block
-
+    
     async def get_l1_block(for_l2_block):
         block = await arb_provider.get_block(for_l2_block)
         return int(block["l1BlockNumber"], 16)
@@ -98,10 +98,6 @@ async def get_first_block_for_l1_block(provider, for_l1_block, allow_greater=Fal
         mid = start + (end - start) // 2
         l1_block = await get_l1_block(mid)
 
-        print(type(l1_block))
-        print(l1_block)
-        print(type(for_l1_block))
-        print(for_l1_block)
         if l1_block == for_l1_block:
             result_for_target_block = mid
             end = mid - 1
@@ -111,19 +107,18 @@ async def get_first_block_for_l1_block(provider, for_l1_block, allow_greater=Fal
             if allow_greater:
                 result_for_greater_block = mid
             end = mid - 1
-
     return result_for_target_block if result_for_target_block is not None else result_for_greater_block
 
 
 
-async def get_block_ranges_for_l1_block(provider, for_l1_block, allow_greater=False, min_l2_block=None, max_l2_block='latest'):# -> list[None] | list:
+async def get_block_ranges_for_l1_block(provider, for_l1_block, min_l2_block=None, max_l2_block='latest', allow_greater=False):# -> list[None] | list:
     # arb_provider = ArbitrumProvider(provider)
     if isinstance(provider, ArbitrumProvider):
         arb_provider = provider
     else:
         arb_provider = ArbitrumProvider(provider)
 
-    current_l2_block = arb_provider.w3.eth.get_block_number()
+    current_l2_block = arb_provider.w3.eth.block_number
 
     if not max_l2_block or max_l2_block == 'latest':
         max_l2_block = current_l2_block
@@ -134,8 +129,7 @@ async def get_block_ranges_for_l1_block(provider, for_l1_block, allow_greater=Fa
 
     end_block = await get_first_block_for_l1_block(
         provider, for_l1_block + 1, allow_greater=True, min_l2_block=min_l2_block, max_l2_block=max_l2_block
-    )
-
+    )    
     if not start_block:
         return [None, None]
 
