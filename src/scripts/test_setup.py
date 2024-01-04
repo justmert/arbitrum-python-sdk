@@ -13,20 +13,21 @@ from src.lib.data_entities.networks import add_custom_network, get_l1_network, g
 from src.lib.asset_briger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
 from src.lib.asset_briger.eth_bridger import EthBridger
 from src.lib.inbox.inbox import InboxTools
+from .deploy_bridge import deploy_erc20_and_init
 
 config = {
-    'arb_url': os.getenv('ARB_URL'),
-    'eth_url': os.getenv('ETH_URL'),
-    'arb_key': os.getenv('ARB_KEY'),
-    'eth_key': os.getenv('ETH_KEY'),
+    'ARB_URL': os.getenv('ARB_URL'),
+    'ETH_URL': os.getenv('ETH_URL'),
+    'ARB_KEY': os.getenv('ARB_KEY'),
+    'ETH_KEY': os.getenv('ETH_KEY'),
 }
 
 def get_deployment_data():
     docker_names = [
-        'nitro_sequencer_1',
-        'nitro-sequencer-1',
+        # 'nitro_sequencer_1',
+        # 'nitro-sequencer-1',
+        # 'nitro-testnode-sequencer-1',
         'nitro-testnode-sequencer-1',
-        'nitro-testnode_sequencer_1',
     ]
     for docker_name in docker_names:
         try:
@@ -51,10 +52,10 @@ def get_custom_networks(l1_url: str, l2_url: str):
     deployment_data = json.loads(get_deployment_data())
 
     # Extract the relevant addresses from the deployment data
-    bridge_address = deployment_data['bridge']
-    inbox_address = deployment_data['inbox']
-    sequencer_inbox_address = deployment_data['sequencer-inbox']
-    rollup_address = deployment_data['rollup']
+    bridge_address = Web3.to_checksum_address(deployment_data['bridge'])
+    inbox_address = Web3.to_checksum_address(deployment_data['inbox'])
+    sequencer_inbox_address = Web3.to_checksum_address(deployment_data['sequencer-inbox'])
+    rollup_address = Web3.to_checksum_address(deployment_data['rollup'])
 
     # Fetch additional configuration from the contracts (like confirmPeriodBlocks)
     rollup_contract = load_contract(l1_provider, 'RollupAdminLogic', rollup_address)
@@ -105,7 +106,7 @@ def get_custom_networks(l1_url: str, l2_url: str):
     }
 
 
-def setup_networks(l1_url: str, l2_url: str, l1_private_key: str, l2_private_key: str):
+def setup_networks(l1_url: str, l2_url: str, l1_private_key, l2_private_key):
     # Set up the providers for L1 and L2
     l1_provider = Web3(HTTPProvider(l1_url))
     l2_provider = Web3(HTTPProvider(l2_url))
@@ -114,18 +115,23 @@ def setup_networks(l1_url: str, l2_url: str, l1_private_key: str, l2_private_key
     l1_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
     l2_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-    # Set up the accounts for deploying contracts
-    l1_deployer = l1_provider.eth.account.privateKeyToAccount(l1_private_key)
-    l2_deployer = l2_provider.eth.account.privateKeyToAccount(l2_private_key)
+    # Create LocalAccount objects from private keys
+    l1_deployer = Account.from_key(l1_private_key)
+    l2_deployer = Account.from_key(l2_private_key)
 
-    # Deploy necessary contracts and get their addresses
-    # You'll need to implement deploy_contracts() according to your contracts
-    l1_contracts, l2_contracts = deployErc20AndInit(l1_provider, l2_provider, l1_deployer, l2_deployer) # need to implement this
-
-
+    # Set the default account for each provider to the deployer accounts
+    l1_provider.eth.default_account = Web3.to_checksum_address(l1_deployer.address)
+    l2_provider.eth.default_account = Web3.to_checksum_address(l2_deployer.address)
 
     # Fetch the custom networks
     custom_networks = get_custom_networks(l1_url, l2_url)
+
+    # Deploy necessary contracts and get their addresses
+    l1_contracts, l2_contracts = deploy_erc20_and_init(
+        l1_provider, l1_deployer, 
+        l2_provider, l2_deployer, 
+        custom_networks['l2Network']['ethBridge']['inbox']
+    )
 
     # Add token bridge information to the L2 network
     l2_network = custom_networks['l2Network']
@@ -151,12 +157,16 @@ def setup_networks(l1_url: str, l2_url: str, l1_private_key: str, l2_private_key
 
     # Register the WETH gateway and other necessary setups
     admin_erc20_bridger = AdminErc20Bridger(l2_network)
-    admin_erc20_bridger.set_gateways(l1_deployer, l2_deployer.provider, [
-        {
-            'gatewayAddr': l2_network['tokenBridge']['l1WethGateway'],
-            'tokenAddr': l2_network['tokenBridge']['l1Weth'],
-        }
-    ])
+    admin_erc20_bridger.set_gateways(
+        l1_deployer,
+        l2_deployer.provider,
+        [
+            {
+                'gatewayAddr': l2_network['tokenBridge']['l1WethGateway'],
+                'tokenAddr': l2_network['tokenBridge']['l1Weth'],
+            }
+        ]
+    )
 
     # Return the configured network and signers
     return {
@@ -166,21 +176,26 @@ def setup_networks(l1_url: str, l2_url: str, l1_private_key: str, l2_private_key
         'l2Deployer': l2_deployer,
     }
 
-
-def get_signer(provider, key=None):
+def get_signer(provider: Web3, key: str = None):
     if not key and not provider:
         raise Exception('Provide at least one of key or provider.')
     if key:
-        return Account.privateKeyToAccount(key).connect(provider)
+        account = Account.from_key(key)
+        # Ensure that the provider is set to use this account for transactions
+        provider.eth.default_account = Web3.to_checksum_address(account.address)
+        return account
     else:
-        return provider.getSigner(0)
+        # Assuming the first account is what you want to use
+        # Adjust accordingly if you want to use a different account
+        return provider.eth.account.create()  # Or provider.eth.accounts[0] if accounts are already loaded
+
 
 def test_setup():
-    eth_provider = Web3(HTTPProvider(config['eth_url']))
-    arb_provider = Web3(HTTPProvider(config['arb_url']))
+    eth_provider = Web3(HTTPProvider(config['ETH_URL']))
+    arb_provider = Web3(HTTPProvider(config['ARB_URL']))
 
-    l1_deployer = get_signer(eth_provider, config['eth_key'])
-    l2_deployer = get_signer(arb_provider, config['arb_key'])
+    l1_deployer = get_signer(eth_provider, config['ETH_KEY'])
+    l2_deployer = get_signer(arb_provider, config['ARB_KEY'])
 
     seed = Account.create()
     l1_signer = seed.connect(eth_provider)

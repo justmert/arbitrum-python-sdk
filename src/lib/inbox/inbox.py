@@ -7,7 +7,7 @@ from src.lib.utils.helper import load_contract
 from src.lib.data_entities.networks import l1_networks
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.utils.event_fetcher import EventFetcher
-from src.lib.utils.multi_call import MultiCaller, CallInput
+from src.lib.utils.multi_call import MultiCaller
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.message import InboxMessageKind
@@ -55,7 +55,7 @@ class InboxTools:
         sequencer_inbox = load_contract(provider=self.l1_provider, contract_name='SequencerInbox', contract_address=self.l2_network.eth_bridge.sequencer_inbox)
         multicall = await MultiCaller.from_provider(self.l1_provider)
         multicall_input: Tuple[
-            CallInput,
+            Any, # CallInput
             Any,  # Replace Any with the actual return type from MultiCaller.getBlockNumberInput()
             Any   # Replace Any with the actual return type from MultiCaller.getCurrentBlockTimestampInput()
         ] = [

@@ -1,24 +1,10 @@
-# test_l2_to_l1_message_events.py
-
-import json
-import pytest
-from web3 import Web3, HTTPProvider
-from web3.middleware import geth_poa_middleware
-from hexbytes import HexBytes
-from unittest.mock import MagicMock
-from src.lib.data_entities.networks import get_l2_network
-# from src.lib.message.l1_to_l2_message_gas_estimator import L1ToL2MessageGasEstimator as GasOverrides
-# Assuming the following modules are defined in Python in the src/lib directory
-# from src.lib.message.L1ToL2MessageGasEstimator import GasOverrides
+from web3 import Web3
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.message.l2_to_l1_message import L2ToL1Message
 from src.lib.asset_briger.erc20_bridger import Erc20Bridger
-from src.
 
-# from src.lib.abi.ERC20 import ERC20
-# from src.L2ToL1Message import L2ToL1Message
-from src.Erc20Bridger import Erc20Bridger
-from src.config import config
+from src.scripts.test_setup import config, get_signer, test_setup
+from src.lib.message.l2_to_l1_message import L2ToL1MessageStatus
+
 # Constants and utility functions
 pre_fund_amount = Web3.toWei(0.1, 'ether')
 arb_sys = '0x0000000000000000000000000000000000000064'
@@ -221,10 +207,10 @@ async def fund(signer, amount=None, funding_key=None):
     })).wait()
 
 async def fund_l1(l1_signer, amount=None):
-    await fund(l1_signer, amount, config['eth_key'])
+    await fund(l1_signer, amount, config['ETH_KEY'])
 
 async def fund_l2(l2_signer, amount=None):
-    await fund(l2_signer, amount, config['arb_key'])
+    await fund(l2_signer, amount, config['ARB_KEY'])
 
 def wait(ms=0):
     import time

@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import L2Network, l1_networks
 from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
-from src.lib.message.l1_transaction import L1ContractTransaction
-from src.lib.message.l2_transaction import L2ContractTransaction
 
 class AssetBridger(ABC):
     def __init__(self, l2_network: L2Network):
@@ -20,9 +18,9 @@ class AssetBridger(ABC):
         await SignerProviderUtils.check_network_matches(sop, self.l2_network.chain_id)
 
     @abstractmethod
-    async def deposit(self, params) -> L1ContractTransaction:
+    async def deposit(self, params):
         pass
 
     @abstractmethod
-    async def withdraw(self, params) -> L2ContractTransaction:
+    async def withdraw(self, params):
         pass
