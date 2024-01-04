@@ -20,15 +20,11 @@ import os
 
 
 def main():
-    # eth_provider = Web3(HTTPProvider(config["ETH_URL"]))
-    # arb_provider = Web3(HTTPProvider(config["ARB_URL"]))
-
-    # eth_deployer = get_signer(eth_provider, config["ETH_KEY"])
-    # arb_deployer = get_signer(arb_provider, config["ARB_KEY"])
 
     l1_network, l2_network = setup_networks(
         l1_private_key=config['ETH_KEY'], l2_private_key=config['ARB_KEY'], l1_url=config["ETH_URL"], l2_url=config["ARB_URL"]
     )
+    
 
     with open("localNetwork.json", "w") as f:
         json.dump({"l1Network": l1_network, "l2Network": l2_network}, f, indent=2)
