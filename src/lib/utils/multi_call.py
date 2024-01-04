@@ -1,12 +1,21 @@
 import json
-from web3 import Web3
+from web3 import Web3, HTTPProvider
 from src.lib.data_entities.networks import l1_networks, l2_networks
 from src.lib.data_entities.errors import ArbSdkError
 
 
 class MultiCaller:
     def __init__(self, provider, address):
-        self.provider = provider
+        if isinstance(provider, Web3):
+            self.provider = provider
+        
+        elif isinstance(provider, str):
+            self.provider = Web3(HTTPProvider(provider))
+
+        else:
+            raise ArbSdkError("MultiCaller provider must be an instance of Web3.")
+        
+        print(self.provider)
         self.address = address
 
     @staticmethod
@@ -63,7 +72,7 @@ class MultiCaller:
 
         args = [{'target': p['target_addr'], 'callData': p['encoder']()} for p in params]
         outputs = contract.functions.tryAggregate(require_success, args).call()
-
+        print(outputs)
         return [p['decoder'](output['returnData']) if output['success'] else None for output, p in zip(outputs, params)]
 
     async def get_token_data(self, erc20_addresses, options=None):
@@ -77,7 +86,6 @@ class MultiCaller:
         erc20_contract = self.provider.eth.contract(abi=erc20_abi)
 
         inputs = []
-        print("tttt",erc20_contract)
         for address in erc20_addresses:
             if options.get('balanceOf'):
                 account = options['balanceOf']['account']
@@ -99,7 +107,7 @@ class MultiCaller:
 
         # Execute multicall
         results = await self.multi_call(inputs)
-
+        print(results)
         # Parse results into structured format
         token_data = []
         for i in range(0, len(results), len(options)):

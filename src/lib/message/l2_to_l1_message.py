@@ -81,6 +81,7 @@ class L2ToL1Message:
             log_queries.append(nitro.L2ToL1MessageNitro.get_l2_to_l1_events(l2_provider, nitro_filter, position, destination, hash))
 
         results = log_queries
+        print(results)
         return [event for sublist in results for event in sublist]  # Flattening the list
 
 
