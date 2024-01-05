@@ -14,7 +14,7 @@ def get_contract_instance(web3_provider: Web3, contract_address: str, contract_a
 
 # Get the base fee
 async def get_base_fee(provider: Web3):
-    latest_block = provider.eth.getBlock('latest')
+    latest_block = provider.eth.get_block('latest')
     base_fee = latest_block['baseFeePerGas']
     if not base_fee:
         raise ArbSdkError('Latest block did not contain base fee, ensure provider is connected to a network that supports EIP 1559.')

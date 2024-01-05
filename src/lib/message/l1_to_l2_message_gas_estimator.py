@@ -6,19 +6,22 @@ from src.lib.data_entities.errors import ArbSdkError
 from src.lib.utils.lib import get_base_fee
 from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.utils.helper import load_contract
-
+from src.lib.data_entities.retryable_data import RetryableDataTools, RetryableData
+from src.lib.data_entities.networks import get_l2_network
 
 # Constants and imports for BigNumber handling, error classes, etc.
 DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = Decimal(300)
 DEFAULT_GAS_PRICE_PERCENT_INCREASE = Decimal(200)
 
 class L1ToL2MessageGasEstimator:
-    def __init__(self, l2_provider_url):
-        self.w3 = Web3(Web3.HTTPProvider(l2_provider_url))
+    def __init__(self, l2_provider_or_url):
+        if isinstance(l2_provider_or_url, Web3):
+            self.l2_provider = l2_provider_or_url
+        else:
+            self.l2_provider = Web3(Web3.HTTPProvider(l2_provider_or_url))
 
     def percent_increase(self, num: Decimal, increase: Decimal) -> Decimal:
         return num + num * increase / Decimal(100)
-
 
     async def estimate_submission_fee(
         self, l1_provider: Web3, l1_base_fee: Decimal, call_data_size: int, 
@@ -27,8 +30,9 @@ class L1ToL2MessageGasEstimator:
         # Apply default options if necessary
         options = options or {}
         percent_increase = options.get("percentIncrease", DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE)
-
-        inbox = load_contract("Inbox", NODE_INTERFACE_ADDRESS, self.w3)  # Update with actual inbox address
+    # const network = await getL2Network(this.l2Provider)
+        network = get_l2_network(self.l2_provider)
+        inbox = load_contract(contract_name="Inbox", address= network.ethBridge.inbox, provider=l1_provider, is_classic=False)  # Update with actual inbox address
         submission_fee = inbox.functions.calculateRetryableSubmissionFee(call_data_size, l1_base_fee).call()
 
         return self.percent_increase(Decimal(submission_fee), percent_increase)
@@ -36,7 +40,8 @@ class L1ToL2MessageGasEstimator:
     async def estimate_retryable_ticket_gas_limit(
         self, retryable_data: Dict[str, Any], sender_deposit: Decimal = Decimal('1')
     ) -> Decimal:
-        node_interface = self.load_contract("NodeInterface", NODE_INTERFACE_ADDRESS, self.w3)
+        print(retryable_data)
+        node_interface = load_contract("NodeInterface", NODE_INTERFACE_ADDRESS, self.l2_provider)
         gas_limit = node_interface.functions.estimateRetryableTicket(
             retryable_data['from'],
             sender_deposit,
@@ -53,11 +58,12 @@ class L1ToL2MessageGasEstimator:
     ) -> Decimal:
         options = options or {}
         percent_increase = options.get("percentIncrease", DEFAULT_GAS_PRICE_PERCENT_INCREASE)
-        gas_price = self.w3.eth.gas_price
+        gas_price = self.l2_provider.eth.gas_price
         return self.percent_increase(Decimal(gas_price), percent_increase)
 
     async def estimate_all(self, retryable_estimate_data: Dict[str, Any], l1_base_fee: Decimal, 
                            l1_provider: Web3, options: Optional[Dict[str, Any]] = None) -> Dict[str, Decimal]:
+        
         data = retryable_estimate_data['data']
         gas_limit_options = options.get('gasLimit', {}) if options else {}
         max_fee_per_gas_options = options.get('maxFeePerGas', {}) if options else {}
@@ -84,30 +90,38 @@ class L1ToL2MessageGasEstimator:
             'deposit': deposit
         }
 
-    async def populate_function_params(self, data_func, l1_provider: Web3, gas_overrides: Optional[Dict[str, Any]] = None):
+    async def populate_function_params(self, data_func, l1_provider, gas_overrides = None):
         # Dummy values to trigger a special revert containing the real params
         dummy_params = {
-            'gasLimit': Decimal(0),
-            'maxFeePerGas': Decimal(0),
-            'maxSubmissionCost': Decimal(1)
+            'gasLimit': 0,
+            'maxFeePerGas': 0,
+            'maxSubmissionCost': 1
         }
+        # Create a dummy transaction to simulate the call
         tx_request_dummy = data_func(dummy_params)
-        
-        # Attempt to get retryable data from null call
-        try:
-            null_call_result = l1_provider.eth.call({
-                'to': tx_request_dummy['to'],
-                'data': tx_request_dummy['data'],
-                'value': tx_request_dummy['value'],
-                'from': tx_request_dummy['from']
-            })
-            retryable = self.parse_retryable_data(null_call_result)
-        except Exception as e:
-            retryable = self.parse_retryable_data(str(e))
 
-        if not retryable:
+        retryable_data = None
+        try:
+            # Simulate the transaction to capture the revert message
+            l1_provider.eth.call(tx_request_dummy)
+        except Exception as e:
+        # Extract the revert message from the exception
+            revert_message = str(e)
+            if hasattr(e, 'data'):
+                print("Revert raw data:", e.data)
+
+            # Use a custom function to parse the revert message and extract retryable data
+            retryable_data = RetryableDataTools.try_parse_error(revert_message)
+
+        if not retryable_data:
             raise ArbSdkError('No retryable data found in error')
 
+        retryable = {
+            'from': tx_request_dummy['from'],
+            'to': tx_request_dummy['to'],
+            'value': tx_request_dummy['value'],
+            'data': retryable_data
+        }
         # Use retryable data to get gas estimates
         base_fee = await get_base_fee(l1_provider)
         estimates = await self.estimate_all(retryable, base_fee, l1_provider, gas_overrides)

@@ -21,7 +21,7 @@ class InboxTools:
             raise ArbSdkError(f"L1Network not found for chain id: {l2_network.partner_chain_id}.")
 
     async def find_first_block_below(self, block_number: int, block_timestamp: int) -> Any:
-        block = await self.l1_provider.getBlock(block_number)
+        block = await self.l1_provider.get_block(block_number)
         diff = block.timestamp - block_timestamp
         if diff < 0:
             return block
@@ -37,7 +37,7 @@ class InboxTools:
         )
 
     async def estimate_arbitrum_gas(self, transaction_l2_request, l2_provider) -> Dict[str, Any]:
-        node_interface = load_contract(provider=l2_provider, contract_name='NodeInterface', contract_address=NODE_INTERFACE_ADDRESS)
+        node_interface = load_contract(provider=l2_provider, contract_name='NodeInterface', address=NODE_INTERFACE_ADDRESS) # also available in classic!
         contract_creation = self.is_contract_creation(transaction_l2_request)
         gas_components = await node_interface.callStatic.gasEstimateComponents(
             transaction_l2_request.to or Web3.toChecksumAddress('0x0000000000000000000000000000000000000000'),
@@ -52,7 +52,7 @@ class InboxTools:
         return {**gas_components, 'gasEstimateForL2': gas_estimate_for_l2}
 
     async def get_force_includable_block_range(self, block_number_range_size: int) -> Dict[str, int]:
-        sequencer_inbox = load_contract(provider=self.l1_provider, contract_name='SequencerInbox', contract_address=self.l2_network.eth_bridge.sequencer_inbox)
+        sequencer_inbox = load_contract(provider=self.l1_provider, contract_name='SequencerInbox', address=self.l2_network.eth_bridge.sequencer_inbox, is_classic=False)
         multicall = await MultiCaller.from_provider(self.l1_provider)
         multicall_input: Tuple[
             Any, # CallInput
@@ -101,7 +101,7 @@ class InboxTools:
     async def get_force_includable_event(self, max_search_range_blocks: int = 3 * 6545,
                                         start_search_range_blocks: int = 100, range_multiplier: int = 2):
         
-        bridge = load_contract(provider=self.l1_provider, contract_name='Bridge', contract_address=self.l2_network.eth_bridge.bridge)
+        bridge = load_contract(provider=self.l1_provider, contract_name='Bridge', address=self.l2_network.eth_bridge.bridge, is_classic=False)
 
         events = await self.get_events_and_increase_range(bridge, start_search_range_blocks, max_search_range_blocks, range_multiplier)
 
@@ -110,7 +110,7 @@ class InboxTools:
 
         event_info = events[-1]
         
-        sequencer_inbox = load_contract(provider=self.l1_provider, contract_name='SequencerInbox', contract_address=self.l2_network.eth_bridge.sequencer_inbox)
+        sequencer_inbox = load_contract(provider=self.l1_provider, contract_name='SequencerInbox', address=self.l2_network.eth_bridge.sequencer_inbox, is_classic=False)
 
         total_delayed_read = await sequencer_inbox.totalDelayedMessagesRead()
 
@@ -122,14 +122,14 @@ class InboxTools:
 
     async def force_include(self, message_delivered_event = None, overrides = None):
         
-        sequencer_inbox = load_contract(provider=self.l1_signer, contract_name='SequencerInbox', contract_address=self.l2_network.eth_bridge.sequencer_inbox)
+        sequencer_inbox = load_contract(provider=self.l1_signer, contract_name='SequencerInbox', address=self.l2_network.eth_bridge.sequencer_inbox, is_classic=False)
 
         event_info = message_delivered_event or await self.get_force_includable_event()
 
         if not event_info:
             return None
 
-        block = await self.l1_provider.getBlock(event_info.block_hash)
+        block = await self.l1_provider.get_block(event_info.block_hash)
         return await sequencer_inbox.functions.forceInclusion(event_info.event.message_index + 1, event_info.event.kind,
                                                             [event_info.block_number, block.timestamp],
                                                             event_info.event.base_fee_l1, event_info.event.sender,
@@ -137,9 +137,9 @@ class InboxTools:
 
     async def send_l2_signed_tx(self, signed_tx: str):
         
-        delayed_inbox = load_contract(provider=self.l1_signer, contract_name='IInbox', contract_address=self.l2_network.eth_bridge.inbox)
+        delayed_inbox = load_contract(provider=self.l1_signer, contract_name='IInbox', address=self.l2_network.eth_bridge.inbox) # also available in classic!
 
-        send_data = Web3.solidityPack(['uint8', 'bytes'], [Web3.toHex(InboxMessageKind.L2MessageType_signedTx), signed_tx])
+        send_data = Web3.solidityPack(['uint8', 'bytes'], [Web3.to_hex(InboxMessageKind.L2MessageType_signedTx), signed_tx])
         return await delayed_inbox.functions.sendL2Message(send_data)
 
     async def sign_l2_tx(self, tx_request, l2_signer: Any) -> str:
@@ -147,7 +147,7 @@ class InboxTools:
         contract_creation = self.is_contract_creation(tx)
 
         if 'nonce' not in tx:
-            tx['nonce'] = await l2_signer.getTransactionCount()
+            tx['nonce'] = await l2_signer.get_transaction_count()
 
         if tx.get('type') == 1 or 'gasPrice' in tx:
             if 'gasPrice' in tx:

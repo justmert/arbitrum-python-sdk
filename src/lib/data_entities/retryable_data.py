@@ -32,27 +32,29 @@ class RetryableDataTools:
 
     @staticmethod
     def try_parse_error(error_or_data: Union[Exception, Dict[str, str], str]) -> Optional[RetryableData]:
-        error_data = None
+        if False:
+            error_data = None
+            if isinstance(error_or_data, str):
+                error_data = error_or_data
+            elif isinstance(error_or_data, dict) and 'errorData' in error_or_data:
+                error_data = error_or_data['errorData']
+            elif isinstance(error_or_data, Exception):
+                # Extract error data from exception
+                pass  # Implement based on the structure of your exceptions
 
-        if isinstance(error_or_data, str):
-            error_data = error_or_data
-        elif isinstance(error_or_data, dict) and 'errorData' in error_or_data:
-            error_data = error_or_data['errorData']
-        elif isinstance(error_or_data, Exception):
-            # Extract error data from exception
-            pass  # Implement based on the structure of your exceptions
-
-        if error_data:
-            return RetryableDataTools.parse_error_data(error_data)
-        return None
+            if error_data:
+                return RetryableDataTools.parse_error_data(error_data)
+            return None
+        return error_or_data # No need to parse error data
 
     @staticmethod
     def parse_error_data(error_data: str) -> Optional[RetryableData]:
-        try:
-            # due to limitations in the ABI encoding, we can't decode the error data directly            
-            # Extract the relevant fields from parsed_error to create a RetryableData instance
-            return RetryableData(**error_data)
-        except Exception as e:
-            # Handle decoding error
-            return None
-    
+        if False:
+            try:
+                # due to limitations in the ABI encoding, we can't decode the error data directly            
+                # Extract the relevant fields from parsed_error to create a RetryableData instance
+                return RetryableData(**error_data)
+            except Exception as e:
+                # Handle decoding error
+                return None
+        return error_data # No need to parse error data

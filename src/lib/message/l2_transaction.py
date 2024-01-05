@@ -84,14 +84,14 @@ class L2TransactionReceipt:
     def get_batch_confirmations(self, web3_instance: Web3) -> int:
         node_interface = load_contract(
             "NodeInterface", NODE_INTERFACE_ADDRESS, web3_instance
-        )
+        ) # also available in classic!
         return node_interface.functions.getL1Confirmations(self.block_hash).call()
 
     async def get_batch_number(self, web3_instance) -> int:
         arb_provider = ArbitrumProvider(web3_instance)
         node_interface = load_contract(
             "NodeInterface", NODE_INTERFACE_ADDRESS, arb_provider.w3
-        )
+        ) # also available in classic
         rec = await arb_provider.get_transaction_receipt(self.transaction_hash)
 
         if rec is None:

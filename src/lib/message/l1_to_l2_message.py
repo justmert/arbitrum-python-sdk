@@ -391,13 +391,13 @@ class L1ToL2MessageReader(L1ToL2Message):
     @staticmethod
     async def get_lifetime(l2_provider):
         arb_retryable_tx_contract = load_contract(
-            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, l2_provider
+            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, l2_provider, is_classic=False
         )
         return await arb_retryable_tx_contract.functions.getLifetime().call()
 
     async def get_timeout(self):
         arb_retryable_tx_contract = load_contract(
-            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_provider
+            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_provider, is_classic=False
         )
         return await arb_retryable_tx_contract.functions.getTimeout(
             self.retryable_creation_id
@@ -405,7 +405,7 @@ class L1ToL2MessageReader(L1ToL2Message):
 
     async def get_beneficiary(self):
         arb_retryable_tx_contract = load_contract(
-            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_provider
+            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_provider, is_classic=False
         )
         return await arb_retryable_tx_contract.functions.getBeneficiary(
             self.retryable_creation_id
@@ -489,7 +489,7 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
         if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
             # Load the ArbRetryableTx contract
             arb_retryable_tx = load_contract(
-                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer
+                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer, is_classic=False
             )
 
             # Send the redeem transaction
@@ -521,7 +521,7 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
         if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
             # Load the ArbRetryableTx contract
             arb_retryable_tx = load_contract(
-                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer
+                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer, is_classic=False
             )
 
             # Send the cancel transaction
@@ -545,7 +545,7 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
         if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
             # Load the ArbRetryableTx contract
             arb_retryable_tx = load_contract(
-                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer
+                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer, is_classic=False
             )
 
             # Send the keepalive transaction

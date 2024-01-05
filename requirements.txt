@@ -1,0 +1,11 @@
+web3==v6.3.0
+rlp 
+eth-utils
+python-dotenv
+pytest
+eth-typing
+asyncio
+pytest-asyncio
+eth-abi
+pyyaml
+mock

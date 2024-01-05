@@ -51,7 +51,7 @@ class L1ToL2MessageCreator:
 
         l2_network = get_l2_network(l2_provider)
         inbox_contract = load_contract(
-            "Inbox", l2_network.eth_bridge.inbox, l1_provider
+            "Inbox", l2_network.eth_bridge.inbox, l1_provider, is_classic=False
         )
 
         function_data = inbox_contract.encodeABI(

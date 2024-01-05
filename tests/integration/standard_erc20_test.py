@@ -29,17 +29,17 @@ from src.lib.utils.lib import is_defined
 
     # def test_deposit_erc20(self):
     #     # Replace with actual deposit_token function
-    #     deposit_amount = Web3.toWei(100, 'ether')
+    #     deposit_amount = Web3.to_wei(100, 'ether')
     #     deposit_token(deposit_amount, self.l1Token.address, self.erc20Bridger, self.l1Signer, self.l2Signer, L1ToL2MessageStatus.REDEEMED, GatewayType.STANDARD)
 
     # def test_deposit_with_no_funds_manual_redeem(self):
-    #     deposit_amount = Web3.toWei(100, 'ether')
+    #     deposit_amount = Web3.to_wei(100, 'ether')
     #     wait_res = deposit_token(deposit_amount, self.l1Token.address, self.erc20Bridger, self.l1Signer, self.l2Signer, L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2, GatewayType.STANDARD, gas_limit=0, max_fee_per_gas=0)
     #     # Replace redeemAndTest with actual implementation.
     #     self.redeemAndTest(wait_res['message'], 1)
 
     # def test_deposit_with_low_funds_manual_redeem(self):
-    #     deposit_amount = Web3.toWei(100, 'ether')
+    #     deposit_amount = Web3.to_wei(100, 'ether')
     #     wait_res = deposit_token(deposit_amount, self.l1Token.address, self.erc20Bridger, self.l1Signer, self.l2Signer, L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2, GatewayType.STANDARD, gas_limit=5, max_fee_per_gas=5)
     #     self.redeemAndTest(wait_res['message'], 1)
 
@@ -51,7 +51,7 @@ class StandardERC20Test(unittest.TestCase):
         fund_l1(cls.setup['l1Signer'])
         fund_l2(cls.setup['l2Signer'])
 
-        cls.deploy_erc20 = load_contract(cls.setup['l1Signer'].provider, 'TestERC20', cls.setup['l1Token'].address)
+        cls.deploy_erc20 = load_contract(cls.setup['l1Signer'].provider, 'TestERC20', cls.setup['l1Token'].address, is_classic=True)
         cls.test_token = cls.deploy_erc20.deploy(cls.setup['l1Signer'])
         cls.test_token.deployed()
         cls.test_token.mint().wait()
@@ -64,7 +64,7 @@ class StandardERC20Test(unittest.TestCase):
 
     def test_deposits_erc20(self):
         deposit_token(
-            Web3.toWei(100, 'ether'),
+            Web3.to_wei(100, 'ether'),
             self.test_state['l1Token'].address,
             self.test_state['erc20Bridger'],
             self.test_state['l1Signer'],
@@ -86,7 +86,7 @@ class StandardERC20Test(unittest.TestCase):
 
     def test_deposit_with_no_funds_manual_redeem(self):
         wait_res = deposit_token(
-            Web3.toWei(100, 'ether'),
+            Web3.to_wei(100, 'ether'),
             self.test_state['l1Token'].address,
             self.test_state['erc20Bridger'],
             self.test_state['l1Signer'],
@@ -102,7 +102,7 @@ class StandardERC20Test(unittest.TestCase):
 
     def test_deposit_with_low_funds_manual_redeem(self):
         wait_res = deposit_token(
-            Web3.toWei(100, 'ether'),
+            Web3.to_wei(100, 'ether'),
             self.test_state['l1Token'].address,
             self.test_state['erc20Bridger'],
             self.test_state['l1Signer'],
@@ -117,7 +117,7 @@ class StandardERC20Test(unittest.TestCase):
 
     def test_deposit_with_only_low_gas_limit_manual_redeem_succeeds(self):
         wait_res = deposit_token(
-            Web3.toWei(100, 'ether'),
+            Web3.to_wei(100, 'ether'),
             self.test_state['l1Token'].address,
             self.test_state['erc20Bridger'],
             self.test_state['l1Signer'],
@@ -144,7 +144,7 @@ class StandardERC20Test(unittest.TestCase):
 
     def test_deposit_with_low_funds_fails_first_redeem_succeeds_seconds(self):
         wait_res = deposit_token(
-            Web3.toWei(100, 'ether'),
+            Web3.to_wei(100, 'ether'),
             self.test_state['l1Token'].address,
             self.test_state['erc20Bridger'],
             self.test_state['l1Signer'],
@@ -155,8 +155,8 @@ class StandardERC20Test(unittest.TestCase):
             max_fee_per_gas=5
         )
 
-        arb_retryable_tx = load_contract(self.test_state['l2Signer'].provider, 'ArbRetryableTx', ARB_RETRYABLE_TX_ADDRESS)
-        n_interface = load_contract(self.test_state['l2Signer'].provider, 'NodeInterface', NODE_INTERFACE_ADDRESS)
+        arb_retryable_tx = load_contract(self.test_state['l2Signer'].provider, 'ArbRetryableTx', ARB_RETRYABLE_TX_ADDRESS, is_classic=False)
+        n_interface = load_contract(self.test_state['l2Signer'].provider, 'NodeInterface', NODE_INTERFACE_ADDRESS) # also available in classic!
 
         gas_components = n_interface.callStatic.gas_estimate_components(
             arb_retryable_tx.address,
@@ -178,21 +178,21 @@ class StandardERC20Test(unittest.TestCase):
             l2_token_addr
         )
 
-        start_balance = Web3.toWei(500, 'ether')  # 5 deposits in the previous tests
+        start_balance = Web3.to_wei(500, 'ether')  # 5 deposits in the previous tests
         l2_balance_start = l2_token.balance_of(self.test_state['l2Signer'].address)
 
         self.assertEqual(str(l2_balance_start), str(start_balance))
 
         withdraw_token(
-            amount=Web3.toWei(10, 'ether'),
+            amount=Web3.to_wei(10, 'ether'),
             gateway_type=GatewayType.STANDARD,
             start_balance=start_balance,
-            l1_token=load_contract(self.test_state['l1Signer'].provider, 'ERC20', self.test_state['l1Token'].address),
+            l1_token=load_contract(self.test_state['l1Signer'].provider, 'ERC20', self.test_state['l1Token'].address, is_classic=True),
             test_state=self.test_state
         )
 
     # def test_deposit_with_only_low_gas_limit_manual_redeem_succeeds(self):
-    #     deposit_amount = Web3.toWei(100, 'ether')
+    #     deposit_amount = Web3.to_wei(100, 'ether')
     #     wait_res = deposit_token(deposit_amount, self.l1Token.address, self.erc20Bridger, self.l1Signer, self.l2Signer, L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2, GatewayType.STANDARD, gas_limit=21000)
 
     #     # Assuming getRetryableCreationReceipt, getRedeemScheduledEvents, and getTransactionReceipt are implemented
@@ -209,7 +209,7 @@ class StandardERC20Test(unittest.TestCase):
     #     self.redeemAndTest(wait_res['message'], 1)
 
     # def test_deposit_with_low_funds_fails_first_redeem_succeeds_seconds(self):
-    #     deposit_amount = Web3.toWei(100, 'ether')
+    #     deposit_amount = Web3.to_wei(100, 'ether')
     #     wait_res = deposit_token(deposit_amount, self.l1Token.address, self.erc20Bridger, self.l1Signer, self.l2Signer, L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2, GatewayType.STANDARD, gas_limit=5, max_fee_per_gas=5)
     #     arb_retryable_tx = load_contract(self.l2Signer.provider, 'ArbRetryableTx', ARB_RETRYABLE_TX_ADDRESS)
     #     n_interface = load_contract(self.l2Signer.provider, 'NodeInterface', NODE_INTERFACE_ADDRESS)

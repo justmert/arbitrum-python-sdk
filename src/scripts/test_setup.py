@@ -1,10 +1,12 @@
 import os
 import json
 from web3 import Web3, HTTPProvider
-from web3.eth import Account
+# from web3.eth import Account
 import subprocess
 from web3 import Web3, HTTPProvider
+from web3 import Account
 from web3.middleware import geth_poa_middleware
+from yaml import Token
 
 # Import your custom classes and functions here
 # from my_project import EthBridger, InboxTools, Erc20Bridger, AdminErc20Bridger
@@ -14,6 +16,7 @@ from src.lib.asset_briger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
 from src.lib.asset_briger.eth_bridger import EthBridger
 from src.lib.inbox.inbox import InboxTools
 from .deploy_bridge import deploy_erc20_and_init
+from src.lib.data_entities.networks import L1Network, L2Network, EthBridge, TokenBridge
 
 config = {
     'ARB_URL': os.getenv('ARB_URL'),
@@ -58,47 +61,48 @@ def get_custom_networks(l1_url: str, l2_url: str):
     rollup_address = Web3.to_checksum_address(deployment_data['rollup'])
 
     # Fetch additional configuration from the contracts (like confirmPeriodBlocks)
-    rollup_contract = load_contract(l1_provider, 'RollupAdminLogic', rollup_address)
+    rollup_contract = load_contract(l1_provider, 'RollupAdminLogic', rollup_address, is_classic=False)
     # rollup_contract = l1_provider.eth.contract(address=rollup_address, abi=RollupAdminLogicABI)  # Add RollupAdminLogicABI
     confirm_period_blocks = rollup_contract.functions.confirmPeriodBlocks().call()
     
-    bridge_contract = load_contract(l1_provider, 'Bridge', bridge_address)
+    bridge_contract = load_contract(l1_provider, 'Bridge', bridge_address, is_classic=False)
     # bridge_contract = l1_provider.eth.contract(address=bridge_address, abi=BridgeABI)  # Add BridgeABI
     outbox_address = bridge_contract.functions.allowedOutboxList(0).call()
 
     l1_network_info = l1_provider.net.version
     l2_network_info = l2_provider.net.version
 
-    l1_network = {
-        'blockTime': 10,
-        'chainID': int(l1_network_info),
-        'explorerUrl': '',
-        'isCustom': True,
-        'name': 'EthLocal',
-        'partnerChainIDs': [int(l2_network_info)],
-        'isArbitrum': False,
-    }
+    l1_network = L1Network(
+        blockTime = 10,
+        chainID = int(l1_network_info),
+        explorerUrl ='',
+        isCustom= True,
+        name='EthLocal',
+        partnerChainIDs= [int(l2_network_info)],
+        isArbitrum=False,
+    )
 
-    l2_network = {
-        'chainID': int(l2_network_info),
-        'confirmPeriodBlocks': confirm_period_blocks,
-        'ethBridge': {
-            'bridge': bridge_address,
-            'inbox': inbox_address,
-            'outbox': outbox_address,
-            'rollup': rollup_address,
-            'sequencerInbox': sequencer_inbox_address,
-        },
-        'explorerUrl': '',
-        'isArbitrum': True,
-        'isCustom': True,
-        'name': 'ArbLocal',
-        'partnerChainID': int(l1_network_info),
-        'retryableLifetimeSeconds': 7 * 24 * 60 * 60,
-        "nitroGenesisBlock": 0,
-        "nitroGenesisL1Block": 0,
-        "depositTimeout": 900000
-    }
+    l2_network = L2Network(
+        chainID =  int(l2_network_info),
+        confirmPeriodBlocks = confirm_period_blocks,
+        ethBridge = EthBridge(
+            bridge = bridge_address,
+            inbox = inbox_address,
+            outbox = outbox_address,
+            rollup = rollup_address,
+            sequencerInbox = sequencer_inbox_address,
+        ),
+        tokenBridge= {},
+        explorerUrl= '',
+        isArbitrum= True,
+        isCustom= True,
+        name= 'ArbLocal',
+        partnerChainID= int(l1_network_info),
+        retryableLifetimeSeconds= 7 * 24 * 60 * 60,
+        nitroGenesisBlock= 0,
+        nitroGenesisL1Block= 0,
+        depositTimeout= 900000
+    )
 
     return {
         'l1Network': l1_network,
@@ -106,7 +110,7 @@ def get_custom_networks(l1_url: str, l2_url: str):
     }
 
 
-def setup_networks(l1_url: str, l2_url: str, l1_private_key, l2_private_key):
+async def setup_networks(l1_url: str, l2_url: str, l1_private_key, l2_private_key):
     # Set up the providers for L1 and L2
     l1_provider = Web3(HTTPProvider(l1_url))
     l2_provider = Web3(HTTPProvider(l2_url))
@@ -135,32 +139,42 @@ def setup_networks(l1_url: str, l2_url: str, l1_private_key, l2_private_key):
 
     # Add token bridge information to the L2 network
     l2_network = custom_networks['l2Network']
-    l2_network['tokenBridge'] = {
-        'l1CustomGateway': l1_contracts['customGateway'],
-        'l1ERC20Gateway': l1_contracts['standardGateway'],
-        'l1GatewayRouter': l1_contracts['router'],
-        'l1MultiCall': l1_contracts['multicall'],
-        'l1ProxyAdmin': l1_contracts['proxyAdmin'],
-        'l1Weth': l1_contracts['weth'],
-        'l1WethGateway': l1_contracts['wethGateway'],
-        'l2CustomGateway': l2_contracts['customGateway'],
-        'l2ERC20Gateway': l2_contracts['standardGateway'],
-        'l2GatewayRouter': l2_contracts['router'],
-        'l2MultiCall': l2_contracts['multicall'],
-        'l2ProxyAdmin': l2_contracts['proxyAdmin'],
-        'l2Weth': l2_contracts['weth'],
-        'l2WethGateway': l2_contracts['wethGateway'],
-    }
-
+    l2_network.tokenBridge = TokenBridge(
+        l1CustomGateway = l1_contracts['customGateway'],
+        l1ERC20Gateway = l1_contracts['standardGateway'],
+        l1GatewayRouter = l1_contracts['router'],
+        l1MultiCall = l1_contracts['multicall'],
+        l1ProxyAdmin = l1_contracts['proxyAdmin'],
+        l1Weth = l1_contracts['weth'],
+        l1WethGateway = l1_contracts['wethGateway'],
+        l2CustomGateway = l2_contracts['customGateway'],
+        l2ERC20Gateway = l2_contracts['standardGateway'],
+        l2GatewayRouter = l2_contracts['router'],
+        l2Multicall = l2_contracts['multicall'],
+        l2ProxyAdmin = l2_contracts['proxyAdmin'],
+        l2Weth = l2_contracts['weth'],
+        l2WethGateway = l2_contracts['wethGateway'],
+    )
+    l1_network = custom_networks['l1Network']
+    
     # Register the custom networks
-    add_custom_network(custom_networks['l1Network'], l2_network)
+    # l2_network = L2Network(**l2_network)
+    # l1_network = L1Network(**l1_network)
+    # l2_network.ethBridge = EthBridge(**l2_network.ethBridge)
+    # l2_network.tokenBridge = TokenBridge(**l2_network.tokenBridge)
+    add_custom_network(l1_network, l2_network)
 
+    print('l1_network', l1_network)
+    print('l2_network', l2_network)
+    
     # Register the WETH gateway and other necessary setups
     admin_erc20_bridger = AdminErc20Bridger(l2_network)
-    admin_erc20_bridger.set_gateways(
-        l1_deployer,
-        l2_deployer.provider,
-        [
+    await admin_erc20_bridger.set_gateways(
+        l1_signer=l1_deployer,
+        l1_provider=l1_provider,
+        l2_signer=l2_deployer,
+        l2_provider=l2_provider,
+        token_gateways=[
             {
                 'gatewayAddr': l2_network['tokenBridge']['l1WethGateway'],
                 'tokenAddr': l2_network['tokenBridge']['l1Weth'],
@@ -170,7 +184,7 @@ def setup_networks(l1_url: str, l2_url: str, l1_private_key, l2_private_key):
 
     # Return the configured network and signers
     return {
-        'l1Network': custom_networks['l1Network'],
+        'l1Network': l1_network,
         'l2Network': l2_network,
         'l1Deployer': l1_deployer,
         'l2Deployer': l2_deployer,

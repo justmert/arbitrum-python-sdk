@@ -125,7 +125,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
         }
 
     async def get_block_from_node_log(self, l2_provider, log=None):
-        # Assuming ArbitrumProvider is defined and has a getBlock method
+        # Assuming ArbitrumProvider is defined and has a get_block method
         arbitrum_provider = ArbitrumProvider(l2_provider)
 
         if not log:

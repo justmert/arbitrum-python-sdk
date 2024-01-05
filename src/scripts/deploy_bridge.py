@@ -1,8 +1,8 @@
 from web3 import Web3
 from web3.contract import Contract
 from eth_typing import Address
-from src.lib.utils.helper import load_contract
-from web3.eth import Account
+# from web3.eth import Account
+from web3 import Account
 import json
 
 ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
@@ -23,11 +23,11 @@ def load_contract_abi(name: str, is_classic = False) -> list:
 def deploy_contract(provider: Web3, deployer: Account, contract_name: str, *constructor_args, is_classic = False) -> Contract:
     contract_abi, bytecode = load_contract_abi(contract_name, is_classic=is_classic)
     contract = provider.eth.contract(abi=contract_abi, bytecode=bytecode)
-    construct_txn = contract.constructor(*constructor_args).buildTransaction({
+    construct_txn = contract.constructor(*constructor_args).build_transaction({
         'from': deployer.address,
         'nonce': provider.eth.get_transaction_count(deployer.address),
         'gas': 2528712,  # You might want to estimate this value
-        'gasPrice': provider.toWei('21', 'gwei')
+        'gasPrice': provider.to_wei('21', 'gwei')
     })
     signed = deployer.sign_transaction(construct_txn)
     tx_hash = provider.eth.send_raw_transaction(signed.rawTransaction)
@@ -105,18 +105,18 @@ def deploy_erc20_l2(provider, deployer):
 
 def sign_and_send_transaction(provider, contract_function, signer, nonce=None):
     # Build the transaction
-    transaction = contract_function.buildTransaction({
+    transaction = contract_function.build_transaction({
         'from': signer.address,
-        'nonce': nonce if nonce is not None else provider.eth.getTransactionCount(signer.address),
+        'nonce': nonce if nonce is not None else provider.eth.get_transaction_count(signer.address),
         'gas': 2528712,  # Adjust as needed
-        'gasPrice': provider.toWei('21', 'gwei')
+        'gasPrice': provider.to_wei('21', 'gwei')
     })
 
     # Sign the transaction
     signed_txn = signer.sign_transaction(transaction)
 
     # Send the transaction
-    tx_hash = provider.eth.sendRawTransaction(signed_txn.rawTransaction)
+    tx_hash = provider.eth.send_raw_transaction(signed_txn.rawTransaction)
     tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
 
     return tx_receipt

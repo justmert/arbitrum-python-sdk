@@ -39,13 +39,13 @@ class EthBridger(AssetBridger):
         return EthBridger(await get_l2_network(l2_provider))
 
     async def get_deposit_request(self, params):
-        inbox = load_contract(provider=self.l2_provider, contract_name='Inbox', contract_address=self.l2_network.eth_bridge.inbox)
+        inbox = load_contract(provider=self.l2_provider, contract_name='Inbox', address=self.l2_network.eth_bridge.inbox, is_classic=False)
 
         function_data = inbox.encodeFunctionData('depositEth()')
         return {
             'txRequest': {
                 'to': self.l2_network.eth_bridge.inbox,
-                'value': Web3.toWei(params.amount, 'ether'),
+                'value': Web3.to_wei(params.amount, 'ether'),
                 'data': function_data,
                 'from': params['from'],
             },
@@ -97,13 +97,13 @@ class EthBridger(AssetBridger):
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx)
 
     async def get_withdrawal_request(self, params):
-        arb_sys = load_contract(provider=self.l2_provider, contract_name='ArbSys', contract_address=ARB_SYS_ADDRESS)
+        arb_sys = load_contract(provider=self.l2_provider, contract_name='ArbSys', address=ARB_SYS_ADDRESS) # also available in classic!
         function_data = arb_sys.encodeFunctionData('withdrawEth', [params.destinationAddress])
         return {
             'txRequest': {
                 'to': ARB_SYS_ADDRESS,
                 'data': function_data,
-                'value': Web3.toWei(params.amount, 'ether'),
+                'value': Web3.to_wei(params.amount, 'ether'),
                 'from': params['from'],
             },
             'estimateL1GasLimit': lambda l1_provider: 130000

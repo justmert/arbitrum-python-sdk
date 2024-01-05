@@ -6,7 +6,7 @@ from src.scripts.test_setup import config, get_signer, test_setup
 from src.lib.message.l2_to_l1_message import L2ToL1MessageStatus
 
 # Constants and utility functions
-pre_fund_amount = Web3.toWei(0.1, 'ether')
+pre_fund_amount = Web3.to_wei(0.1, 'ether')
 arb_sys = '0x0000000000000000000000000000000000000064'
 
 def pretty_log(text: str):

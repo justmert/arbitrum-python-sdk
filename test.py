@@ -1,20 +1,102 @@
-from web3 import Web3
-from eth_utils import to_checksum_address
+# def snake_to_camel(name):
+#     # Special cases where the conversion isn't straightforward
+#     special_cases = {"id": "ID", "ids": "IDs"}
+#     components = name.split('_')
+#     # Convert the first component as is, then title-case the remaining components
+#     camel_case_name = components[0] + ''.join(special_cases.get(x, x.title()) for x in components[1:])
+#     return camel_case_name
 
-# Assuming web3 instance is created and connected to an Ethereum node
-w3 = Web3(Web3.HTTPProvider('YOUR_PROVIDER_URL'))
 
-# Define the offset as in the JavaScript code
-offset = int('0x1111000000000000000000000000000000001111', 16)
+# class CamelSnakeCaseMixin:
+#     def __getitem__(self, key):
+#         return self.__getattr__(key)
 
-# Ethereum addresses are 20 bytes long. The maximum possible address, in bytes, is:
-max_address_int = 2**(20*8) - 1
+#     def __getattr__(self, name):
+#         # Try to fetch the attribute as is (for camelCase or any other case)
+#         try:
+#             return super().__getattribute__(name)
+#         except AttributeError:
+#             pass
+        
+#         # Convert snake_case to camelCase and try again
+#         camel_case_name = snake_to_camel(name)
+#         try:
+#             return super().__getattribute__(camel_case_name)
+#         except AttributeError:
+#             pass
 
-# Calculate the new address by subtracting the offset and an additional 10 from the maximum address
-new_address_int = max_address_int - offset - 10
+#         # If not found, raise AttributeError
+#         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-# Convert the integer to a hex string, then to an Ethereum address
-new_address_hex = hex(new_address_int)
-new_address_eth = to_checksum_address(new_address_hex)
+#     def __setattr__(self, name, value):
+#         # Ensure attributes are stored in camelCase
+#         if '_' in name:
+#             name = snake_to_camel(name)
+        
+#         super().__setattr__(name, value)
 
-print(new_address_eth)
+
+# class Network(CamelSnakeCaseMixin):
+#     def __init__(self, chainID, name, explorerUrl, isCustom, gif=None):
+#         self.chainID = chainID
+#         self.name = name
+#         self.explorerUrl = explorerUrl
+#         self.isCustom = isCustom
+#         self.gif = gif
+
+
+# class L1Network(Network):
+#     def __init__(self, partnerChainIDs, blockTime, isArbitrum, **kwargs):
+#         super().__init__(**kwargs)
+#         self.partnerChainIDs = partnerChainIDs
+#         self.blockTime = blockTime
+#         self.isArbitrum = isArbitrum
+
+
+# class L2Network(Network):
+#     def __init__(
+#         self,
+#         tokenBridge,
+#         ethBridge,
+#         partnerChainID,
+#         isArbitrum,
+#         confirmPeriodBlocks,
+#         retryableLifetimeSeconds,
+#         nitroGenesisBlock,
+#         nitroGenesisL1Block,
+#         depositTimeout,
+#         **kwargs,
+#     ):
+#         super().__init__(**kwargs)
+#         self.tokenBridge = tokenBridge
+#         self.ethBridge = ethBridge
+#         self.partnerChainID = partnerChainID
+#         self.isArbitrum = isArbitrum
+#         self.confirmPeriodBlocks = confirmPeriodBlocks
+#         self.retryableLifetimeSeconds = retryableLifetimeSeconds
+#         self.nitroGenesisBlock = nitroGenesisBlock
+#         self.nitroGenesisL1Block = nitroGenesisL1Block
+#         self.depositTimeout = depositTimeout
+
+
+# x = L2Network(
+#     tokenBridge=None,
+#     ethBridge=None,
+#     partnerChainID=123,
+#     isArbitrum=True,
+#     confirmPeriodBlocks=123,
+#     retryableLifetimeSeconds=123,
+#     nitroGenesisBlock=123,
+#     nitroGenesisL1Block=123,
+#     depositTimeout=123,
+#     chainID=123,
+#     name='ArbLocal',
+#     explorerUrl='',
+#     isCustom=True,
+# )
+
+# print(x.partnerChainID)  # Access by camelCase attribute
+# print(x['partnerChainID'])  # Access by camelCase key
+
+# print(x.partner_chain_id)  # Access by camelCase attribute
+# print(x['partner_chain_id'])  # Access by camelCase key

@@ -6,7 +6,6 @@ import asyncio
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS
-from src.lib.utils.helper import load_contract
 from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
 from src.lib.data_entities.message import L2ToL1MessageStatus
 
