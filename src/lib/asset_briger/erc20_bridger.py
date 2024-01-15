@@ -348,11 +348,12 @@ class AdminErc20Bridger(Erc20Bridger):
         return transaction_data
 
     async def set_gateways(
-        self, l1_signer, l1_provider: Web3, l2_signer, l2_provider, 
+        self, l1_signer, l1_provider: Web3, l2_signer, l2_provider: Web3, 
         token_gateways, options=None
     ):
         if not SignerProviderUtils.signer_has_provider(l1_signer):
             raise MissingProviderArbSdkError('l1Signer')
+        
         await self.check_l1_network(l1_signer)
         await self.check_l2_network(l2_provider)
 
@@ -376,12 +377,9 @@ class AdminErc20Bridger(Erc20Bridger):
         }
     
         tx_hash = l1_provider.eth.send_transaction(transaction)
-        # print(res)
-
 
         # Waiting for the transaction to be mined and getting the receipt
         tx_receipt = l1_provider.eth.wait_for_transaction_receipt(tx_hash)
-        print(tx_receipt)
 
         # Apply the monkey patch to the transaction receipt
         patched_tx_receipt = L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)

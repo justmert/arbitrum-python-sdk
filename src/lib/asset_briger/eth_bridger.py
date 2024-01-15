@@ -30,9 +30,9 @@ class L2ToL1TxReqAndSigner:
 
 
 class EthBridger(AssetBridger):
-    def __init__(self, l2_provider):
-        super().__init__(l2_provider)
-        self.l2_network = get_l2_network(l2_provider)
+    def __init__(self, l2_network):
+        super().__init__(l2_network)
+        self.l2_network = l2_network
 
     @staticmethod
     async def from_provider(l2_provider):

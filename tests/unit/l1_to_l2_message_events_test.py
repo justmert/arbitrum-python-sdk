@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import patch
 from web3 import Web3, EthereumTesterProvider, HTTPProvider
-from eth_tester.exceptions import TransactionFailed
 from hexbytes import HexBytes
 
 # Assuming L1TransactionReceipt is properly converted and available

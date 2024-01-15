@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import List, Optional, Any, Callable
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.data_entities.signer_or_provider import (
-    SignerProviderUtils, SignerOrProvider
+    SignerProviderUtils, 
 )
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS

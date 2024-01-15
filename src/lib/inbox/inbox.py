@@ -33,14 +33,14 @@ class InboxTools:
         return (
             transaction_l2_request.to == '0x' or
             not transaction_l2_request.to or
-            transaction_l2_request.to == Web3.toChecksumAddress('0x0000000000000000000000000000000000000000')
+            transaction_l2_request.to == Web3.to_checksum_address('0x0000000000000000000000000000000000000000')
         )
 
     async def estimate_arbitrum_gas(self, transaction_l2_request, l2_provider) -> Dict[str, Any]:
         node_interface = load_contract(provider=l2_provider, contract_name='NodeInterface', address=NODE_INTERFACE_ADDRESS) # also available in classic!
         contract_creation = self.is_contract_creation(transaction_l2_request)
         gas_components = await node_interface.callStatic.gasEstimateComponents(
-            transaction_l2_request.to or Web3.toChecksumAddress('0x0000000000000000000000000000000000000000'),
+            transaction_l2_request.to or Web3.to_checksum_address('0x0000000000000000000000000000000000000000'),
             contract_creation,
             transaction_l2_request.data,
             {
@@ -163,7 +163,7 @@ class InboxTools:
         tx['chainId'] = await l2_signer.getChainId()
 
         if 'to' not in tx:
-            tx['to'] = Web3.toChecksumAddress('0x0000000000000000000000000000000000000000')
+            tx['to'] = Web3.to_checksum_address('0x0000000000000000000000000000000000000000')
 
         try:
             tx['gasLimit'] = (await self.estimate_arbitrum_gas(tx, l2_signer.provider)).gasEstimateForL2

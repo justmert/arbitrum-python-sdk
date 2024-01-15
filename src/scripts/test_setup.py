@@ -7,6 +7,9 @@ from web3 import Web3, HTTPProvider
 from web3 import Account
 from web3.middleware import geth_poa_middleware
 from yaml import Token
+from pathlib import Path
+from attrdict import AttrDict
+from src.lib.data_entities.errors import ArbSdkError
 
 # Import your custom classes and functions here
 # from my_project import EthBridger, InboxTools, Erc20Bridger, AdminErc20Bridger
@@ -15,6 +18,7 @@ from src.lib.data_entities.networks import add_custom_network, get_l1_network, g
 from src.lib.asset_briger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
 from src.lib.asset_briger.eth_bridger import EthBridger
 from src.lib.inbox.inbox import InboxTools
+from src.scripts import PROJECT_DIRECTORY
 from .deploy_bridge import deploy_erc20_and_init
 from src.lib.data_entities.networks import L1Network, L2Network, EthBridge, TokenBridge
 
@@ -69,8 +73,8 @@ def get_custom_networks(l1_url: str, l2_url: str):
     # bridge_contract = l1_provider.eth.contract(address=bridge_address, abi=BridgeABI)  # Add BridgeABI
     outbox_address = bridge_contract.functions.allowedOutboxList(0).call()
 
-    l1_network_info = l1_provider.net.version
-    l2_network_info = l2_provider.net.version
+    l1_network_info = l1_provider.eth.chain_id
+    l2_network_info = l2_provider.eth.chain_id
 
     l1_network = L1Network(
         blockTime = 10,
@@ -109,32 +113,16 @@ def get_custom_networks(l1_url: str, l2_url: str):
         'l2Network': l2_network,
     }
 
+async def setup_networks(l1_url: str, l2_url: str, l1_deployer: Account, l2_deployer: Account, l1_provider: Web3, l2_provider: Web3):
 
-async def setup_networks(l1_url: str, l2_url: str, l1_private_key, l2_private_key):
-    # Set up the providers for L1 and L2
-    l1_provider = Web3(HTTPProvider(l1_url))
-    l2_provider = Web3(HTTPProvider(l2_url))
-
-    # Adjust for PoA middleware if needed
-    l1_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
-    l2_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-    # Create LocalAccount objects from private keys
-    l1_deployer = Account.from_key(l1_private_key)
-    l2_deployer = Account.from_key(l2_private_key)
-
-    # Set the default account for each provider to the deployer accounts
-    l1_provider.eth.default_account = Web3.to_checksum_address(l1_deployer.address)
-    l2_provider.eth.default_account = Web3.to_checksum_address(l2_deployer.address)
 
     # Fetch the custom networks
     custom_networks = get_custom_networks(l1_url, l2_url)
-
     # Deploy necessary contracts and get their addresses
     l1_contracts, l2_contracts = deploy_erc20_and_init(
-        l1_provider, l1_deployer, 
-        l2_provider, l2_deployer, 
-        custom_networks['l2Network']['ethBridge']['inbox']
+        l1_provider= l1_provider, l2_provider=l2_provider,
+        l1_signer=l1_deployer, l2_signer=l2_deployer,
+        inbox_address=custom_networks['l2Network']['ethBridge']['inbox']
     )
 
     # Add token bridge information to the L2 network
@@ -157,11 +145,6 @@ async def setup_networks(l1_url: str, l2_url: str, l1_private_key, l2_private_ke
     )
     l1_network = custom_networks['l1Network']
     
-    # Register the custom networks
-    # l2_network = L2Network(**l2_network)
-    # l1_network = L1Network(**l1_network)
-    # l2_network.ethBridge = EthBridge(**l2_network.ethBridge)
-    # l2_network.tokenBridge = TokenBridge(**l2_network.tokenBridge)
     add_custom_network(l1_network, l2_network)
     
     # Register the WETH gateway and other necessary setups
@@ -198,44 +181,77 @@ def get_signer(provider: Web3, key: str = None):
     else:
         # Assuming the first account is what you want to use
         # Adjust accordingly if you want to use a different account
-        return provider.eth.account.create()  # Or provider.eth.accounts[0] if accounts are already loaded
+        # return provider.eth.account.create()  # Or provider.eth.accounts[0] if accounts are already loaded
+        return provider.eth.accounts[0]
 
 
-def test_setup():
+async def test_setup():
+    # Configure the Ethereum and Arbitrum providers
     eth_provider = Web3(HTTPProvider(config['ETH_URL']))
     arb_provider = Web3(HTTPProvider(config['ARB_URL']))
 
+    # Adjust for PoA middleware if necessary
+    eth_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
+    arb_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+    # Create signers for deployments
     l1_deployer = get_signer(eth_provider, config['ETH_KEY'])
     l2_deployer = get_signer(arb_provider, config['ARB_KEY'])
 
+    # Generate a new account for l1 and l2 signers
     seed = Account.create()
-    l1_signer = seed.connect(eth_provider)
-    l2_signer = seed.connect(arb_provider)
+    l1_signer_address = Web3.to_checksum_address(seed.address)
+    l2_signer_address = Web3.to_checksum_address(seed.address)
 
+    # Set the default account for each provider to the new signer accounts
+    eth_provider.eth.default_account = l1_signer_address
+    arb_provider.eth.default_account = l2_signer_address
+
+   # Try to get the network configurations
     try:
-        l1_network = get_l1_network(l1_deployer)
-        l2_network = get_l2_network(l2_deployer)
-    except Exception as e:
-        # Handle the exception as needed, maybe set up networks if not found
-        pass
+        set_l1_network = get_l1_network(eth_provider)
+        set_l2_network = get_l2_network(arb_provider)
+    
+    except ArbSdkError:
+        # Handle the case where the networks haven't been added yet
+        local_network_file = PROJECT_DIRECTORY / 'localNetwork.json'
+        print(local_network_file.exists())
+        if local_network_file.exists():
+            with open(local_network_file, 'r') as file:
+                network_data = json.load(file)
+            set_l1_network = L1Network(**network_data['l1Network'])
 
-    erc20_bridger = Erc20Bridger(l2_network)
-    admin_erc20_bridger = AdminErc20Bridger(l2_network)
-    eth_bridger = EthBridger(l2_network)
-    inbox_tools = InboxTools(l1_signer, l2_network)
+            network_data['l2Network']['tokenBridge'] = TokenBridge(**network_data['l2Network']['tokenBridge'])
+            network_data['l2Network']['ethBridge'] = EthBridge(**network_data['l2Network']['ethBridge'])
+            set_l2_network = L2Network(**network_data['l2Network'])
+            add_custom_network(set_l1_network, set_l2_network)
+            
+            print('set_l2_network', set_l2_network.eth_bridge)
+        else:
+            # Deploy a new network
+            network_data = await setup_networks(
+                l1_deployer=l1_deployer, l2_deployer=l2_deployer, l1_url= config['ETH_URL'], l2_url=config['ARB_URL'], l1_provider=eth_provider, l2_provider=arb_provider
+            )
+            set_l1_network = network_data['l1Network']
+            set_l2_network = network_data['l2Network']
 
-    return {
-        'l1_signer': l1_signer,
-        'l2_signer': l2_signer,
-        'l1_network': l1_network,
-        'l2_network': l2_network,
+    # Initialize bridger and tools objects
+    erc20_bridger = Erc20Bridger(set_l2_network)
+    admin_erc20_bridger = AdminErc20Bridger(set_l2_network)
+    eth_bridger = EthBridger(set_l2_network)
+    inbox_tools = InboxTools(l1_signer_address, set_l2_network)
+
+    return AttrDict({
+        'l1_signer': l1_signer_address,
+        'l2_signer': l2_signer_address,
+        'l1_network': set_l1_network,
+        'l2_network': set_l2_network,
         'erc20_bridger': erc20_bridger,
         'admin_erc20_bridger': admin_erc20_bridger,
         'eth_bridger': eth_bridger,
         'inbox_tools': inbox_tools,
         'l1_deployer': l1_deployer,
         'l2_deployer': l2_deployer,
-    }
-
-if __name__ == "__main__":
-    setup = test_setup()
+        'l1_provider': eth_provider,
+        'l2_provider': arb_provider,
+    })

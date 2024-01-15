@@ -124,10 +124,11 @@ def sign_and_send_transaction(provider, contract_function, signer, nonce=None):
 
 def deploy_erc20_and_init(l1_provider, l1_signer, l2_provider, l2_signer, inbox_address: Address):
     print('Deploying L1 contracts...')
-    l1_contracts = deploy_erc20_l1(l1_provider, l1_signer)
+    print('l1rype', type(l1_signer))
+    l1_contracts = deploy_erc20_l1(provider=l1_provider, deployer=l1_signer)
 
     print('Deploying L2 contracts...')
-    l2_contracts = deploy_erc20_l2(l2_provider, l2_signer)
+    l2_contracts = deploy_erc20_l2(provider=l2_provider, deployer=l2_signer)
 
     print('Initializing L2 contracts...')
     sign_and_send_transaction(

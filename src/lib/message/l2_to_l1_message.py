@@ -3,8 +3,7 @@ from web3.providers import BaseProvider
 # from web3.contract import ContractTransaction
 
 # Import necessary modules and classes
-# from signer_or_provider import SignerOrProvider, is_signer
-from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
+from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 import src.lib.message.l2_to_l1_message_classic as classic
 import src.lib.message.l2_to_l1_message_nitro as nitro
 # from arbsys import ClassicL2ToL1TransactionEvent, NitroL2ToL1TransactionEvent
@@ -52,7 +51,7 @@ class L2ToL1Message:
         return is_defined(getattr(event, 'index_in_batch', None))
 
     @staticmethod
-    def from_event(l1_signer_or_provider: SignerOrProvider, event, l1_provider: Optional[BaseProvider] = None) -> Union['L2ToL1MessageReader', 'L2ToL1MessageWriter']:
+    def from_event(l1_signer_or_provider, event, l1_provider: Optional[BaseProvider] = None) -> Union['L2ToL1MessageReader', 'L2ToL1MessageWriter']:
         if SignerProviderUtils.is_signer(l1_signer_or_provider):
             return L2ToL1MessageWriter(l1_signer_or_provider, event, l1_provider)
         else:

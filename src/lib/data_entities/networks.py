@@ -6,6 +6,7 @@ import asyncio
 from .signer_or_provider import SignerProviderUtils
 import os
 from src.lib.utils.helper import CamelSnakeCaseMixin
+from web3.middleware import geth_poa_middleware
 
 
 class Network(CamelSnakeCaseMixin):
@@ -68,6 +69,7 @@ class TokenBridge(CamelSnakeCaseMixin):
         l2ProxyAdmin,
         l1MultiCall,
         l2Multicall,
+        l2MultiCall = None
     ):
         self.l1GatewayRouter = l1GatewayRouter
         self.l2GatewayRouter = l2GatewayRouter
@@ -339,19 +341,14 @@ l2_networks = {
 def get_network(signer_or_provider_or_chain_id, layer):
     if isinstance(signer_or_provider_or_chain_id, int):
         chain_id = signer_or_provider_or_chain_id
+    
+    elif isinstance(signer_or_provider_or_chain_id, Web3):
+        chain_id = signer_or_provider_or_chain_id.eth.chain_id
+    
     else:
-        provider = SignerProviderUtils.get_provider_or_throw(
-            signer_or_provider_or_chain_id
-        )
-        chain_id = provider.net.version
+        raise ArbSdkError(f"Please provide a Web3 instance or chain ID. You have provided {type(signer_or_provider_or_chain_id)}")
 
     networks = l1_networks if layer == 1 else l2_networks
-    if isinstance(chain_id, str):
-        try:
-            chain_id = int(chain_id)
-        except ValueError:
-            raise ArbSdkError(f"Unrecognized network {chain_id}.")
-
     if chain_id in networks:
         return networks[chain_id]
     else:

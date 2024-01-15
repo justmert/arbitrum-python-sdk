@@ -9,3 +9,4 @@ pytest-asyncio
 eth-abi
 pyyaml
 mock
+attrdict

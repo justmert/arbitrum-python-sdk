@@ -23,7 +23,6 @@ from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.signer_or_provider import (
     SignerProviderUtils,
-    SignerOrProvider,
 )
 from src.lib.data_entities.message import InboxMessageKind
 from src.lib.message.message_data_parser import SubmitRetryableMessageDataParser
@@ -78,7 +77,7 @@ class L1TransactionReceipt():
             for message_num in message_nums
         ]
 
-    async def is_classic(self, l2_signer_or_provider: SignerOrProvider) -> bool:
+    async def is_classic(self, l2_signer_or_provider) -> bool:
         provider = SignerProviderUtils.get_provider_or_throw(l2_signer_or_provider)
         network = get_l2_network(provider)
         return self.block_number < network.nitro_genesis_l1_block
@@ -144,7 +143,7 @@ class L1TransactionReceipt():
         return eth_deposit_messages
 
     async def get_l1_to_l2_messages(
-        self, l2_signer_or_provider: SignerOrProvider
+        self, l2_signer_or_provider
     ):
         provider = SignerProviderUtils.get_provider_or_throw(l2_signer_or_provider)
         network = get_l2_network(provider)
@@ -264,7 +263,7 @@ class L1ContractCallTransactionReceipt(L1TransactionReceipt):
 
     async def wait_for_l2(
         self,
-        l2_signer_or_provider: SignerOrProvider,
+        l2_signer_or_provider,
         confirmations: Optional[int] = None,
         timeout: Optional[int] = None,
     ):
