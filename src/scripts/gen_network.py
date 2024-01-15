@@ -26,8 +26,8 @@ async def main():
         l1_private_key=config['ETH_KEY'], l2_private_key=config['ARB_KEY'], l1_url=config["ETH_URL"], l2_url=config["ARB_URL"]
     )
 
-    l1_network = networks_and_deployers["l1Network"]
-    l2_network = networks_and_deployers["l2Network"]
+    l1_network = networks_and_deployers["l1Network"].to_dict()
+    l2_network = networks_and_deployers["l2Network"].to_dict()
     
     with open("localNetwork.json", "w") as f:
         json.dump({"l1Network": l1_network, "l2Network": l2_network}, f, indent=2)

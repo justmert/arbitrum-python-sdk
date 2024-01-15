@@ -1,102 +1,38 @@
-# def snake_to_camel(name):
-#     # Special cases where the conversion isn't straightforward
-#     special_cases = {"id": "ID", "ids": "IDs"}
-#     components = name.split('_')
-#     # Convert the first component as is, then title-case the remaining components
-#     camel_case_name = components[0] + ''.join(special_cases.get(x, x.title()) for x in components[1:])
-#     return camel_case_name
+from web3 import Web3
+import re
+from eth_abi import abi
 
 
-# class CamelSnakeCaseMixin:
-#     def __getitem__(self, key):
-#         return self.__getattr__(key)
+error_data_hex = "0x07c266e3000000000000000000000000840bd0e55bf25bbc4861ba9eff53004e2aee93a7000000000000000000000000763d253a4f76299ac76369cc0416a5961c236d770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000003f1eae7d46d88f08fc2f8ed27fcb2ab183eb2d0e0000000000000000000000003f1eae7d46d88f08fc2f8ed27fcb2ab183eb2d0e00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000000c44201f9850000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000010000000000000000000000003a79b477768c0935daf987b4e7d69ebcc8afbacb00000000000000000000000000000000000000000000000000000000000000010000000000000000000000009ddeba87fb9c49258316e4454f49b578c180e6be00000000000000000000000000000000000000000000000000000000" 
 
-#     def __getattr__(self, name):
-#         # Try to fetch the attribute as is (for camelCase or any other case)
-#         try:
-#             return super().__getattribute__(name)
-#         except AttributeError:
-#             pass
-        
-#         # Convert snake_case to camelCase and try again
-#         camel_case_name = snake_to_camel(name)
-#         try:
-#             return super().__getattribute__(camel_case_name)
-#         except AttributeError:
-#             pass
+# The error data in hexadecimal format
 
-#         # If not found, raise AttributeError
-#         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+# def decode_error_data(hex_data, abi_types):
+    # if hex_data.startswith("0x"):
+    #     hex_data = hex_data[2:]
+    
+    # # Decode the data based on the ABI types
+    # decoded_data = Web3().eth.abi.decode_parameters(abi_types, hex_data)
+    # return decoded_data
+# error_data_hex = "0x07c266e3..."  # Your error data
+abi_types = ['address', 'address', 'uint256', 'uint256', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes']
 
-#     def __setattr__(self, name, value):
-#         # Ensure attributes are stored in camelCase
-#         if '_' in name:
-#             name = snake_to_camel(name)
-        
-#         super().__setattr__(name, value)
+#   'error RetryableData(address from, address to, uint256 l2CallValue, uint256 deposit, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 gasLimit, uint256 maxFeePerGas, bytes data)',
 
 
-# class Network(CamelSnakeCaseMixin):
-#     def __init__(self, chainID, name, explorerUrl, isCustom, gif=None):
-#         self.chainID = chainID
-#         self.name = name
-#         self.explorerUrl = explorerUrl
-#         self.isCustom = isCustom
-#         self.gif = gif
+# Remove '0x' prefix and skip the first 4 bytes (8 characters)
+if error_data_hex.startswith("0x"):
+    error_data_hex = error_data_hex[2:]
+error_data_hex = error_data_hex[8:]
 
+# Decode the error data
+decoded_data = abi.decode(abi_types, bytes.fromhex(error_data_hex))
 
-# class L1Network(Network):
-#     def __init__(self, partnerChainIDs, blockTime, isArbitrum, **kwargs):
-#         super().__init__(**kwargs)
-#         self.partnerChainIDs = partnerChainIDs
-#         self.blockTime = blockTime
-#         self.isArbitrum = isArbitrum
+# Print the decoded data
+for i, data in enumerate(decoded_data):
+    if isinstance(data, bytes):
+        # byte to hex
+        print('hex', data.hex())
+    else:
+        print(f"Parameter {i+1} ({abi_types[i]}):", data)
 
-
-# class L2Network(Network):
-#     def __init__(
-#         self,
-#         tokenBridge,
-#         ethBridge,
-#         partnerChainID,
-#         isArbitrum,
-#         confirmPeriodBlocks,
-#         retryableLifetimeSeconds,
-#         nitroGenesisBlock,
-#         nitroGenesisL1Block,
-#         depositTimeout,
-#         **kwargs,
-#     ):
-#         super().__init__(**kwargs)
-#         self.tokenBridge = tokenBridge
-#         self.ethBridge = ethBridge
-#         self.partnerChainID = partnerChainID
-#         self.isArbitrum = isArbitrum
-#         self.confirmPeriodBlocks = confirmPeriodBlocks
-#         self.retryableLifetimeSeconds = retryableLifetimeSeconds
-#         self.nitroGenesisBlock = nitroGenesisBlock
-#         self.nitroGenesisL1Block = nitroGenesisL1Block
-#         self.depositTimeout = depositTimeout
-
-
-# x = L2Network(
-#     tokenBridge=None,
-#     ethBridge=None,
-#     partnerChainID=123,
-#     isArbitrum=True,
-#     confirmPeriodBlocks=123,
-#     retryableLifetimeSeconds=123,
-#     nitroGenesisBlock=123,
-#     nitroGenesisL1Block=123,
-#     depositTimeout=123,
-#     chainID=123,
-#     name='ArbLocal',
-#     explorerUrl='',
-#     isCustom=True,
-# )
-
-# print(x.partnerChainID)  # Access by camelCase attribute
-# print(x['partnerChainID'])  # Access by camelCase key
-
-# print(x.partner_chain_id)  # Access by camelCase attribute
-# print(x['partner_chain_id'])  # Access by camelCase key

@@ -65,7 +65,7 @@ class EthBridger(AssetBridger):
             l1_signer = params['l1Signer']
             overrides = params.get('overrides', {})
 
-        tx = await l1_signer.sendTransaction({
+        tx = await l1_signer.send_transaction({
             **eth_deposit['txRequest'],
             **overrides
         })

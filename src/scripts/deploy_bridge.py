@@ -123,7 +123,6 @@ def sign_and_send_transaction(provider, contract_function, signer, nonce=None):
 
 
 def deploy_erc20_and_init(l1_provider, l1_signer, l2_provider, l2_signer, inbox_address: Address):
-    print(l1_provider.eth.accounts)
     print('Deploying L1 contracts...')
     l1_contracts = deploy_erc20_l1(l1_provider, l1_signer)
 

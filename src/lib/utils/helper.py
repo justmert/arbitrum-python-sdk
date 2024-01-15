@@ -62,3 +62,24 @@ class CamelSnakeCaseMixin:
             name = snake_to_camel(name)
         
         super().__setattr__(name, value)
+
+    def to_dict(self):
+        return {attr: self.convert_to_serializable(getattr(self, attr)) for attr in self.__dict__}
+
+
+    def convert_to_serializable(self, value):
+        # If the value is an instance of CamelSnakeCaseMixin, convert it to a dictionary
+        if isinstance(value, CamelSnakeCaseMixin):
+            return value.to_dict()
+        # If the value is a list, apply this conversion to each element
+        elif isinstance(value, list):
+            return [self.convert_to_serializable(item) for item in value]
+        # If the value is a dictionary, apply this conversion to each value
+        elif isinstance(value, dict):
+            return {key: self.convert_to_serializable(val) for key, val in value.items()}
+    
+        elif isinstance(value, Contract):
+            return value.address
+        else:
+            return value
+        

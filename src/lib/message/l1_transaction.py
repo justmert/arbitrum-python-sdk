@@ -36,7 +36,7 @@ class L1TransactionReceipt():
     A Python equivalent of the TypeScript L1TransactionReceipt class.
     """
 
-    def __init__(self, tx, event_fetcher: EventFetcher):
+    def __init__(self, tx, event_fetcher: EventFetcher = None):
         self.to: Optional[ChecksumAddress] = tx.get("to")
         self.from_: Optional[ChecksumAddress] = tx.get("from")
         self.contract_address: Optional[ChecksumAddress] = tx.get("contractAddress")
@@ -207,18 +207,29 @@ class L1TransactionReceipt():
         contract_transaction.wait = patched_wait
         return contract_transaction
 
+    # @staticmethod
+    # def monkey_patch_contract_call_wait(contract_transaction: Contract):
+    #     original_wait = contract_transaction.wait
+
+    #     async def patched_wait(
+    #         confirmations: Optional[int] = None
+    #     ) -> L1ContractCallTransactionReceipt:
+    #         result = await original_wait(confirmations)
+    #         return L1ContractCallTransactionReceipt(result)
+
+    #     contract_transaction.wait = patched_wait
+    #     return contract_transaction
+
+
+    # web3.py handles the transaction receipt differently compared to ethers
     @staticmethod
-    def monkey_patch_contract_call_wait(contract_transaction: Contract):
-        original_wait = contract_transaction.wait
+    def monkey_patch_contract_call_wait(tx_receipt):
+        # Your logic to modify the transaction receipt
+        # Since the original_wait logic is specific to ethers.js,
+        # you might need to adjust this part based on what you want to achieve in Python
+        # ...
 
-        async def patched_wait(
-            confirmations: Optional[int] = None
-        ) -> L1ContractCallTransactionReceipt:
-            result = await original_wait(confirmations)
-            return L1ContractCallTransactionReceipt(result)
-
-        contract_transaction.wait = patched_wait
-        return contract_transaction
+        return L1ContractCallTransactionReceipt(tx_receipt)  # Return the modified receipt
 
 
 class L1EthDepositTransactionReceipt(L1TransactionReceipt):

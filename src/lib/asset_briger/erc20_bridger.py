@@ -333,25 +333,22 @@ class AdminErc20Bridger(Erc20Bridger):
         max_fee_per_gas = int(params['maxFeePerGas'])
         max_submission_cost = int(params['maxSubmissionCost'])
 
-        # Construct the transaction data for setting gateways
-        transaction = {
-            'from': from_address,
-            'to': l1_gateway_router.address,
-            'value': Web3.to_wei(gas_limit * max_fee_per_gas + max_submission_cost, 'wei'),
-            'data': l1_gateway_router.functions.setGateways(
+        transaction_data = l1_gateway_router.functions.setGateways(
                 token_addresses,
                 gateway_addresses,
                 gas_limit,
                 max_fee_per_gas,
                 max_submission_cost
-            )._encode_transaction_data()
-        }
-
-        return transaction
-
+            ).build_transaction({
+                'from': from_address,
+                'gas': 222780,  # Explicitly set gas to avoid automatic estimation
+                'gasPrice': Web3.to_wei('21', 'gwei'),
+                'value': gas_limit * max_fee_per_gas + max_submission_cost
+            })
+        return transaction_data
 
     async def set_gateways(
-        self, l1_signer, l1_provider, l2_signer, l2_provider, 
+        self, l1_signer, l1_provider: Web3, l2_signer, l2_provider, 
         token_gateways, options=None
     ):
         if not SignerProviderUtils.signer_has_provider(l1_signer):
@@ -367,12 +364,25 @@ class AdminErc20Bridger(Erc20Bridger):
             return self._encode_set_gateways_data(token_gateways=token_gateways, params=params, l1_gateway_router=l1_gateway_router, from_address=from_address)
 
         g_estimator = L1ToL2MessageGasEstimator(l2_provider)
-        estimates = await g_estimator.populate_function_params(set_gateways_func, l1_provider, options)
-
-        res = await l1_signer.send_transaction({
-            'to': estimates['to'],
+        estimates = await g_estimator.populate_function_params(
+            set_gateways_func, 
+            l1_provider, 
+            options
+        )
+        transaction = {
+            'to':  Web3.to_checksum_address(estimates['to']),
             'data': estimates['data'],
-            'value': estimates['estimates']['deposit'],
-        })
+            'value': int(estimates['estimates']['deposit']),
+        }
+    
+        tx_hash = l1_provider.eth.send_transaction(transaction)
+        # print(res)
 
-        return L1TransactionReceipt.monkey_patch_contract_call_wait(res)
+
+        # Waiting for the transaction to be mined and getting the receipt
+        tx_receipt = l1_provider.eth.wait_for_transaction_receipt(tx_hash)
+        print(tx_receipt)
+
+        # Apply the monkey patch to the transaction receipt
+        patched_tx_receipt = L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
+        return patched_tx_receipt

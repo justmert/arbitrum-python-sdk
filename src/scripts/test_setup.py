@@ -163,9 +163,6 @@ async def setup_networks(l1_url: str, l2_url: str, l1_private_key, l2_private_ke
     # l2_network.ethBridge = EthBridge(**l2_network.ethBridge)
     # l2_network.tokenBridge = TokenBridge(**l2_network.tokenBridge)
     add_custom_network(l1_network, l2_network)
-
-    print('l1_network', l1_network)
-    print('l2_network', l2_network)
     
     # Register the WETH gateway and other necessary setups
     admin_erc20_bridger = AdminErc20Bridger(l2_network)
@@ -242,4 +239,3 @@ def test_setup():
 
 if __name__ == "__main__":
     setup = test_setup()
-    print(setup)

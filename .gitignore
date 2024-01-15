@@ -6,4 +6,6 @@ __pycache__/
 *.pyc
 myenv
 test.py
+localNetwork.json
+.gitignore
 

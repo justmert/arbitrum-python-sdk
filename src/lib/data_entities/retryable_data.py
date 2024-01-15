@@ -2,11 +2,16 @@ from web3 import Web3
 from decimal import Decimal
 from typing import Dict, Optional, Union
 import json
+import re
+from eth_abi import abi
 
 class RetryableData:
     """
     Equivalent of TypeScript's RetryableData interface
     """
+
+    abi_types = ['address', 'address', 'uint256', 'uint256', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes']
+    
     def __init__(self, from_address: str, to: str, l2_call_value: Decimal, deposit: Decimal,
                  max_submission_cost: Decimal, excess_fee_refund_address: str,
                  call_value_refund_address: str, gas_limit: Decimal, max_fee_per_gas: Decimal, data: str):
@@ -31,21 +36,34 @@ class RetryableDataTools:
     }
 
     @staticmethod
-    def try_parse_error(error_or_data: Union[Exception, Dict[str, str], str]) -> Optional[RetryableData]:
-        if False:
-            error_data = None
-            if isinstance(error_or_data, str):
-                error_data = error_or_data
-            elif isinstance(error_or_data, dict) and 'errorData' in error_or_data:
-                error_data = error_or_data['errorData']
-            elif isinstance(error_or_data, Exception):
-                # Extract error data from exception
-                pass  # Implement based on the structure of your exceptions
+    def try_parse_error(error_data_hex: Union[Exception, Dict[str, str], str]) -> Optional[RetryableData]:
+        try:
+            if error_data_hex.startswith("0x"):
+                error_data_hex = error_data_hex[2:]
+            error_data_hex = error_data_hex[8:]
 
-            if error_data:
-                return RetryableDataTools.parse_error_data(error_data)
+            # Decode the error data
+            decoded_data = abi.decode(RetryableData.abi_types, bytes.fromhex(error_data_hex))
+
+            if len(decoded_data) != len(RetryableData.abi_types):
+                print('Error decoding retryable data')
+                return None
+            else:
+                return {
+                    'from': Web3.to_checksum_address(decoded_data[0]),
+                    'to': Web3.to_checksum_address(decoded_data[1]),
+                    'l2CallValue': decoded_data[2],
+                    'deposit': decoded_data[3],
+                    'maxSubmissionCost': decoded_data[4],
+                    'excessFeeRefundAddress': Web3.to_checksum_address(decoded_data[5]),
+                    'callValueRefundAddress': Web3.to_checksum_address(decoded_data[6]),
+                    'gasLimit': decoded_data[7],
+                    'maxFeePerGas': decoded_data[8],
+                    # 'data': decoded_data[9].hex()  if str(decoded_data[9].hex()).startswith('0x')  else '0x' + decoded_data[9].hex()
+                    'data': decoded_data[9]
+                }
+        except Exception as ex:
             return None
-        return error_or_data # No need to parse error data
 
     @staticmethod
     def parse_error_data(error_data: str) -> Optional[RetryableData]:
