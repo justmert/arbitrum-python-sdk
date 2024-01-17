@@ -18,8 +18,8 @@ with open('src/abi/classic/TestERC20.json', 'r') as contract_file:
     contract_data = json.load(contract_file)
 
 # Constants similar to depositAmount and withdrawalAmount
-DEPOSIT_AMOUNT = Web3.to_wei(100, 'ether')
-WITHDRAWAL_AMOUNT = Web3.to_wei(10, 'ether')
+DEPOSIT_AMOUNT = 100
+WITHDRAWAL_AMOUNT = 10
 
 
 TEST_ERC20_ABI = contract_data['abi']

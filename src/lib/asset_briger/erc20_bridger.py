@@ -10,10 +10,12 @@ from src.lib.data_entities.retryable_data import RetryableDataTools
 from web3.providers import BaseProvider
 from web3.contract import Contract
 from web3 import Web3
-from src.lib.utils.helper import load_contract
+from src.lib.utils.helper import CaseDict, load_contract
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.data_entities.transaction_request import is_l1_to_l2_transaction_request, is_l2_to_l1_transaction_request
 from src.lib.data_entities.networks import L1Network, L2Network, EthBridge, TokenBridge
+from eth_abi import encode
+from web3 import Web3
 
 MAX_APPROVAL = 2**256 - 1
 MIN_CUSTOM_DEPOSIT_GAS_LIMIT = 275000
@@ -156,7 +158,7 @@ class Erc20Bridger(AssetBridger):
         function_data = router_interface.encodeFunctionData('outboundTransfer(address,address,uint256,bytes)', [
             params['erc20l1_address'],
             to_address,
-            params['amount'],
+            int(params['amount']),
             '0x',
         ])
         
@@ -205,7 +207,7 @@ class Erc20Bridger(AssetBridger):
 
         await self.check_l1_network(params['l1Signer'])
 
-        l1_provider = SignerProviderUtils.get_provider_or_throw(params['l1Signer'])
+        l1_provider = SignerProviderUtils.get_provider_or_throw(params['l1Provider'])
 
         print('deposit_params', params)
         # Determine if the request is an L1 to L2 transaction request
@@ -214,7 +216,10 @@ class Erc20Bridger(AssetBridger):
         else:
             # Prepare the deposit request
             token_deposit = await self.get_deposit_request(
-                params,
+                {
+                    **params,
+                    'from': params['l1Signer'].address
+                },
                 l1_provider=l1_provider,
                 l2_provider=params['l2Provider']
             )
@@ -226,8 +231,18 @@ class Erc20Bridger(AssetBridger):
         # })
         # return L1TransactionReceipt.monkey_patch_contract_call_wait(tx)
         # Combine with overrides
-        transaction = {**token_deposit['tx_request'], **params.get('overrides', {})}
+        transaction = {**token_deposit['tx_request'], **params.get('overrides', {
+            'gasPrice': Web3.to_wei('21', 'gwei')
+        })}
 
+
+
+        transaction['value'] = int(transaction['value']) if 'value' in transaction else 0
+        # Estimate gas and set the transaction parameters
+        transaction['gas'] = l1_provider.eth.estimate_gas(transaction)
+        transaction['nonce'] = l1_provider.eth.get_transaction_count(params['l1Signer'].address)
+        transaction['chainId'] = l1_provider.eth.chain_id
+        print('transaction', transaction)
         # Sign the transaction with the private key
         signed_txn = params['l1Signer'].sign_transaction(transaction)
 
@@ -240,6 +255,14 @@ class Erc20Bridger(AssetBridger):
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
 
+    def solidity_encode(self, types, values):
+        # Correctly handle '0x' string to be an empty byte string
+        values = [val if val != '0x' else b'' for val in values]
+        
+        # ABI encode the values
+        encoded_values = encode(types, values)
+        return encoded_values
+
     async def get_deposit_request(self, params, l1_provider, l2_provider):
         # Check networks
         # Implement checkL1Network and checkL2Network
@@ -248,7 +271,8 @@ class Erc20Bridger(AssetBridger):
 
         # Apply defaults to the parameters
         # Implement apply_defaults
-        defaulted_params = self.apply_defaults(params)
+        defaulted_params = CaseDict(self.apply_defaults(params))
+        # print('def_aparams', defaulted_params)
 
         # Extract necessary parameters
         amount = defaulted_params['amount']
@@ -260,7 +284,7 @@ class Erc20Bridger(AssetBridger):
         l1_gateway_address = await self.get_l1_gateway_address(erc20_l1_address, l1_provider)
 
         # Adjust for custom gateway deposits
-        if l1_gateway_address == L2Network.tokenBridge.l1CustomGateway:
+        if l1_gateway_address == self.l2_network.tokenBridge.l1CustomGateway:
             if 'gasLimit' not in retryable_gas_overrides:
                 retryable_gas_overrides['gasLimit'] = {}
             if 'min' not in retryable_gas_overrides['gasLimit']:
@@ -268,27 +292,42 @@ class Erc20Bridger(AssetBridger):
 
         # Define deposit function
         def deposit_func(deposit_params):
-            inner_data = Web3.solidityKeccak(['uint256', 'bytes'], [deposit_params['max_submission_cost'], '0x'])
+            print(deposit_params['maxSubmissionCost'])
+            inner_data = self.solidity_encode(['uint256', 'bytes'], [int(deposit_params['maxSubmissionCost']), "0x"])
             # i_gateway_router = load_contract(contract_name='L1GatewayRouter')
             i_gateway_router = load_contract(provider=l1_provider, contract_name='L1GatewayRouter', address=self.l2_network.token_bridge.l1_gateway_router, is_classic=True)
-            encoded_data = i_gateway_router.functions.encodeABI(
-                fn_name='outboundTransfer',
-                args=[erc20_l1_address, destination_address, amount, deposit_params['gas_limit'], deposit_params['max_fee_per_gas'], inner_data]
-            ).call()
-            return {
-                'data': encoded_data,
-                'to': L2Network.tokenBridge.l1GatewayRouter,
-                'from': defaulted_params['from'],
-                'value': deposit_params['gas_limit'] * deposit_params['max_fee_per_gas'] + deposit_params['max_submission_cost']
-            }
+        # Get the contract function
+            # Create encoded data for the function call
 
+            print('------start-')
+            print('gaslimit', deposit_params['gasLimit'])
+            print('maxfeepergas', deposit_params['maxFeePerGas'])
+            print('------end-')
+            encoded_data = i_gateway_router.functions.outboundTransfer(
+                Web3.to_checksum_address(erc20_l1_address), 
+                Web3.to_checksum_address(destination_address), 
+                int(amount), 
+                int(deposit_params['gasLimit']), 
+                int(deposit_params['maxFeePerGas']), 
+                inner_data
+            ).build_transaction({
+                'from': defaulted_params['from'],
+                'gas': 222780,  # Explicitly set gas to avoid automatic estimation
+                'gasPrice': Web3.to_wei('21', 'gwei'),
+                'value': deposit_params['gasLimit'] * deposit_params['maxFeePerGas'] + deposit_params['maxSubmissionCost']
+
+            })
+            return encoded_data
+
+        
         # Estimate gas
         gas_estimator = L1ToL2MessageGasEstimator(l2_provider)
         estimates = await gas_estimator.populate_function_params(deposit_func, l1_provider, retryable_gas_overrides)
-
+        print('estimates', estimates)
+        print('o1o1o1o1o1o1oo1o1o1o1oo1o1o')
         return {
             'tx_request': {
-                'to': L2Network.tokenBridge.l1GatewayRouter,
+                'to': self.l2_network.tokenBridge.l1GatewayRouter,
                 'data': estimates['data'],
                 'value': estimates['value'],
                 'from': params['from']

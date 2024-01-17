@@ -149,10 +149,15 @@ class L1ToL2MessageGasEstimator:
         }
         null_data_request = data_func(dummy_params)
         retryable_data = None
+        print('NULL_DATA_REQUEST', null_data_request)
         try:
             res = await l1_provider.eth.call(null_data_request)
+            print('RESSSSS', res)
             retryable_data = RetryableDataTools.try_parse_error(str(res))
         except Exception as err:
+            print('errora goirdiii')
+            print('bu da hatasi', err)
+            print(err.data)
             if hasattr(err, "data"):
                 retryable_data = err.data
                 retryable_data = RetryableDataTools.try_parse_error(str(err))

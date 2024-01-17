@@ -159,13 +159,14 @@ async def deposit_token(l1_provider, l2_provider, deposit_amount, l1_token_addre
     # Make the deposit
     deposit_res = await erc20_bridger.deposit(CaseDict({
         'l1_signer': l1_signer,
+        'l1_provider': l1_provider,
         'l2_provider': l2_provider,
         'erc20_l1_address': l1_token_address,
         'amount': deposit_amount,
         'retryable_gas_overrides': retryable_overrides,
     }))
-    deposit_rec = await deposit_res.wait()
 
+    print('--left_of')
     # Check the token balance in the bridge after the deposit
     final_bridge_token_balance = await l1_token.balance_of(expected_l1_gateway_address)
     assert final_bridge_token_balance == initial_bridge_token_balance + deposit_amount, 'bridge balance not updated after L1 token deposit txn'
