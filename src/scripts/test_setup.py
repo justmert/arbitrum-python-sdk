@@ -1,19 +1,16 @@
 import os
 import json
 from web3 import Web3, HTTPProvider
-# from web3.eth import Account
 import subprocess
 from web3 import Web3, HTTPProvider
 from web3 import Account
 from web3.middleware import geth_poa_middleware
 from yaml import Token
 from pathlib import Path
-from attrdict import AttrDict
+from addict import Dict
 from src.lib.data_entities.errors import ArbSdkError
 
-# Import your custom classes and functions here
-# from my_project import EthBridger, InboxTools, Erc20Bridger, AdminErc20Bridger
-from src.lib.utils.helper import load_contract
+from src.lib.utils.helper import CaseDict, load_contract
 from src.lib.data_entities.networks import add_custom_network, get_l1_network, get_l2_network
 from src.lib.asset_briger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
 from src.lib.asset_briger.eth_bridger import EthBridger
@@ -185,7 +182,7 @@ def get_signer(provider: Web3, key: str = None):
         return provider.eth.accounts[0]
 
 
-async def test_setup():
+async def test_setup() -> CaseDict:
     # Configure the Ethereum and Arbitrum providers
     eth_provider = Web3(HTTPProvider(config['ETH_URL']))
     arb_provider = Web3(HTTPProvider(config['ARB_URL']))
@@ -202,10 +199,19 @@ async def test_setup():
     seed = Account.create()
     l1_signer_address = Web3.to_checksum_address(seed.address)
     l2_signer_address = Web3.to_checksum_address(seed.address)
+    print('l1_signer', l1_signer_address)
+    print('l2_signer', l2_signer_address)
+    print('l1_deployer', l1_deployer.address)
+    print('l2_deployer', l2_deployer.address)
+
 
     # Set the default account for each provider to the new signer accounts
     eth_provider.eth.default_account = l1_signer_address
     arb_provider.eth.default_account = l2_signer_address
+    signer_private_key = seed.key.hex()  
+
+
+    signer_account = Account.from_key(signer_private_key)
 
    # Try to get the network configurations
     try:
@@ -224,9 +230,7 @@ async def test_setup():
             network_data['l2Network']['tokenBridge'] = TokenBridge(**network_data['l2Network']['tokenBridge'])
             network_data['l2Network']['ethBridge'] = EthBridge(**network_data['l2Network']['ethBridge'])
             set_l2_network = L2Network(**network_data['l2Network'])
-            add_custom_network(set_l1_network, set_l2_network)
-            
-            print('set_l2_network', set_l2_network.eth_bridge)
+            add_custom_network(set_l1_network, set_l2_network)            
         else:
             # Deploy a new network
             network_data = await setup_networks(
@@ -241,7 +245,7 @@ async def test_setup():
     eth_bridger = EthBridger(set_l2_network)
     inbox_tools = InboxTools(l1_signer_address, set_l2_network)
 
-    return AttrDict({
+    return CaseDict({
         'l1_signer': l1_signer_address,
         'l2_signer': l2_signer_address,
         'l1_network': set_l1_network,
@@ -254,4 +258,10 @@ async def test_setup():
         'l2_deployer': l2_deployer,
         'l1_provider': eth_provider,
         'l2_provider': arb_provider,
+        # 'l1_signer_private_key': signer_private_key,
+        # 'l2_signer_private_key': signer_private_key,
+        # 'l1_deployer_private_key': config['ETH_KEY'],
+        # 'l2_deployer_private_key': config['ARB_KEY'],
+        'l1_signer_account': signer_account,
+        'l2_signer_account': signer_account,
     })

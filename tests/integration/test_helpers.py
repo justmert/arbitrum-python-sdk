@@ -1,19 +1,20 @@
 from web3 import Web3
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.asset_briger.erc20_bridger import Erc20Bridger
-
+from src.lib.asset_briger.erc20_bridger import MAX_APPROVAL, MIN_CUSTOM_DEPOSIT_GAS_LIMIT, MAX_UINT256
+from src.lib.utils.helper import CaseDict
 from src.scripts.test_setup import config, get_signer, test_setup
 from src.lib.message.l2_to_l1_message import L2ToL1MessageStatus
-
+from web3 import Account
 # Constants and utility functions
-pre_fund_amount = Web3.to_wei(0.1, 'ether')
+PRE_FUND_AMOUNT = Web3.to_wei(0.1, 'ether')
 arb_sys = '0x0000000000000000000000000000000000000064'
 
-def pretty_log(text: str):
-    print(f"    *** {text}\n")
+# def pretty_log(text: str):
+#     print(f"    *** {text}\n")
 
-def warn(text: str):
-    print(f"WARNING: {text}\n")
+# def warn(text: str):
+#     print(f"WARNING: {text}\n")
 
 class GatewayType:
     STANDARD = 1
@@ -122,43 +123,47 @@ def get_gateways(gateway_type, l2_network):
     else:
         raise ArbSdkError(f"Unexpected gateway type: {gateway_type}")
 
-async def deposit_token(deposit_amount, l1_token_address, erc20_bridger, l1_signer, l2_signer, expected_status, expected_gateway_type, retryable_overrides=None):
+async def deposit_token(l1_provider, l2_provider, deposit_amount, l1_token_address, erc20_bridger, l1_signer: Account, l2_signer: Account, expected_status, expected_gateway_type, retryable_overrides=None):
     # Approve the ERC20 tokens for transfer by the bridge
-    approval_tx = await erc20_bridger.approve_token({
+    approval_tx = await erc20_bridger.approve_token(CaseDict({
         'erc20_l1_address': l1_token_address,
-        'l1_signer': l1_signer,
-    })
-    await approval_tx.wait()
+        'l1Signer': l1_signer,
+        'l1Provider': l1_provider
+    }))
+    # await approval_tx.wait()
+    print('approval_tx', approval_tx)
 
     # Get the address of the L1 gateway for the token
     expected_l1_gateway_address = await erc20_bridger.get_l1_gateway_address(
         l1_token_address,
-        l1_signer.provider
+        l1_provider
     )
 
     # Retrieve the L1 token contract and check the allowance
     l1_token = erc20_bridger.get_l1_token_contract(
-        l1_signer.provider,
+        l1_provider,
         l1_token_address
     )
-    allowance = await l1_token.allowance(
-        await l1_signer.get_address(),
+
+    allowance = l1_token.functions.allowance(
+        l1_signer.address,
         expected_l1_gateway_address
-    )
-    assert allowance == Erc20Bridger.MAX_APPROVAL, 'set token allowance failed'
+    ).call()
+
+    assert allowance == MAX_APPROVAL, 'set token allowance failed'
 
     # Check the token balance in the bridge before the deposit
-    initial_bridge_token_balance = await l1_token.balance_of(expected_l1_gateway_address)
-    user_bal_before = await l1_token.balance_of(await l1_signer.get_address())
+    initial_bridge_token_balance = l1_token.functions.balanceOf(expected_l1_gateway_address).call()
+    user_bal_before = l1_token.functions.balanceOf(l1_signer.address).call()
 
     # Make the deposit
-    deposit_res = await erc20_bridger.deposit({
+    deposit_res = await erc20_bridger.deposit(CaseDict({
         'l1_signer': l1_signer,
-        'l2_provider': l2_signer.provider,
+        'l2_provider': l2_provider,
         'erc20_l1_address': l1_token_address,
         'amount': deposit_amount,
         'retryable_gas_overrides': retryable_overrides,
-    })
+    }))
     deposit_rec = await deposit_res.wait()
 
     # Check the token balance in the bridge after the deposit
@@ -197,20 +202,96 @@ async def deposit_token(deposit_amount, l1_token_address, erc20_bridger, l1_sign
         'l2_token': l2_token
     }
 
+# def deposit_token(web3_instance, deposit_amount, l1_token_address, erc20_bridger, l1_signer_address, l2_signer_address, expected_status, expected_gateway_type):
+#     # Create the ERC20 token contract instance
+#     l1_token_contract = web3_instance.eth.contract(address=l1_token_address, abi=erc20_bridger.ERC20_ABI)
 
-async def fund(signer, amount=None, funding_key=None):
-    # Assuming getSigner function exists to retrieve a wallet object
-    wallet = get_signer(signer.provider, funding_key)
-    await (await wallet.send_transaction({
-        'to': await signer.get_address(),
-        'value': amount or pre_fund_amount,
-    })).wait()
+#     # Approve the ERC20 token for deposit
+#     approve_tx = erc20_bridger.approve_token(web3_instance, l1_token_address, l1_signer_address, deposit_amount)
+#     web3_instance.eth.wait_for_transaction_receipt(approve_tx)
 
-async def fund_l1(l1_signer, amount=None):
-    await fund(l1_signer, amount, config['ETH_KEY'])
+#     # Fetch the expected L1 Gateway Address from the Erc20Bridger
+#     expected_l1_gateway_address = erc20_bridger.get_l1_gateway_address(l1_token_address)
 
-async def fund_l2(l2_signer, amount=None):
-    await fund(l2_signer, amount, config['ARB_KEY'])
+#     # Check the token allowance
+#     allowance = l1_token_contract.functions.allowance(l1_signer_address, expected_l1_gateway_address).call()
+#     assert allowance >= deposit_amount, "Token allowance is too low"
+
+#     # Get the initial balance of the bridge contract
+#     initial_bridge_token_balance = l1_token_contract.functions.balanceOf(expected_l1_gateway_address).call()
+
+#     # Get the user's balance before the deposit
+#     user_balance_before = l1_token_contract.functions.balanceOf(l1_signer_address).call()
+
+#     # Perform the deposit
+#     deposit_tx_receipt = erc20_bridger.deposit(web3_instance, l1_token_address, deposit_amount, l1_signer_address, l2_signer_address)
+
+#     # Check the final balance of the bridge contract
+#     final_bridge_token_balance = l1_token_contract.functions.balanceOf(expected_l1_gateway_address).call()
+#     assert final_bridge_token_balance == initial_bridge_token_balance + deposit_amount, "Incorrect bridge balance after deposit"
+
+#     # Check the user's balance after the deposit
+#     user_balance_after = l1_token_contract.functions.balanceOf(l1_signer_address).call()
+#     assert user_balance_after == user_balance_before - deposit_amount, "Incorrect user balance after deposit"
+
+#     # Validate the deposit transaction
+#     assert deposit_tx_receipt.status == expected_status, "Unexpected deposit transaction status"
+
+#     # Additional checks and validations can be added here
+
+#     return deposit_tx_receipt
+
+# async def fund(signer, amount=None, funding_key=None):
+#     # Assuming getSigner function exists to retrieve a wallet object
+#     wallet = get_signer(signer.provider, funding_key)
+#     await (await wallet.send_transaction({
+#         'to': await signer.get_address(),
+#         'value': amount or PRE_FUND_AMOUNT,
+#     })).wait()
+
+
+def fund(web3_instance, to_address, amount, funding_private_key=None):
+    if funding_private_key is None:
+        raise ValueError("Funding private key is required")
+
+    # Create the account from the private key
+    funding_account = Account.from_key(funding_private_key)
+    
+    # Fetch the current chain ID
+    chain_id = web3_instance.eth.chain_id
+
+    estimated_gas = web3_instance.eth.estimate_gas({
+        'from': funding_account.address,
+        'to': to_address,
+        'value': amount,
+    })
+    
+    # Build the transaction
+    tx = {
+        'nonce': web3_instance.eth.get_transaction_count(funding_account.address),
+        'to': to_address,
+        'value': amount,
+        'gas': estimated_gas,  # Standard gas limit for Ether transfer
+        'gasPrice': web3_instance.eth.gas_price,
+        'chainId': chain_id  # Include the chain ID
+    }
+    # Sign the transaction
+    signed_tx = funding_account.sign_transaction(tx)
+
+    # Send the transaction
+    tx_hash = web3_instance.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+    # Wait for the transaction to be mined
+    tx_receipt = web3_instance.eth.wait_for_transaction_receipt(tx_hash)
+
+    return tx_receipt
+
+
+def fund_l1(l1_provider, l1_signer, amount=PRE_FUND_AMOUNT):
+    fund(l1_provider, l1_signer, amount, config['ETH_KEY'])
+
+def fund_l2(l2_provider, l2_signer, amount=PRE_FUND_AMOUNT):
+    fund(l2_provider, l2_signer, amount, config['ARB_KEY'])
 
 def wait(ms=0):
     import time

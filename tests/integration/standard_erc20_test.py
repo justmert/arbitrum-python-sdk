@@ -10,7 +10,7 @@ from src.scripts.test_setup import test_setup
 from src.lib.utils.lib import is_defined
 import pytest
 import json
-
+from web3 import Account
 pytestmark = pytest.mark.asyncio
 
 
@@ -20,7 +20,6 @@ with open('src/abi/classic/TestERC20.json', 'r') as contract_file:
 # Constants similar to depositAmount and withdrawalAmount
 DEPOSIT_AMOUNT = Web3.to_wei(100, 'ether')
 WITHDRAWAL_AMOUNT = Web3.to_wei(10, 'ether')
-
 
 
 TEST_ERC20_ABI = contract_data['abi']
@@ -77,20 +76,27 @@ TEST_ERC20_BYTECODE = contract_data['bytecode']
     #     cls.test_state['l1Token'] = cls.test_token
 
 
-def deploy_test_erc20(web3_instance, deployer_private_key):
+def deploy_test_erc20(web3_instance, deployer):
     # Create the contract instance
     contract = web3_instance.eth.contract(abi=TEST_ERC20_ABI, bytecode=TEST_ERC20_BYTECODE)
+    
+    # deployer = Account.from_key(deployer_private_key)
+    # Fetch the current chain ID for EIP-155 replay protection
+    chain_id = web3_instance.eth.chain_id
+
+    # Estimate the gas required for deployment
+    gas_estimate = contract.constructor().estimate_gas({'from': deployer.address})
 
     # Build the deployment transaction
-    construct_txn = contract.constructor().buildTransaction({
-        'from': web3_instance.eth.account.privateKeyToAccount(deployer_private_key).address,
-        'nonce': web3_instance.eth.get_transaction_count(web3_instance.eth.account.privateKeyToAccount(deployer_private_key).address),
-        'gas': 2000000,  # Set appropriate gas limit
-        'gasPrice': web3_instance.eth.gas_price
+    construct_txn = contract.constructor().build_transaction({
+        'from': deployer.address,
+        'nonce': web3_instance.eth.get_transaction_count(deployer.address),
+        'gas': gas_estimate,  # Use the estimated gas limit
+        'gasPrice': web3_instance.eth.gas_price,
+        'chainId': chain_id  # Include the chain ID
     })
 
-    # Sign the transaction
-    signed_txn = web3_instance.eth.account.sign_transaction(construct_txn, private_key=deployer_private_key)
+    signed_txn = deployer.sign_transaction(construct_txn)
 
     # Send the transaction
     tx_hash = web3_instance.eth.send_raw_transaction(signed_txn.rawTransaction)
@@ -100,24 +106,32 @@ def deploy_test_erc20(web3_instance, deployer_private_key):
 
     # Get the contract address
     contract_address = tx_receipt.contractAddress
-
     return contract_address
 
 
-def mint_tokens(web3_instance, contract_address, minter_private_key):
+def mint_tokens(web3_instance, contract_address, minter):
     # Create the contract instance
     contract = web3_instance.eth.contract(address=contract_address, abi=TEST_ERC20_ABI)
 
+    # minter = Account.from_key(minter_private_key)
+
+    # Fetch the current chain ID for EIP-155 replay protection
+    chain_id = web3_instance.eth.chain_id
+
     # Build the mint transaction
-    mint_txn = contract.functions.mint().buildTransaction({
-        'from': web3_instance.eth.account.privateKeyToAccount(minter_private_key).address,
-        'nonce': web3_instance.eth.get_transaction_count(web3_instance.eth.account.privateKeyToAccount(minter_private_key).address),
-    'gas': 200000, # Set appropriate gas limit
-    'gasPrice': web3_instance.eth.gas_price
+    mint_txn = contract.functions.mint().build_transaction({
+    'from': minter.address,
+    'nonce': web3_instance.eth.get_transaction_count(minter.address),
+    # 'gas': gas_estimate, # Set appropriate gas limit
+    'gasPrice': web3_instance.eth.gas_price,
+    'chainId': chain_id  # Include the chain ID
     })
 
+    # Estimate gas for the mint transaction
+    mint_txn['gas'] = web3_instance.eth.estimate_gas(mint_txn)
+
     # Sign the transaction
-    signed_txn = web3_instance.eth.account.sign_transaction(mint_txn, private_key=minter_private_key)
+    signed_txn = minter.sign_transaction(mint_txn)
 
     # Send the transaction
     tx_hash = web3_instance.eth.send_raw_transaction(signed_txn.rawTransaction)
@@ -129,34 +143,37 @@ def mint_tokens(web3_instance, contract_address, minter_private_key):
 
 
 @pytest.fixture
-async def state():
+async def setup_state():
     setup = await test_setup()
-    print(setup)
-    await fund_l1(setup['l1_signer'])
-    await fund_l2(setup['l2_signer'])
+    # print(setup)
+    fund_l1(setup.l1_provider, setup.l1_signer_account.address)
+    fund_l2(setup.l2_provider, setup.l2_signer_account.address)
 
-    # Deploy the ERC20 contract
-    contract_address = deploy_test_erc20(setup.l1_provider, setup.l1_signer)
+    contract_address = deploy_test_erc20(setup.l1_provider, setup.l1_signer_account)
+    print('deployed_erc20_address', contract_address)
     
-    # Mint tokens
-    mint_receipt = mint_tokens(setup.l1_provider, contract_address, setup.l1_signer)
-
-    # Add the contract address to the setup
-    setup['l1_token'] = contract_address
+    # # Mint tokens
+    mint_receipt = mint_tokens(setup.l1_provider, contract_address, setup.l1_signer_account)
+    print('mint_receipt', mint_receipt)
+    
+    # # Add the contract address to the setup
+    setup['l1_token_address'] = contract_address
     return setup
 
 
 
 @pytest.mark.asyncio
-async def test_deposit_erc20(state):
+async def test_deposit_erc20(setup_state) -> None:
     await deposit_token(
-        DEPOSIT_AMOUNT,
-        state['l1_token'].address,
-        state['erc20_bridger'],
-        state['l1_signer'],
-        state['l2_signer'],
-        L1ToL2MessageStatus.REDEEMED,
-        GatewayType.STANDARD
+        l1_provider=setup_state.l1_provider,
+        l2_provider=setup_state.l2_provider,
+        deposit_amount=DEPOSIT_AMOUNT,
+        l1_token_address=setup_state.l1_token_address,
+        erc20_bridger=setup_state.erc20_bridger,
+        l1_signer=setup_state.l1_signer_account,
+        l2_signer=setup_state.l2_signer_account,
+        expected_status=L1ToL2MessageStatus.REDEEMED,
+        expected_gateway_type=GatewayType.STANDARD
     )
 
     # def redeem_and_test(self, message: L1ToL2MessageWriter, expected_status: int, gas_limit=None):

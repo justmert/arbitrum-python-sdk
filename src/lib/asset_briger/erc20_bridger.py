@@ -31,25 +31,54 @@ class Erc20Bridger(AssetBridger):
 
     async def get_l1_gateway_address(self, erc20_l1_address, l1_provider):
         await self.check_l1_network(l1_provider)
+        print('gatway_erc20', erc20_l1_address)
+        print('l1_gateway_router', self.l2_network.token_bridge.l1_gateway_router)
+        # l1 gateway router 0x1D55838a9EC169488D360783D65e6CD985007b72
+
         l1_gateway_router = load_contract(provider=l1_provider, contract_name='L1GatewayRouter', address=self.l2_network.token_bridge.l1_gateway_router, is_classic=True)
-        return await l1_gateway_router.get_gateway(erc20_l1_address)
+        return l1_gateway_router.functions.getGateway(erc20_l1_address).call()
 
     async def get_l2_gateway_address(self, erc20_l1_address, l2_provider):
         await self.check_l2_network(l2_provider)
         l2_gateway_router = load_contract(provider=l2_provider, contract_name='L2GatewayRouter', address=self.l2_network.token_bridge.l2_gateway_router, is_classic=True)
-        return await l2_gateway_router.get_gateway(erc20_l1_address)
+        return l2_gateway_router.functions.getGateway(erc20_l1_address).call()
 
     async def get_approve_token_request(self, params):
+        print('aaa', SignerProviderUtils.get_provider_or_throw(params['l1Provider']))
         gateway_address = await self.get_l1_gateway_address(params['erc20L1Address'], SignerProviderUtils.get_provider_or_throw(params['l1Provider']))
         i_erc20_interface = load_contract(provider=params['l1Provider'], contract_name='ERC20', address=params['erc20L1Address'], is_classic=True)
-        # i_erc20_interface = ERC20.create_interface()
-        data = i_erc20_interface.encode_function_data('approve', [gateway_address, params.get('amount', MAX_APPROVAL)])
+
+        # Encode the function call
+        data = i_erc20_interface.functions.approve(gateway_address, params.get('amount', MAX_APPROVAL)).build_transaction({
+            # 'from': w3.eth.default_account  # This needs to be the account that will send the transaction
+        })['data']
         return {'to': params['erc20L1Address'], 'data': data, 'value': 0}
 
     async def approve_token(self, params):
-        await self.check_l1_network(params['l1Signer'])
+        await self.check_l1_network(params['l1Provider'])
         approve_request = await self.get_approve_token_request(params) if SignerProviderUtils.get_provider_or_throw(params['l1Signer']) else params['txRequest']
-        return await params['l1Signer'].send_transaction({**approve_request, **params.get('overrides', {})})
+    
+        
+        # Merge any overrides
+        transaction = {**approve_request, **params.get('overrides', {
+            'gasPrice': Web3.to_wei('21', 'gwei')
+        })}
+
+        # Estimate gas and set the transaction parameters
+        transaction['gas'] = params['l1Provider'].eth.estimate_gas(transaction)
+        transaction['nonce'] = params['l1Provider'].eth.get_transaction_count(params['l1Signer'].address)
+        transaction['chainId'] = params['l1Provider'].eth.chain_id
+        print(transaction)
+        # Sign the transaction
+        signed_txn = params['l1Signer'].sign_transaction(transaction)
+
+        # Send the transaction
+        tx_hash = params['l1_provider'].eth.send_raw_transaction(signed_txn.rawTransaction)
+
+        # Wait for the transaction to be mined
+        tx_receipt = params['l1_provider'].eth.wait_for_transaction_receipt(tx_hash)
+
+        return tx_receipt
 
     async def get_l2_withdrawal_events(self, l2_provider, gateway_address, filter, l1_token_address = None, from_address = None, to_address = None):
         await self.check_l2_network(l2_provider)
@@ -168,31 +197,108 @@ class Erc20Bridger(AssetBridger):
         })
         return L2TransactionReceipt.monkey_patch_wait(tx)
 
+
+
     async def deposit(self, params):
-        if not SignerProviderUtils.signer_has_provider(params['l1Signer']):
+        if not SignerProviderUtils.signer_has_provider(params['l1_signer']):
             raise MissingProviderArbSdkError('l1Signer')
 
         await self.check_l1_network(params['l1Signer'])
 
         l1_provider = SignerProviderUtils.get_provider_or_throw(params['l1Signer'])
 
+        print('deposit_params', params)
         # Determine if the request is an L1 to L2 transaction request
         if is_l1_to_l2_transaction_request(params):
             token_deposit = params
         else:
             # Prepare the deposit request
-            token_deposit = await self.get_deposit_request({
-                **params,
-                'l1Provider': l1_provider,
-                'from': await params['l1Signer'].get_address()
-            })
+            token_deposit = await self.get_deposit_request(
+                params,
+                l1_provider=l1_provider,
+                l2_provider=params['l2Provider']
+            )
 
         # Send the transaction
-        tx = await params['l1Signer'].send_transaction({
-            **token_deposit['tx_request'],
-            **params.get('overrides', {})
-        })
-        return L1TransactionReceipt.monkey_patch_contract_call_wait(tx)
+        # tx = await params['l1Signer'].send_transaction({
+        #     **token_deposit['tx_request'],
+        #     **params.get('overrides', {})
+        # })
+        # return L1TransactionReceipt.monkey_patch_contract_call_wait(tx)
+        # Combine with overrides
+        transaction = {**token_deposit['tx_request'], **params.get('overrides', {})}
+
+        # Sign the transaction with the private key
+        signed_txn = params['l1Signer'].sign_transaction(transaction)
+
+        # Send the transaction
+        tx_hash = params['l1Provider'].eth.send_raw_transaction(signed_txn.rawTransaction)
+
+        # Wait for the transaction to be mined and get the receipt
+        tx_receipt = params['l1Provider'].eth.wait_for_transaction_receipt(tx_hash)
+
+        return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
+
+
+    async def get_deposit_request(self, params, l1_provider, l2_provider):
+        # Check networks
+        # Implement checkL1Network and checkL2Network
+        await self.check_l1_network(l1_provider)
+        await self.check_l2_network(l2_provider)
+
+        # Apply defaults to the parameters
+        # Implement apply_defaults
+        defaulted_params = self.apply_defaults(params)
+
+        # Extract necessary parameters
+        amount = defaulted_params['amount']
+        destination_address = defaulted_params['destination_address']
+        erc20_l1_address = defaulted_params['erc20_l1_address']
+        retryable_gas_overrides = defaulted_params.get('retryable_gas_overrides', {})
+
+        # Get L1 gateway address
+        l1_gateway_address = await self.get_l1_gateway_address(erc20_l1_address, l1_provider)
+
+        # Adjust for custom gateway deposits
+        if l1_gateway_address == L2Network.tokenBridge.l1CustomGateway:
+            if 'gasLimit' not in retryable_gas_overrides:
+                retryable_gas_overrides['gasLimit'] = {}
+            if 'min' not in retryable_gas_overrides['gasLimit']:
+                retryable_gas_overrides['gasLimit']['min'] = MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+
+        # Define deposit function
+        def deposit_func(deposit_params):
+            inner_data = Web3.solidityKeccak(['uint256', 'bytes'], [deposit_params['max_submission_cost'], '0x'])
+            # i_gateway_router = load_contract(contract_name='L1GatewayRouter')
+            i_gateway_router = load_contract(provider=l1_provider, contract_name='L1GatewayRouter', address=self.l2_network.token_bridge.l1_gateway_router, is_classic=True)
+            encoded_data = i_gateway_router.functions.encodeABI(
+                fn_name='outboundTransfer',
+                args=[erc20_l1_address, destination_address, amount, deposit_params['gas_limit'], deposit_params['max_fee_per_gas'], inner_data]
+            ).call()
+            return {
+                'data': encoded_data,
+                'to': L2Network.tokenBridge.l1GatewayRouter,
+                'from': defaulted_params['from'],
+                'value': deposit_params['gas_limit'] * deposit_params['max_fee_per_gas'] + deposit_params['max_submission_cost']
+            }
+
+        # Estimate gas
+        gas_estimator = L1ToL2MessageGasEstimator(l2_provider)
+        estimates = await gas_estimator.populate_function_params(deposit_func, l1_provider, retryable_gas_overrides)
+
+        return {
+            'tx_request': {
+                'to': L2Network.tokenBridge.l1GatewayRouter,
+                'data': estimates['data'],
+                'value': estimates['value'],
+                'from': params['from']
+            },
+            'retryable_data': {
+                **estimates['retryable'],
+                **estimates['estimates']
+            },
+            'is_valid': lambda: L1ToL2MessageGasEstimator.is_valid(estimates['estimates'], re_estimates['estimates'])
+        }
 
 
 class AdminErc20Bridger(Erc20Bridger):

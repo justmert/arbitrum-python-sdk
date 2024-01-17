@@ -13,8 +13,6 @@ class AssetBridger(ABC):
             raise ArbSdkError(f"Unknown l1 network chain id: {l2_network.partner_chain_id}")
 
     async def check_l1_network(self, sop) -> None:
-        # print('hiii l1_network', self.l1_network)
-        # print(self.l1_network['chainID'])
         await SignerProviderUtils.check_network_matches(sop, self.l1_network.chain_id)
 
     async def check_l2_network(self, sop) -> None:

@@ -47,4 +47,6 @@ class SignerProviderUtils:
             provider_chain_id = signer_or_provider.eth.chain_id
             if provider_chain_id != chain_id:
                 raise ArbSdkError(f'Signer/provider chain id: {provider_chain_id} does not match provided chain id: {chain_id}.')
+            else:
+                print("chain id matches")
                 
