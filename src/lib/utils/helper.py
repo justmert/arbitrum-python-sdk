@@ -25,6 +25,19 @@ def load_contract(provider: Web3, contract_name: str, address: str, is_classic =
 
     return provider.eth.contract(address=contract_address, abi=abi)
 
+def load_abi(contract_name: str, is_classic = False) -> Contract:
+    if is_classic:
+        file_path = f'src/abi/classic/{contract_name}.json'
+    else:
+        file_path = f'src/abi/{contract_name}.json'
+    
+    with open(file_path, 'r') as abi_file:
+        contract_data = json.load(abi_file)
+        if not contract_data.get('abi'):
+            raise Exception(f'No ABI found for contract: {contract_name}')
+        
+        abi = contract_data['abi']
+    return abi
 
 def snake_to_camel(name):
     # Special cases where the conversion isn't straightforward

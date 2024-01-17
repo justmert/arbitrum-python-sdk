@@ -5,6 +5,7 @@ from web3.types import TxReceipt, TxParams
 from typing import List, Optional, Tuple, Type
 from decimal import Decimal
 from eth_typing.evm import ChecksumAddress
+from src.lib.data_entities.event import parse_typed_logs
 
 # Assuming the existence of relevant modules and classes in the same project structure
 from .l1_to_l2_message import (
@@ -26,7 +27,6 @@ from src.lib.data_entities.signer_or_provider import (
 )
 from src.lib.data_entities.message import InboxMessageKind
 from src.lib.message.message_data_parser import SubmitRetryableMessageDataParser
-from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.lib import is_defined
 
 
@@ -35,7 +35,7 @@ class L1TransactionReceipt():
     A Python equivalent of the TypeScript L1TransactionReceipt class.
     """
 
-    def __init__(self, tx, event_fetcher: EventFetcher = None):
+    def __init__(self, tx):
         self.to: Optional[ChecksumAddress] = tx.get("to")
         self.from_: Optional[ChecksumAddress] = tx.get("from")
         self.contract_address: Optional[ChecksumAddress] = tx.get("contractAddress")
@@ -53,12 +53,11 @@ class L1TransactionReceipt():
         self.byzantium: bool = tx.get("byzantium")
         self.type: int = tx.get("type")
         self.status: Optional[int] = tx.get("status")
-        self.event_fetcher = event_fetcher
 
 
     async def get_l1_to_l2_messages_classic(
         self, l2_provider: Web3
-    ) -> List[L1ToL2MessageReaderClassic]:
+    ):
         network = get_l2_network(l2_provider)
         chain_id = network.chain_id
         is_classic = await self.is_classic(l2_provider)
@@ -69,7 +68,7 @@ class L1TransactionReceipt():
             )
 
         message_nums = [
-            msg["messageNum"] for msg in self.get_inbox_message_delivered_events()
+            msg["messageNum"] for msg in self.get_inbox_message_delivered_events(l2_provider)
         ]
 
         return [
@@ -77,26 +76,26 @@ class L1TransactionReceipt():
             for message_num in message_nums
         ]
 
-    async def is_classic(self, l2_signer_or_provider) -> bool:
+    async def is_classic(self, l2_signer_or_provider):
         provider = SignerProviderUtils.get_provider_or_throw(l2_signer_or_provider)
         network = get_l2_network(provider)
         return self.block_number < network.nitro_genesis_l1_block
 
-    def get_message_delivered_events(self) -> List[Dict[str, Any]]:
-        
-        return  self.event_fetcher.parse_typed_logs(
+    def get_message_delivered_events(self, provider):
+        return  parse_typed_logs(provider,
             "Bridge", self.logs, "MessageDelivered"
         )
         
 
-    def get_inbox_message_delivered_events(self) -> List[Dict[str, Any]]:
-        return self.event_fetcher.parse_typed_logs(
+    def get_inbox_message_delivered_events(self, provider):
+        return parse_typed_logs( provider,
             "Inbox", self.logs, "InboxMessageDelivered"
         )
 
-    def get_message_events(self):
-        bridge_messages = self.get_message_delivered_events()
-        inbox_messages = self.get_inbox_message_delivered_events()
+    def get_message_events(self, provider):
+        bridge_messages = self.get_message_delivered_events(provider)
+        print('BRIDGE_MESSAGES', bridge_messages)
+        inbox_messages = self.get_inbox_message_delivered_events(provider)
 
         if len(bridge_messages) != len(inbox_messages):
             raise ArbSdkError(
@@ -155,7 +154,7 @@ class L1TransactionReceipt():
                 "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
             )
 
-        events = self.get_message_events()
+        events = self.get_message_events(l2_signer_or_provider.provider)
         return  [
             L1ToL2Message.from_event_components(
                 l2_signer_or_provider,
@@ -175,8 +174,8 @@ class L1TransactionReceipt():
         ]
         
 
-    def get_token_deposit_events(self) -> List[Dict[str, Any]]:
-        return self.event_fetcher.parse_typed_logs(
+    def get_token_deposit_events(self, provider) -> List[Dict[str, Any]]:
+        return parse_typed_logs( provider,
             "L1ERC20GatewayFactory", self.logs, "DepositInitiated"
         )
 
@@ -263,12 +262,11 @@ class L1ContractCallTransactionReceipt(L1TransactionReceipt):
 
     async def wait_for_l2(
         self,
-        l2_signer,
-        l2_provider,
+        l2_signer_or_provider,
         confirmations: Optional[int] = None,
         timeout: Optional[int] = None,
     ):
-        messages = await self.get_l1_to_l2_messages(l2_signer, l2_provider)
+        messages = await self.get_l1_to_l2_messages(l2_signer_or_provider)
         if not messages:
             raise ArbSdkError("Unexpected missing L1ToL2 message.")
 

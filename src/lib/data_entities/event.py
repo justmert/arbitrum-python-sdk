@@ -1,37 +1,35 @@
 from web3 import Web3
-from web3.contract import Contract
+from web3.types import LogReceipt
+from src.lib.utils.helper import load_abi
+import json
+from eth_utils import to_hex
+import copy
 
-# Note: Since Python doesn't have TypeScript's typing system, we'll be using more generic Python types.
+def parse_typed_logs(provider, contract_name: str, logs, event_name: str):
+    contract_abi = load_abi(contract_name)
+    contract = provider.eth.contract(abi=contract_abi)
 
-class TypeChainContractFactory:
-    def __init__(self, abi, provider):
-        self.abi = abi
-        self.provider = provider
-
-    def connect(self, address):
-        return self.provider.eth.contract(address=address, abi=self.abi)
-
-    def create_interface(self):
-        # Note: This function should return an interface to interact with the contract.
-        # In Python, this is typically handled by the Contract object from web3.py
-        return self.abi
-
-
-def parse_typed_log(contract_factory, log, filter_name):
-    contract = contract_factory.connect(log['address'])
-    event_abi = [event for event in contract_factory.abi if event['name'] == filter_name and event['type'] == 'event']
-    
+    # Find the correct event ABI
+    event_abi = next((event for event in contract_abi if event.get('name') == event_name and event.get('type') == 'event'), None)
     if not event_abi:
-        return None
+        print(f"Event {event_name} not found in ABI.")
+        return []
 
-    event_abi = event_abi[0]
-    event_signature = Web3.keccak(text=f"{filter_name}({','.join([input['type'] for input in event_abi['inputs']])})").hex()
+    # Compute the expected event signature and ensure it starts with '0x'
+    event_signature = Web3.keccak(text=f"{event_name}({','.join([input['type'] for input in event_abi['inputs']])})").hex()
 
-    if log['topics'][0] == event_signature:
-        return contract.events[filter_name]().processLog(log)
-    else:
-        return None
-
-
-def parse_typed_logs(contract_factory, logs, filter_name):
-    return [parse_typed_log(contract_factory, log, filter_name) for log in logs if parse_typed_log(contract_factory, log, filter_name) is not None]
+    parsed_logs = []
+    for log in logs:
+        log_topic = to_hex(log['topics'][0])
+        if log_topic and log_topic == event_signature:
+            try:
+                print(f"Matched! Log's Topic: 0x{log_topic} == Computed Signature: 0x{event_signature}")
+                log_receipt = LogReceipt(log)
+                decoded_log = contract.events[event_name]().process_log(log_receipt)
+                parsed_logs.append(decoded_log['args'])
+            except Exception as e:
+                print(f"Failed to decode log: {e}")
+                raise e
+            else:
+                pass
+    return parsed_logs

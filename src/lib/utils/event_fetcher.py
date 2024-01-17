@@ -4,60 +4,66 @@ from web3.exceptions import BadFunctionCallOutput
 from typing import Any, Dict, List, Optional
 import json
 
-class EventFetcher:
-    def __init__(self, provider_or_url: str, abi_directory: str):
-        if isinstance(provider_or_url, str):
-            self.w3 = Web3(Web3.HTTPProvider(provider_or_url))
-        elif isinstance(provider_or_url, Web3):
-            self.w3 = provider_or_url
-        self.abi_directory = abi_directory
-
-    def load_abi(self, name: str) -> List[Dict[str, Any]]:
-        # Ensure this path is correct and points to the ABI file
-        print(name)
-        with open(f"src/abi/{name}.json", 'r') as abi_file:
-            abi_content = json.load(abi_file)
-            # Ensure this extracts just the list of ABI definitions
-            return abi_content['abi'] if 'abi' in abi_content else abi_content
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
 
 
-    def parse_typed_logs(self, contract_name: str, logs: List[Dict[str, Any]], event_name: str) -> List[Dict[str, Any]]:
-        contract_abi = self.load_abi(contract_name)
-        contract = self.w3.eth.contract(abi=contract_abi)
+class FetchedEvent:
+    def __init__(self, event, topic, name, block_number, block_hash, transaction_hash, address, topics, data):
+        self.event = event
+        self.topic = topic
+        self.name = name
+        self.block_number = block_number
+        self.block_hash = block_hash
+        self.transaction_hash = transaction_hash
+        self.address = address
+        self.topics = topics
+        self.data = data
 
-        # Find the correct event ABI
-        event_abi = next((event for event in contract_abi if event.get('name') == event_name and event.get('type') == 'event'), None)
-        if not event_abi:
-            print(f"Event {event_name} not found in ABI.")
-            return []
+class EventFetcher():
 
-        # Compute the expected event signature and ensure it starts with '0x'
-        event_signature = Web3.keccak(text=f"{event_name}({','.join([input['type'] for input in event_abi['inputs']])})").hex()
-        event_signature = event_signature[2:].lower()  # Ensure it's in lowercase and without '0x'
+    def __init__(self, provider):
+        if isinstance(provider, str):
+            self.provider = Web3(Web3.HTTPProvider(provider))
 
-        parsed_logs = []
-        for log in logs:
-            # Normalize the log's topic by removing '0x' prefix and converting to lowercase
-            log_topic = log['topics'][0][2:].lower() if log['topics'] else None
-            if log_topic and log_topic == event_signature:
-                try:
-                    print(f"Matched! Log's Topic: 0x{log_topic} == Computed Signature: 0x{event_signature}")
-                    # Create a LogReceipt object to match the expected type for process_log
-                    
-                    no_prefix_log = log.copy()
-                    no_prefix_log['topics'] = [bytes.fromhex(topic[2:]) for topic in log['topics']]
+        elif isinstance(provider, Web3):
+            self.provider = provider
+            
+        elif isinstance(provider, SignerOrProvider):
+            self.provider = provider.provider
 
-                    log_receipt = LogReceipt(no_prefix_log)
-                    decoded_log = contract.events[event_name]().process_log(log_receipt)
-                    parsed_logs.append(decoded_log['args'])
-                except Exception as e:
-                    print(f"Failed to decode log: {e}")
-                    raise e
-                else:
-                    pass
-        print(parsed_logs)
-        return parsed_logs
+        else:
+            raise Exception("Invalid provider type")
 
+
+    # def get_events(self, contract, topic_generator, str,
+    #                filter_params):
+        
+    #     contract = self.provider.eth.contract(address=filter_params.get('address', '0x0000000000000000000000000000000000000000'), abi=contract.abi)
+
+    #     event_filter = topic_generator(contract)
+    #     full_filter = dict(**event_filter, **filter_params)
+    #     logs = self.provider.eth.get_logs(full_filter)
+
+    #     fetched_events = []
+    #     for log in logs:
+    #         if log.get('removed', False):
+    #             continue
+
+    #         p_log = contract.events[event_filter.event_name]().processLog(log)
+    #         fetched_event = FetchedEvent(
+    #             event=p_log['args'],
+    #             topic=p_log['topics'][0] if p_log['topics'] else None,
+    #             name=p_log['event'],
+    #             block_number=log['blockNumber'],
+    #             block_hash=log['blockHash'],
+    #             transaction_hash=log['transactionHash'],
+    #             address=log['address'],
+    #             topics=log['topics'],
+    #             data=log['data']
+    #         )
+    #         fetched_events.append(fetched_event)
+
+    #     return fetched_events
 
 
     def get_events(self, abi: List[Dict[str, Any]], address: str, event_name: str, from_block: int, to_block: int) -> List[Dict[str, Any]]:
