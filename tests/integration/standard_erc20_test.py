@@ -146,14 +146,14 @@ def mint_tokens(web3_instance, contract_address, minter):
 async def setup_state():
     setup = await test_setup()
     # print(setup)
-    fund_l1(setup.l1_provider, setup.l1_signer_account.address)
-    fund_l2(setup.l2_provider, setup.l2_signer_account.address)
+    fund_l1(setup.l1_signer.provider, setup.l1_signer.account.address)
+    fund_l2(setup.l2_signer.provider, setup.l2_signer.account.address)
 
-    contract_address = deploy_test_erc20(setup.l1_provider, setup.l1_signer_account)
+    contract_address = deploy_test_erc20(setup.l1_signer.provider, setup.l1_signer.account)
     print('deployed_erc20_address', contract_address)
     
     # # Mint tokens
-    mint_receipt = mint_tokens(setup.l1_provider, contract_address, setup.l1_signer_account)
+    mint_receipt = mint_tokens(setup.l1_signer.provider, contract_address, setup.l1_signer.account)
     print('mint_receipt', mint_receipt)
     
     # # Add the contract address to the setup
@@ -165,13 +165,11 @@ async def setup_state():
 @pytest.mark.asyncio
 async def test_deposit_erc20(setup_state) -> None:
     await deposit_token(
-        l1_provider=setup_state.l1_provider,
-        l2_provider=setup_state.l2_provider,
         deposit_amount=DEPOSIT_AMOUNT,
         l1_token_address=setup_state.l1_token_address,
         erc20_bridger=setup_state.erc20_bridger,
-        l1_signer=setup_state.l1_signer_account,
-        l2_signer=setup_state.l2_signer_account,
+        l1_signer=setup_state.l1_signer,
+        l2_signer=setup_state.l2_signer,
         expected_status=L1ToL2MessageStatus.REDEEMED,
         expected_gateway_type=GatewayType.STANDARD
     )

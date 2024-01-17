@@ -2,6 +2,7 @@ from web3 import Web3
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.asset_briger.erc20_bridger import Erc20Bridger
 from src.lib.asset_briger.erc20_bridger import MAX_APPROVAL, MIN_CUSTOM_DEPOSIT_GAS_LIMIT, MAX_UINT256
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.helper import CaseDict
 from src.scripts.test_setup import config, get_signer, test_setup
 from src.lib.message.l2_to_l1_message import L2ToL1MessageStatus
@@ -123,12 +124,12 @@ def get_gateways(gateway_type, l2_network):
     else:
         raise ArbSdkError(f"Unexpected gateway type: {gateway_type}")
 
-async def deposit_token(l1_provider, l2_provider, deposit_amount, l1_token_address, erc20_bridger, l1_signer: Account, l2_signer: Account, expected_status, expected_gateway_type, retryable_overrides=None):
+async def deposit_token(deposit_amount, l1_token_address, erc20_bridger, l1_signer: SignerOrProvider, l2_signer: SignerOrProvider, expected_status, expected_gateway_type, retryable_overrides=None):
     # Approve the ERC20 tokens for transfer by the bridge
     approval_tx = await erc20_bridger.approve_token(CaseDict({
         'erc20_l1_address': l1_token_address,
         'l1Signer': l1_signer,
-        'l1Provider': l1_provider
+        'l1Provider': l1_signer.provider
     }))
     # await approval_tx.wait()
     print('approval_tx', approval_tx)
@@ -136,17 +137,17 @@ async def deposit_token(l1_provider, l2_provider, deposit_amount, l1_token_addre
     # Get the address of the L1 gateway for the token
     expected_l1_gateway_address = await erc20_bridger.get_l1_gateway_address(
         l1_token_address,
-        l1_provider
+        l1_signer.provider
     )
 
     # Retrieve the L1 token contract and check the allowance
     l1_token = erc20_bridger.get_l1_token_contract(
-        l1_provider,
+        l1_signer.provider,
         l1_token_address
     )
 
     allowance = l1_token.functions.allowance(
-        l1_signer.address,
+        l1_signer.account.address,
         expected_l1_gateway_address
     ).call()
 
@@ -154,29 +155,27 @@ async def deposit_token(l1_provider, l2_provider, deposit_amount, l1_token_addre
 
     # Check the token balance in the bridge before the deposit
     initial_bridge_token_balance = l1_token.functions.balanceOf(expected_l1_gateway_address).call()
-    user_bal_before = l1_token.functions.balanceOf(l1_signer.address).call()
+    user_bal_before = l1_token.functions.balanceOf(l1_signer.account.address).call()
 
     # Make the deposit
     deposit_res = await erc20_bridger.deposit(CaseDict({
         'l1_signer': l1_signer,
-        'l1_provider': l1_provider,
-        'l2_provider': l2_provider,
+        'l2_provider': l2_signer.provider,
         'erc20_l1_address': l1_token_address,
         'amount': deposit_amount,
         'retryable_gas_overrides': retryable_overrides,
     }))
 
-    print('--left_of')
     # Check the token balance in the bridge after the deposit
-    final_bridge_token_balance = await l1_token.balance_of(expected_l1_gateway_address)
+    final_bridge_token_balance = l1_token.functions.balanceOf(expected_l1_gateway_address).call()
     assert final_bridge_token_balance == initial_bridge_token_balance + deposit_amount, 'bridge balance not updated after L1 token deposit txn'
 
     # Check the user's balance after the deposit
-    user_bal_after = await l1_token.balance_of(await l1_signer.get_address())
+    user_bal_after = l1_token.functions.balanceOf(l1_signer.account.address).call()
     assert user_bal_after == user_bal_before - deposit_amount, 'user bal after'
 
     # Wait for the deposit to be recognized on L2
-    wait_res = await deposit_rec.wait_for_l2(l2_signer)
+    wait_res = await deposit_res.wait_for_l2(l2_signer)
 
     assert wait_res.status == expected_status, 'Unexpected status'
 
@@ -194,7 +193,7 @@ async def deposit_token(l1_provider, l2_provider, deposit_amount, l1_token_addre
     l1_erc20_addr = await erc20_bridger.get_l1_erc20_address(l2_erc20_addr, l2_signer.provider)
     assert l1_erc20_addr == l1_token_address, 'getERC20L1Address/getERC20L2Address failed with proper token address'
 
-    test_wallet_l2_balance = await l2_token.balance_of(await l2_signer.get_address())
+    test_wallet_l2_balance = await l2_token.balance_of(await l2_signer.account.address)
     assert test_wallet_l2_balance == deposit_amount, 'l2 wallet not updated after deposit'
 
     return {
@@ -288,8 +287,8 @@ def fund(web3_instance, to_address, amount, funding_private_key=None):
     return tx_receipt
 
 
-def fund_l1(l1_provider, l1_signer, amount=PRE_FUND_AMOUNT):
-    fund(l1_provider, l1_signer, amount, config['ETH_KEY'])
+def fund_l1(l1_provider, l1_signer_address, amount=PRE_FUND_AMOUNT):
+    fund(l1_provider, l1_signer_address, amount, config['ETH_KEY'])
 
 def fund_l2(l2_provider, l2_signer, amount=PRE_FUND_AMOUNT):
     fund(l2_provider, l2_signer, amount, config['ARB_KEY'])

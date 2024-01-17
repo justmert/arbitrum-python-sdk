@@ -68,11 +68,11 @@ class Erc20Bridger(AssetBridger):
 
         # Estimate gas and set the transaction parameters
         transaction['gas'] = params['l1Provider'].eth.estimate_gas(transaction)
-        transaction['nonce'] = params['l1Provider'].eth.get_transaction_count(params['l1Signer'].address)
+        transaction['nonce'] = params['l1Provider'].eth.get_transaction_count(params['l1Signer'].account.address)
         transaction['chainId'] = params['l1Provider'].eth.chain_id
         print(transaction)
         # Sign the transaction
-        signed_txn = params['l1Signer'].sign_transaction(transaction)
+        signed_txn = params['l1Signer'].account.sign_transaction(transaction)
 
         # Send the transaction
         tx_hash = params['l1_provider'].eth.send_raw_transaction(signed_txn.rawTransaction)
@@ -202,12 +202,12 @@ class Erc20Bridger(AssetBridger):
 
 
     async def deposit(self, params):
-        if not SignerProviderUtils.signer_has_provider(params['l1_signer']):
+        if not SignerProviderUtils.signer_has_provider(params['l1Signer']):
             raise MissingProviderArbSdkError('l1Signer')
 
         await self.check_l1_network(params['l1Signer'])
 
-        l1_provider = SignerProviderUtils.get_provider_or_throw(params['l1Provider'])
+        l1_provider = SignerProviderUtils.get_provider_or_throw(params['l1Signer'])
 
         print('deposit_params', params)
         # Determine if the request is an L1 to L2 transaction request
@@ -218,7 +218,7 @@ class Erc20Bridger(AssetBridger):
             token_deposit = await self.get_deposit_request(
                 {
                     **params,
-                    'from': params['l1Signer'].address
+                    'from': params['l1Signer'].account.address
                 },
                 l1_provider=l1_provider,
                 l2_provider=params['l2Provider']
@@ -240,17 +240,17 @@ class Erc20Bridger(AssetBridger):
         transaction['value'] = int(transaction['value']) if 'value' in transaction else 0
         # Estimate gas and set the transaction parameters
         transaction['gas'] = l1_provider.eth.estimate_gas(transaction)
-        transaction['nonce'] = l1_provider.eth.get_transaction_count(params['l1Signer'].address)
+        transaction['nonce'] = l1_provider.eth.get_transaction_count(params['l1Signer'].account.address)
         transaction['chainId'] = l1_provider.eth.chain_id
         print('transaction', transaction)
         # Sign the transaction with the private key
-        signed_txn = params['l1Signer'].sign_transaction(transaction)
+        signed_txn = params['l1Signer'].account.sign_transaction(transaction)
 
         # Send the transaction
-        tx_hash = params['l1Provider'].eth.send_raw_transaction(signed_txn.rawTransaction)
+        tx_hash = params['l1Signer'].provider.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         # Wait for the transaction to be mined and get the receipt
-        tx_receipt = params['l1Provider'].eth.wait_for_transaction_receipt(tx_hash)
+        tx_receipt = params['l1Signer'].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 

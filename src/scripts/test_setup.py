@@ -18,6 +18,7 @@ from src.lib.inbox.inbox import InboxTools
 from src.scripts import PROJECT_DIRECTORY
 from .deploy_bridge import deploy_erc20_and_init
 from src.lib.data_entities.networks import L1Network, L2Network, EthBridge, TokenBridge
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
 
 config = {
     'ARB_URL': os.getenv('ARB_URL'),
@@ -199,19 +200,17 @@ async def test_setup() -> CaseDict:
     seed = Account.create()
     l1_signer_address = Web3.to_checksum_address(seed.address)
     l2_signer_address = Web3.to_checksum_address(seed.address)
-    print('l1_signer', l1_signer_address)
-    print('l2_signer', l2_signer_address)
-    print('l1_deployer', l1_deployer.address)
-    print('l2_deployer', l2_deployer.address)
-
 
     # Set the default account for each provider to the new signer accounts
     eth_provider.eth.default_account = l1_signer_address
     arb_provider.eth.default_account = l2_signer_address
     signer_private_key = seed.key.hex()  
-
-
     signer_account = Account.from_key(signer_private_key)
+
+    
+    l1_signer = SignerOrProvider(signer_account, eth_provider)
+    l2_signer = SignerOrProvider(signer_account, arb_provider)
+
 
    # Try to get the network configurations
     try:
@@ -245,9 +244,10 @@ async def test_setup() -> CaseDict:
     eth_bridger = EthBridger(set_l2_network)
     inbox_tools = InboxTools(l1_signer_address, set_l2_network)
 
+
     return CaseDict({
-        'l1_signer': l1_signer_address,
-        'l2_signer': l2_signer_address,
+        'l1_signer': l1_signer,
+        'l2_signer': l2_signer,
         'l1_network': set_l1_network,
         'l2_network': set_l2_network,
         'erc20_bridger': erc20_bridger,
@@ -256,12 +256,12 @@ async def test_setup() -> CaseDict:
         'inbox_tools': inbox_tools,
         'l1_deployer': l1_deployer,
         'l2_deployer': l2_deployer,
-        'l1_provider': eth_provider,
-        'l2_provider': arb_provider,
+        # 'l1_provider': eth_provider,
+        # 'l2_provider': arb_provider,
         # 'l1_signer_private_key': signer_private_key,
         # 'l2_signer_private_key': signer_private_key,
         # 'l1_deployer_private_key': config['ETH_KEY'],
         # 'l2_deployer_private_key': config['ARB_KEY'],
-        'l1_signer_account': signer_account,
-        'l2_signer_account': signer_account,
+        # 'l1_signer_account': signer_account,
+        # 'l2_signer_account': signer_account,
     })

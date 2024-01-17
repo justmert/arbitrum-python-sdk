@@ -263,11 +263,12 @@ class L1ContractCallTransactionReceipt(L1TransactionReceipt):
 
     async def wait_for_l2(
         self,
-        l2_signer_or_provider,
+        l2_signer,
+        l2_provider,
         confirmations: Optional[int] = None,
         timeout: Optional[int] = None,
     ):
-        messages = await self.get_l1_to_l2_messages(l2_signer_or_provider)
+        messages = await self.get_l1_to_l2_messages(l2_signer, l2_provider)
         if not messages:
             raise ArbSdkError("Unexpected missing L1ToL2 message.")
 
