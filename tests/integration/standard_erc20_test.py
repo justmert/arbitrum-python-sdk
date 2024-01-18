@@ -111,32 +111,53 @@ async def setup_state():
     return setup
 
 
+# passing
+@pytest.mark.asyncio
+async def test_deposit_erc20(setup_state) -> None:
+    await deposit_token(
+        deposit_amount=DEPOSIT_AMOUNT,
+        l1_token_address=setup_state.l1_token_address,
+        erc20_bridger=setup_state.erc20_bridger,
+        l1_signer=setup_state.l1_signer,
+        l2_signer=setup_state.l2_signer,
+        expected_status=L1ToL2MessageStatus.REDEEMED,
+        expected_gateway_type=GatewayType.STANDARD
+    )
 
 # @pytest.mark.asyncio
-# async def test_deposit_erc20(setup_state) -> None:
-#     await deposit_token(
+# async def redeem_and_test(message: L1ToL2MessageWriter, expected_status: int, gas_limit=None):
+#     print('hii')
+#     manual_redeem = await message.redeem(gas_limit=gas_limit)
+#     retry_rec = await manual_redeem.wait_for_redeem()
+#     redeem_rec = await manual_redeem.wait()
+#     block_hash = redeem_rec.blockHash
+
+#     assert retry_rec.blockHash == block_hash, 'redeemed in same block'
+#     assert retry_rec.to == setup_state['l2Network']['tokenBridge']['l2ERC20Gateway'], 'redeemed in same block'
+#     assert retry_rec.status == expected_status, "tx didn't fail"
+#     assert await message.status() == (L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 if expected_status == 0 else L1ToL2MessageStatus.REDEEMED), 'message status'
+
+
+
+
+# @pytest.mark.asyncio
+# async def test_deposit_with_no_funds_manual_redeem(setup_state):
+#     # Assuming setup_state is a fixture that sets up the test environment
+#     wait_res = await deposit_token(
 #         deposit_amount=DEPOSIT_AMOUNT,
 #         l1_token_address=setup_state.l1_token_address,
 #         erc20_bridger=setup_state.erc20_bridger,
 #         l1_signer=setup_state.l1_signer,
 #         l2_signer=setup_state.l2_signer,
-#         expected_status=L1ToL2MessageStatus.REDEEMED,
-#         expected_gateway_type=GatewayType.STANDARD
+#         expected_status=L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+#         expected_gateway_type=GatewayType.STANDARD,
+#         retryable_overrides = {
+#             'gasLimit': {'base': 0},  # Assuming this is the equivalent of { base: BigNumber.from(0) }
+#             'maxFeePerGas': {'base': 0}  # Assuming this is the equivalent of { base: BigNumber.from(0) }
+#         }
 #     )
-
-@pytest.mark.asyncio
-async def redeem_and_test(message: L1ToL2MessageWriter, expected_status: int, gas_limit=None):
-    print('hii')
-    manual_redeem = await message.redeem(gas_limit=gas_limit)
-    retry_rec = await manual_redeem.wait_for_redeem()
-    redeem_rec = await manual_redeem.wait()
-    block_hash = redeem_rec.blockHash
-
-    assert retry_rec.blockHash == block_hash, 'redeemed in same block'
-    assert retry_rec.to == setup_state['l2Network']['tokenBridge']['l2ERC20Gateway'], 'redeemed in same block'
-    assert retry_rec.status == expected_status, "tx didn't fail"
-    assert await message.status() == (L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 if expected_status == 0 else L1ToL2MessageStatus.REDEEMED), 'message status'
-
+#     # Call the previously defined redeem_and_test function with the message and expected status
+#     await redeem_and_test(wait_res['message'], 1)
 
 
     # def redeem_and_test(self, message: L1ToL2MessageWriter, expected_status: int, gas_limit=None):

@@ -237,20 +237,26 @@ class L1ToL2MessageReader(L1ToL2Message):
         return None
 
     async def get_successful_redeem(self):
+        print('***********************get_successful_redeem entered')
         l2_network = get_l2_network(self.l2_provider)
         creation_receipt = await self.get_retryable_creation_receipt()
-
+        print('creation_receipt', creation_receipt)
         if not creation_receipt:
+            print('a-NOT_YET_CREATED')
             return {"status": L1ToL2MessageStatus.NOT_YET_CREATED}
 
         if creation_receipt.status == 0:
+            print('b-CREATION_FAILED')
             return {"status": L1ToL2MessageStatus.CREATION_FAILED}
 
         auto_redeem = await self.get_auto_redeem_attempt()
+        print('auto_redeem', auto_redeem)
         if auto_redeem and auto_redeem.status == 1:
+            print('c-REDEEMED')
             return {"l2TxReceipt": auto_redeem, "status": L1ToL2MessageStatus.REDEEMED}
 
         if await self.retryable_exists():
+            print('d-FUNDS_DEPOSITED_ON_L2')
             return {"status": L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}
 
         increment = 1000
@@ -285,12 +291,13 @@ class L1ToL2MessageReader(L1ToL2Message):
                     event["retryTxHash"]
                 )
                 if receipt and receipt.status == 1:
+                    print('e-REDEEMED')
                     return {
                         "l2TxReceipt": receipt,
                         "status": L1ToL2MessageStatus.REDEEMED,
                     }
 
-            to_block = await self.l2_provider.eth.get_block(to_block_number)
+            to_block = self.l2_provider.eth.get_block(to_block_number)
             if to_block.timestamp > timeout:
                 while queried_range:
                     block_range = queried_range.pop(0)
@@ -324,13 +331,15 @@ class L1ToL2MessageReader(L1ToL2Message):
 
             from_block = to_block
 
+        print('f-EXPIRED')
+        print('***********************get_successful_redeem exited')
         return {"status": L1ToL2MessageStatus.EXPIRED}
 
     async def is_expired(self) -> bool:
         return await self.retryable_exists()
 
     async def retryable_exists(self) -> bool:
-        current_timestamp = (await self.l2_provider.eth.get_block("latest")).timestamp
+        current_timestamp = (self.l2_provider.eth.get_block("latest")).timestamp
         try:
             timeout_timestamp = await self.get_timeout()
             return current_timestamp <= timeout_timestamp
@@ -437,16 +446,22 @@ class L1ToL2MessageReaderClassic:
         return self.retryable_creation_receipt
 
     async def status(self):
+        print('***********************status entered')
         creation_receipt = await self.get_retryable_creation_receipt()
         if not creation_receipt:
+            print('a-NOT_YET_CREATED')
             return L1ToL2MessageStatus.NOT_YET_CREATED
+            
         if creation_receipt.status == 0:
+            print('b-CREATION_FAILED')
             return L1ToL2MessageStatus.CREATION_FAILED
         l2_tx_receipt = await get_transaction_receipt( self.l2_provider,
             self.l2_tx_hash
         )
         if l2_tx_receipt and l2_tx_receipt.status == 1:
+            print('c-REDEEMED')
             return L1ToL2MessageStatus.REDEEMED
+        print('***********************status exited')
         return L1ToL2MessageStatus.EXPIRED
 
 
@@ -467,8 +482,10 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
         self.l2_signer = l2_signer
 
     async def redeem(self, overrides=None):
+        print('***********************reedeem entered')
         status = await self.status()
         if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
+            print("a-funds deposited on l2")
             # Load the ArbRetryableTx contract
             arb_retryable_tx = load_contract(
                 "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer, is_classic=False
@@ -491,6 +508,7 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             redeem_transaction = L2TransactionReceipt.to_redeem_transaction(
                 monkey_patched_receipt, self.l2_provider
             )
+            print('***********************reedem exited')
 
             return redeem_transaction
         else:
@@ -499,8 +517,10 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             )
 
     async def cancel(self, overrides=None):
+        print('***********************cancel entered')
         status = await self.status()
         if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
+            print("a-funds deposited on l2")
             # Load the ArbRetryableTx contract
             arb_retryable_tx = load_contract(
                 "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer, is_classic=False

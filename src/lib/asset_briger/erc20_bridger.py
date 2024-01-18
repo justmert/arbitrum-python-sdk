@@ -294,7 +294,7 @@ class Erc20Bridger(AssetBridger):
         destination_address = defaulted_params['destination_address']
         erc20_l1_address = defaulted_params['erc20_l1_address']
         retryable_gas_overrides = defaulted_params.get('retryable_gas_overrides', {})
-
+        print("retryable_gas_overrides", retryable_gas_overrides)
         # Get L1 gateway address
         l1_gateway_address = await self.get_l1_gateway_address(erc20_l1_address, l1_provider)
 
@@ -305,6 +305,7 @@ class Erc20Bridger(AssetBridger):
             if 'min' not in retryable_gas_overrides['gasLimit']:
                 retryable_gas_overrides['gasLimit']['min'] = MIN_CUSTOM_DEPOSIT_GAS_LIMIT
 
+        print("updated_retryable_gas_overrides", retryable_gas_overrides)
         # Define deposit function
         def deposit_func(deposit_params):
             print(deposit_params['maxSubmissionCost'])
