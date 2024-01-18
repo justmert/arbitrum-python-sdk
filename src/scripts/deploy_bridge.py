@@ -5,6 +5,8 @@ from eth_typing import Address
 from web3 import Account
 import json
 
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
+
 ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
 
 def load_contract_abi(name: str, is_classic = False) -> list:
@@ -122,53 +124,54 @@ def sign_and_send_transaction(provider, contract_function, signer, nonce=None):
     return tx_receipt
 
 
-def deploy_erc20_and_init(l1_provider, l1_signer, l2_provider, l2_signer, inbox_address: Address):
+def deploy_erc20_and_init(l1_signer: SignerOrProvider, l2_signer: SignerOrProvider, inbox_address: Address):
+    
     print('Deploying L1 contracts...')
     print('l1rype', type(l1_signer))
-    l1_contracts = deploy_erc20_l1(provider=l1_provider, deployer=l1_signer)
+    l1_contracts = deploy_erc20_l1(provider=l1_signer.provider, deployer=l1_signer.account)
 
     print('Deploying L2 contracts...')
-    l2_contracts = deploy_erc20_l2(provider=l2_provider, deployer=l2_signer)
+    l2_contracts = deploy_erc20_l2(provider=l2_signer.provider, deployer=l2_signer.account)
 
     print('Initializing L2 contracts...')
     sign_and_send_transaction(
-        l2_provider,
+        l2_signer.provider,
         l2_contracts['router'].functions.initialize(
             l1_contracts['router'].address,
             l2_contracts['standardGateway'].address
         ),
-        l2_signer
+        l2_signer.account
     )
 
     sign_and_send_transaction(
-        l2_provider,
+        l2_signer.provider,
         l2_contracts['beaconProxyFactory'].functions.initialize(
             l2_contracts['beacon'].address
         ),
-        l2_signer
+        l2_signer.account
     )
 
     sign_and_send_transaction(
-        l2_provider,
+        l2_signer.provider,
         l2_contracts['standardGateway'].functions.initialize(
             l1_contracts['standardGateway'].address,
             l2_contracts['router'].address,
             l2_contracts['beaconProxyFactory'].address
         ),
-        l2_signer
+        l2_signer.account
     )
 
     sign_and_send_transaction(
-        l2_provider,
+        l2_signer.provider,
         l2_contracts['customGateway'].functions.initialize(
             l1_contracts['customGateway'].address,
             l2_contracts['router'].address
         ),
-        l2_signer
+        l2_signer.account
     )
 
     sign_and_send_transaction(
-        l2_provider,
+        l2_signer.provider,
         l2_contracts['weth'].functions.initialize(
             'WETH',
             'WETH',
@@ -176,42 +179,42 @@ def deploy_erc20_and_init(l1_provider, l1_signer, l2_provider, l2_signer, inbox_
             l2_contracts['wethGateway'].address,
             l1_contracts['weth'].address
         ),
-        l2_signer
+        l2_signer.account
     )
 
     sign_and_send_transaction(
-        l2_provider,
+        l2_signer.provider,
         l2_contracts['wethGateway'].functions.initialize(
             l1_contracts['wethGateway'].address,
             l2_contracts['router'].address,
             l1_contracts['weth'].address,
             l2_contracts['weth'].address
         ),
-        l2_signer
+        l2_signer.account
     )
 
     print('Initializing L1 contracts...')
     sign_and_send_transaction(
-        l1_provider,
+        l1_signer.provider,
         l1_contracts['router'].functions.initialize(
-            l1_signer.address,
+            l1_signer.account.address,
             l1_contracts['standardGateway'].address,
             ADDRESS_ZERO,  # Typically a zero address or specific address based on your setup
             l2_contracts['router'].address,
             inbox_address
         ),
-        l1_signer
+        l1_signer.account
     )
 
 
-    cloneable_proxy_hash = l2_provider.eth.contract(
+    cloneable_proxy_hash = l2_signer.provider.eth.contract(
         address=l2_contracts['beaconProxyFactory'].address,
         abi=l2_contracts['beaconProxyFactory'].abi
     ).functions.cloneableProxyHash().call()
 
 
     sign_and_send_transaction(
-        l1_provider,
+        l1_signer.provider,
         l1_contracts['standardGateway'].functions.initialize(
             l2_contracts['standardGateway'].address,
             l1_contracts['router'].address,
@@ -219,22 +222,22 @@ def deploy_erc20_and_init(l1_provider, l1_signer, l2_provider, l2_signer, inbox_
             cloneable_proxy_hash,
             l2_contracts['beaconProxyFactory'].address
         ),
-        l1_signer
+        l1_signer.account
     )
 
     sign_and_send_transaction(
-        l1_provider,
+        l1_signer.provider,
         l1_contracts['customGateway'].functions.initialize(
             l2_contracts['customGateway'].address,
             l1_contracts['router'].address,
             inbox_address,
-            l1_signer.address
+            l1_signer.account.address
         ),
-        l1_signer
+        l1_signer.account
     )
 
     sign_and_send_transaction(
-        l1_provider,
+        l1_signer.provider,
         l1_contracts['wethGateway'].functions.initialize(
             l2_contracts['wethGateway'].address,
             l1_contracts['router'].address,
@@ -242,7 +245,7 @@ def deploy_erc20_and_init(l1_provider, l1_signer, l2_provider, l2_signer, inbox_
             l1_contracts['weth'].address,
             l2_contracts['weth'].address
         ),
-        l1_signer
+        l1_signer.account
     )
 
     return l1_contracts, l2_contracts

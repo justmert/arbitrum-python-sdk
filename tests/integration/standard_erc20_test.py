@@ -25,56 +25,6 @@ WITHDRAWAL_AMOUNT = 10
 TEST_ERC20_ABI = contract_data['abi']
 TEST_ERC20_BYTECODE = contract_data['bytecode']
 
-# import { TestERC20 } from '../../src/lib/abi/TestERC20'
-# import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-# import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryableTx__factory'
-# import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
-
-
-
-# class TestERC20(unittest.TestCase):
-
-    # def setUp(self):
-    #     # Setup code here. Replace with actual setup.
-    #     self.l1Signer = Web3(HTTPProvider('http://localhost:8545')).eth.accounts[0]  # Placeholder
-    #     self.l2Signer = Web3(HTTPProvider('http://localhost:8547')).eth.accounts[0]  # Placeholder
-    #     self.erc20Bridger = ERC20Bridger()  # Replace with actual initialization
-    #     self.l2Network = L2Network()  # Replace with actual initialization
-    #     self.l1Token = load_contract(Web3(HTTPProvider('http://localhost:8545')), 'TestERC20', TEST_ERC20_ADDRESS)
-
-    # def test_deposit_erc20(self):
-    #     # Replace with actual deposit_token function
-    #     deposit_amount = Web3.to_wei(100, 'ether')
-    #     deposit_token(deposit_amount, self.l1Token.address, self.erc20Bridger, self.l1Signer, self.l2Signer, L1ToL2MessageStatus.REDEEMED, GatewayType.STANDARD)
-
-    # def test_deposit_with_no_funds_manual_redeem(self):
-    #     deposit_amount = Web3.to_wei(100, 'ether')
-    #     wait_res = deposit_token(deposit_amount, self.l1Token.address, self.erc20Bridger, self.l1Signer, self.l2Signer, L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2, GatewayType.STANDARD, gas_limit=0, max_fee_per_gas=0)
-    #     # Replace redeemAndTest with actual implementation.
-    #     self.redeemAndTest(wait_res['message'], 1)
-
-    # def test_deposit_with_low_funds_manual_redeem(self):
-    #     deposit_amount = Web3.to_wei(100, 'ether')
-    #     wait_res = deposit_token(deposit_amount, self.l1Token.address, self.erc20Bridger, self.l1Signer, self.l2Signer, L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2, GatewayType.STANDARD, gas_limit=5, max_fee_per_gas=5)
-    #     self.redeemAndTest(wait_res['message'], 1)
-
-
-# class StandardERC20Test(unittest.TestCase):
-    
-    # @pytest.mark.asyncio
-    # async def setUpClass(cls):
-    #     cls.setup = await test_setup()
-    #     fund_l1(cls.setup['l1Signer'])
-    #     fund_l2(cls.setup['l2Signer'])
-
-    #     cls.deploy_erc20 = load_contract(cls.setup['l1Signer'].provider, 'TestERC20', cls.setup['l1Token'].address, is_classic=True)
-    #     cls.test_token = cls.deploy_erc20.deploy(cls.setup['l1Signer'])
-    #     cls.test_token.deployed()
-    #     cls.test_token.mint().wait()
-
-    #     cls.test_state = cls.setup
-    #     cls.test_state['l1Token'] = cls.test_token
-
 
 def deploy_test_erc20(web3_instance, deployer):
     # Create the contract instance
@@ -162,17 +112,32 @@ async def setup_state():
 
 
 
+# @pytest.mark.asyncio
+# async def test_deposit_erc20(setup_state) -> None:
+#     await deposit_token(
+#         deposit_amount=DEPOSIT_AMOUNT,
+#         l1_token_address=setup_state.l1_token_address,
+#         erc20_bridger=setup_state.erc20_bridger,
+#         l1_signer=setup_state.l1_signer,
+#         l2_signer=setup_state.l2_signer,
+#         expected_status=L1ToL2MessageStatus.REDEEMED,
+#         expected_gateway_type=GatewayType.STANDARD
+#     )
+
 @pytest.mark.asyncio
-async def test_deposit_erc20(setup_state) -> None:
-    await deposit_token(
-        deposit_amount=DEPOSIT_AMOUNT,
-        l1_token_address=setup_state.l1_token_address,
-        erc20_bridger=setup_state.erc20_bridger,
-        l1_signer=setup_state.l1_signer,
-        l2_signer=setup_state.l2_signer,
-        expected_status=L1ToL2MessageStatus.REDEEMED,
-        expected_gateway_type=GatewayType.STANDARD
-    )
+async def redeem_and_test(message: L1ToL2MessageWriter, expected_status: int, gas_limit=None):
+    print('hii')
+    manual_redeem = await message.redeem(gas_limit=gas_limit)
+    retry_rec = await manual_redeem.wait_for_redeem()
+    redeem_rec = await manual_redeem.wait()
+    block_hash = redeem_rec.blockHash
+
+    assert retry_rec.blockHash == block_hash, 'redeemed in same block'
+    assert retry_rec.to == setup_state['l2Network']['tokenBridge']['l2ERC20Gateway'], 'redeemed in same block'
+    assert retry_rec.status == expected_status, "tx didn't fail"
+    assert await message.status() == (L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 if expected_status == 0 else L1ToL2MessageStatus.REDEEMED), 'message status'
+
+
 
     # def redeem_and_test(self, message: L1ToL2MessageWriter, expected_status: int, gas_limit=None):
     #     manual_redeem = message.redeem(gas_limit)
@@ -192,7 +157,6 @@ async def test_deposit_erc20(setup_state) -> None:
     #         self.test_state['erc20Bridger'],
     #         self.test_state['l1Signer'],
     #         self.test_state['l2Signer'],
-    #         L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
     #         GatewayType.STANDARD,
     #         gas_limit=0,
     #         max_fee_per_gas=0

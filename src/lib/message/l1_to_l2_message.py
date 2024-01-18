@@ -40,30 +40,18 @@ def hex_to_bytes(value: str) -> bytes:
 #     return value.rjust(length, b'\0')
 
 
+
 def zero_pad(value, length):
-    # Ensure value is in bytes format
-    value_bytes = to_bytes(value)
+    # Pad the value to the required length
+    return value.rjust(length, b'\x00')
 
-    # Check if the provided value is longer than the specified length
-    if len(value_bytes) > length:
-        raise ValueError("value out of range")
+def format_number(value):
+    hex_str = Web3.to_hex(value)[2:].lstrip('0')
 
-    # Create a byte array of the specified length filled with zeros
-    result = bytearray(length)
-
-    # Set the value at the end of the array, maintaining leading zeros
-    result[-len(value_bytes) :] = value_bytes
-
-    return bytes(result)  # Convert back to an immutable bytes object
-
-
-def format_number(value: int) -> bytes:
-    # Convert the integer to a hexadecimal string, strip leading zeros and the '0x' prefix
-    hex_value = hex(value).lstrip("0x")
-    # Convert the hexadecimal string back to an integer
-    int_value = int(hex_value, 16) if hex_value else 0
-    # Convert the integer to a byte array, adjusting for length and endianness
-    return to_bytes(int_value)
+    # Ensure the hex string has an even number of characters
+    if len(hex_str) % 2 != 0:
+        hex_str = '0' + hex_str
+    return bytes.fromhex(hex_str)
 
 
 def concat(*args) -> bytes:
@@ -98,6 +86,13 @@ class L1ToL2Message:
         self.message_number = message_number
         self.l1_base_fee = l1_base_fee
         self.message_data = message_data
+        print(
+            "chain_id", chain_id, "\n",
+            "sender", sender, "\n",
+            "message_number", message_number, "\n",
+            "l1_base_fee", l1_base_fee, "\n",
+            "message_data", message_data, "\n",
+        )
         self.retryable_creation_id = self.calculate_submit_retryable_id(
             chain_id,
             sender,
@@ -138,48 +133,34 @@ class L1ToL2Message:
         max_fee_per_gas,
         data,
     ):
-        chain_id = format_number(l2_chain_id)
-        msg_num = zero_pad(format_number(message_number), 32)  # 20556
+        chain_id = l2_chain_id
+        msg_num = message_number
         from_addr = to_checksum_address(from_address)
-        dest_addr = "0x" if dest_address == "0x0" else to_checksum_address(dest_address)
+        dest_addr = "0x" if dest_address == "0x0000000000000000000000000000000000000000" else to_checksum_address(dest_address)
         call_value_refund_addr = to_checksum_address(call_value_refund_address)
         excess_fee_refund_addr = to_checksum_address(excess_fee_refund_address)
 
-        # Prepare the list of fields for RLP encoding
         fields = [
-            chain_id,
-            msg_num,
+            format_number(chain_id),
+            zero_pad(format_number(msg_num), 32),
             bytes.fromhex(from_addr[2:]),
-            format_number(l1_base_fee),  # 25249467480
-            format_number(l1_value),  # 600360471887006336
-            format_number(max_fee_per_gas),  # 300000000
-            format_number(gas_limit),  # 120166
-            bytes.fromhex(dest_addr[2:]),
-            format_number(l2_call_value),  # 600000000000000000
+            format_number(l1_base_fee),
+            format_number(l1_value),
+            format_number(max_fee_per_gas),
+            format_number(gas_limit),
+            bytes.fromhex(dest_addr[2:]) if dest_addr != '0x' else b'',
+            format_number(l2_call_value),
             bytes.fromhex(call_value_refund_addr[2:]),
-            format_number(max_submission_fee),  # 324422087006336
+            format_number(max_submission_fee),
             bytes.fromhex(excess_fee_refund_addr[2:]),
             bytes.fromhex(data[2:]),
         ]
 
-        def hex_concat(items):
-            # Concatenate items into a single hex string
-            result = "0x"
-            for item in items:
-                # Ensure each item is a hex string and strip the leading '0x'
-                item_hex = encode_hex(item) if isinstance(item, bytes) else item
-                result += item_hex[2:]
-            return result
-
-        # RLP encode the fields
         rlp_encoded = rlp.encode(fields)
-        # Concatenate '0x69' with the RLP-encoded fields
+        rlp_enc_with_type = b'\x69' + rlp_encoded
 
-        rlp_enc_with_type = hex_concat([b"\x69", rlp_encoded])
-
-        # Compute the keccak256 hash
-        retryable_tx_id = "0x" + keccak(to_bytes(hexstr=rlp_enc_with_type)).hex()
-        return retryable_tx_id
+        retryable_tx_id = Web3.keccak(rlp_enc_with_type)
+        return retryable_tx_id.hex()
 
     @staticmethod
     def from_event_components(
@@ -242,10 +223,10 @@ class L1ToL2MessageReader(L1ToL2Message):
             l2_receipt = L2TransactionReceipt(
                 creation_receipt
             )  # Assuming L2TransactionReceipt is implemented
-            redeem_events = l2_receipt.get_redeem_scheduled_events()
-
+            redeem_events = l2_receipt.get_redeem_scheduled_events(self.l2_provider)
+            print("reedem_events", redeem_events)
             if len(redeem_events) == 1:
-                return await get_transaction_receipt(
+                return await get_transaction_receipt( self.l2_provider,
                     redeem_events[0]["retryTxHash"]
                 )
             elif len(redeem_events) > 1:
@@ -300,7 +281,7 @@ class L1ToL2MessageReader(L1ToL2Message):
             redeem_events = redeem_filter.get_all_entries()
 
             for event in redeem_events:
-                receipt = await get_transaction_receipt(
+                receipt = await get_transaction_receipt(self.l2_provider,
                     event["retryTxHash"]
                 )
                 if receipt and receipt.status == 1:
@@ -461,7 +442,7 @@ class L1ToL2MessageReaderClassic:
             return L1ToL2MessageStatus.NOT_YET_CREATED
         if creation_receipt.status == 0:
             return L1ToL2MessageStatus.CREATION_FAILED
-        l2_tx_receipt = await get_transaction_receipt(
+        l2_tx_receipt = await get_transaction_receipt( self.l2_provider,
             self.l2_tx_hash
         )
         if l2_tx_receipt and l2_tx_receipt.status == 1:
@@ -621,7 +602,7 @@ class EthDepositMessage:
         return {"to": to_address, "value": value}
 
     async def status(self):
-        receipt = await get_transaction_receipt(
+        receipt = await get_transaction_receipt( self.l2_provider,
             self.l2_deposit_tx_hash
         )
         if receipt is None:
@@ -646,7 +627,7 @@ class EthDepositMessage:
             try:
                 # Attempt to get the transaction receipt
                 self.l2_deposit_tx_receipt = (
-                    await get_transaction_receipt(
+                    await get_transaction_receipt( self.l2_provider,
                         self.l2_deposit_tx_hash
                     )
                 )

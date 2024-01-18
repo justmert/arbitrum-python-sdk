@@ -41,7 +41,7 @@ def load_abi(contract_name: str, is_classic = False) -> Contract:
 
 def snake_to_camel(name):
     # Special cases where the conversion isn't straightforward
-    special_cases = {"id": "ID", "ids": "IDs"}
+    special_cases = {"id": "ID", "ids": "IDs", 'erc20': "ERC20"}
     components = name.split('_')
     # Convert the first component as is, then title-case the remaining components
     camel_case_name = components[0] + ''.join(special_cases.get(x, x.title()) for x in components[1:])

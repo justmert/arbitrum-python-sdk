@@ -6,6 +6,7 @@ from src.lib.data_entities.networks import l2_networks
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS
 from .arb_provider import ArbitrumProvider
 import json
+from web3.exceptions import TransactionNotFound
 
 
 # Create a contract instance
@@ -26,13 +27,31 @@ async def wait(ms: int):
 
 # Get transaction receipt
 async def get_transaction_receipt(web3_instance, tx_hash, confirmations=None, timeout=None):
-    try:
-        receipt = await web3_instance.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
-        return receipt if receipt['blockNumber'] >= confirmations else None
-    except TimeExhausted:
-        return None
-    except Exception as e:
-        raise e
+    # Check if confirmations or timeout is provided
+    if confirmations or timeout:
+        try:
+            receipt = web3_instance.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
+            # Additional check for confirmations if needed
+            if confirmations:
+                latest_block = web3_instance.eth.block_number
+                if latest_block - receipt.blockNumber < confirmations:
+                    return None
+            return receipt
+        except TimeExhausted:
+            return None
+        except Exception as e:
+            print("Error waiting for transaction receipt")
+            raise e
+    else:
+        # No confirmations or timeout provided, directly get the receipt
+        try:
+            receipt = web3_instance.eth.get_transaction_receipt(tx_hash)
+            return receipt
+        except TransactionNotFound:
+            return None
+        except Exception as e:
+            print("Error getting transaction receipt")
+            raise e
 
 def is_defined(val):
     return val is not None
@@ -44,8 +63,6 @@ async def is_arbitrum_chain(web3_instance):
         with open('src/abi/ArbSys.json') as f:
             abi_content = json.load(f)
             ARBSYS_ABI = abi_content['abi'] if 'abi' in abi_content else abi_content
-
-            
 
         if isinstance(web3_instance, ArbitrumProvider):
             provider = web3_instance.w3

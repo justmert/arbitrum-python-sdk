@@ -64,7 +64,7 @@ async def withdraw_token(params):
         params['l2_signer'].provider,
         l2_token_addr
     )
-    test_wallet_l2_balance = await l2_token.balance_of(await params['l2_signer'].get_address())
+    test_wallet_l2_balance = l2_token.functions.balanceOf(params['l2_signer'].account.address).call()
     assert test_wallet_l2_balance == params['start_balance'] - params['amount'], 'token withdraw balance not deducted'
 
     wallet_address = await params['l1_signer'].get_address()
@@ -85,7 +85,7 @@ async def withdraw_token(params):
     )
     assert len(gateway_withdraw_events) == 1, 'token query failed'
 
-    bal_before = await params['l1_token'].balance_of(await params['l1_signer'].get_address())
+    bal_before = params['l1_token'].functions.balanceOf(params['l1_signer'].account.address).call()
 
     # Mining simulation on L1 and L2
     # Replace this part with the actual logic for mining simulation or block advancement
@@ -101,11 +101,12 @@ async def withdraw_token(params):
     assert exec_rec['gasUsed'] <= l1_gas_estimate, 'Gas used greater than estimate'
     assert await message.status(params['l2_signer'].provider) == L2ToL1MessageStatus.EXECUTED, 'executed status'
 
-    bal_after = await params['l1_token'].balance_of(await params['l1_signer'].get_address())
+    bal_after = params['l1_token'].functions.balanceOf(params['l1_signer'].account.address).call()
     assert bal_before + params['amount'] == bal_after, 'Not withdrawn'
 
 
 def get_gateways(gateway_type, l2_network):
+    print('l2_network', l2_network)
     if gateway_type == GatewayType.CUSTOM:
         return {
             'expected_l1_gateway': l2_network.token_bridge.l1_custom_gateway,
@@ -176,8 +177,8 @@ async def deposit_token(deposit_amount, l1_token_address, erc20_bridger, l1_sign
 
     # Wait for the deposit to be recognized on L2
     wait_res = await deposit_res.wait_for_l2(l2_signer)
-
-    assert wait_res.status == expected_status, 'Unexpected status'
+    print("wait_res", wait_res)
+    assert wait_res['status'] == expected_status, 'Unexpected status'
 
     # Verify the gateway addresses
     gateways = get_gateways(expected_gateway_type, erc20_bridger.l2_network)
@@ -193,7 +194,7 @@ async def deposit_token(deposit_amount, l1_token_address, erc20_bridger, l1_sign
     l1_erc20_addr = await erc20_bridger.get_l1_erc20_address(l2_erc20_addr, l2_signer.provider)
     assert l1_erc20_addr == l1_token_address, 'getERC20L1Address/getERC20L2Address failed with proper token address'
 
-    test_wallet_l2_balance = await l2_token.balance_of(await l2_signer.account.address)
+    test_wallet_l2_balance = l2_token.functions.balanceOf(l2_signer.account.address).call()
     assert test_wallet_l2_balance == deposit_amount, 'l2 wallet not updated after deposit'
 
     return {

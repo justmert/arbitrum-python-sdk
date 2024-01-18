@@ -9,7 +9,7 @@ from yaml import Token
 from pathlib import Path
 from addict import Dict
 from src.lib.data_entities.errors import ArbSdkError
-
+from web3.contract import Contract
 from src.lib.utils.helper import CaseDict, load_contract
 from src.lib.data_entities.networks import add_custom_network, get_l1_network, get_l2_network
 from src.lib.asset_briger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
@@ -111,16 +111,13 @@ def get_custom_networks(l1_url: str, l2_url: str):
         'l2Network': l2_network,
     }
 
-async def setup_networks(l1_url: str, l2_url: str, l1_deployer: Account, l2_deployer: Account, l1_provider: Web3, l2_provider: Web3):
-
+async def setup_networks(l1_url: str, l2_url: str, l1_deployer: SignerOrProvider, l2_deployer: SignerOrProvider):
 
     # Fetch the custom networks
     custom_networks = get_custom_networks(l1_url, l2_url)
     # Deploy necessary contracts and get their addresses
     l1_contracts, l2_contracts = deploy_erc20_and_init(
-        l1_provider= l1_provider, l2_provider=l2_provider,
-        l1_signer=l1_deployer, l2_signer=l2_deployer,
-        inbox_address=custom_networks['l2Network']['ethBridge']['inbox']
+        l1_signer=l1_deployer, l2_signer=l2_deployer, inbox_address=custom_networks['l2Network']['ethBridge']['inbox']
     )
 
     # Add token bridge information to the L2 network
@@ -143,15 +140,24 @@ async def setup_networks(l1_url: str, l2_url: str, l1_deployer: Account, l2_depl
     )
     l1_network = custom_networks['l1Network']
     
+    def convert_to_address(network_data: Dict):
+        for key, value in network_data.items():
+            if isinstance(value, str):
+                network_data[key] = Web3.to_checksum_address(value)
+
+            elif isinstance(value, Contract):
+                network_data[key] = Web3.to_checksum_address(value.address)
+
+    convert_to_address(l1_network.ethBridge)
+    convert_to_address(l2_network.ethBridge)
+
     add_custom_network(l1_network, l2_network)
     
     # Register the WETH gateway and other necessary setups
     admin_erc20_bridger = AdminErc20Bridger(l2_network)
     await admin_erc20_bridger.set_gateways(
         l1_signer=l1_deployer,
-        l1_provider=l1_provider,
-        l2_signer=l2_deployer,
-        l2_provider=l2_provider,
+        l2_provider=l2_deployer.provider,
         token_gateways=[
             {
                 'gatewayAddr': l2_network['tokenBridge']['l1WethGateway'],
@@ -164,8 +170,8 @@ async def setup_networks(l1_url: str, l2_url: str, l1_deployer: Account, l2_depl
     return {
         'l1Network': l1_network,
         'l2Network': l2_network,
-        'l1Deployer': l1_deployer,
-        'l2Deployer': l2_deployer,
+        # 'l1Deployer': l1_deployer,
+        # 'l2Deployer': l2_deployer,
     }
 
 def get_signer(provider: Web3, key: str = None):
@@ -193,8 +199,9 @@ async def test_setup() -> CaseDict:
     arb_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     # Create signers for deployments
-    l1_deployer = get_signer(eth_provider, config['ETH_KEY'])
-    l2_deployer = get_signer(arb_provider, config['ARB_KEY'])
+    l1_deployer = SignerOrProvider(get_signer(eth_provider, config['ETH_KEY']), eth_provider)
+    l2_deployer = SignerOrProvider(get_signer(arb_provider, config['ARB_KEY']), arb_provider)
+
 
     # Generate a new account for l1 and l2 signers
     seed = Account.create()
@@ -233,7 +240,8 @@ async def test_setup() -> CaseDict:
         else:
             # Deploy a new network
             network_data = await setup_networks(
-                l1_deployer=l1_deployer, l2_deployer=l2_deployer, l1_url= config['ETH_URL'], l2_url=config['ARB_URL'], l1_provider=eth_provider, l2_provider=arb_provider
+                l1_deployer=l1_deployer, l2_deployer=l2_deployer, 
+                l1_url= config['ETH_URL'], l2_url=config['ARB_URL']
             )
             set_l1_network = network_data['l1Network']
             set_l2_network = network_data['l2Network']

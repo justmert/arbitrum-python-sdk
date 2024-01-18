@@ -1,6 +1,6 @@
 from web3 import Web3
 from web3.types import TxReceipt
-from decimal import Decimal
+# from decimal import Decimal
 from typing import List, Optional, Any, Callable
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.data_entities.signer_or_provider import (
@@ -11,6 +11,7 @@ from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.utils.helper import load_contract
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.message.l2_to_l1_message import L2ToL1Message
+from src.lib.data_entities.event import parse_typed_logs
 
 
 class RedeemTransaction:
@@ -24,11 +25,11 @@ class RedeemTransaction:
             self.transaction.transaction_hash
         )
 
-    async def wait_for_redeem(self):
+    async def wait_for_redeem(self, provider):
         rec = await self.wait()
         l2_receipt = L2TransactionReceipt(rec)
 
-        redeem_scheduled_events = l2_receipt.get_redeem_scheduled_events()
+        redeem_scheduled_events = l2_receipt.get_redeem_scheduled_events(provider)
 
         if len(redeem_scheduled_events) != 1:
             raise ArbSdkError(
@@ -41,33 +42,32 @@ class RedeemTransaction:
 
 
 class L2TransactionReceipt:
-    def __init__(self, tx: TxReceipt, event_fetcher: EventFetcher):
-        self.to = tx["to"]
-        self.from_ = tx["from"]
-        self.contract_address = tx["contractAddress"]
-        self.transaction_index = tx["transactionIndex"]
+    def __init__(self, tx: TxReceipt):
+        self.to = tx.get("to")
+        self.from_ = tx.get("from")
+        self.contract_address = tx.get("contractAddress")
+        self.transaction_index = tx.get("transactionIndex")
         self.root = tx.get("root")
-        self.gas_used = Decimal(tx["gasUsed"])
-        self.logs_bloom = tx["logsBloom"]
-        self.block_hash = tx["blockHash"]
-        self.transaction_hash = tx["transactionHash"]
-        self.logs = tx["logs"]
-        self.block_number = tx["blockNumber"]
-        self.confirmations = tx["confirmations"]
-        self.cumulative_gas_used = Decimal(tx["cumulativeGasUsed"])
-        self.effective_gas_price = Decimal(tx["effectiveGasPrice"])
-        self.byzantium = tx["byzantium"]
-        self.type = tx["type"]
+        self.gas_used = tx.get("gasUsed")
+        self.logs_bloom = tx.get("logsBloom")
+        self.block_hash = tx.get("blockHash")
+        self.transaction_hash = tx.get("transactionHash")
+        self.logs = tx.get("logs")
+        self.block_number = tx.get("blockNumber")
+        self.confirmations = tx.get("confirmations")
+        self.cumulative_gas_used = tx.get("cumulativeGasUsed")
+        self.effective_gas_price = tx.get("effectiveGasPrice")
+        self.byzantium = tx.get("byzantium")
+        self.type = tx.get("type")
         self.status = tx.get("status")
-        self.event_fetcher = event_fetcher
 
-    def get_l2_to_l1_events(self):
-        return self.event_fetcher.parse_typed_logs(
+    def get_l2_to_l1_events(self, provider):
+        return parse_typed_logs( provider,
             "ArbSys", self.logs, "L2ToL1Transaction"
         )
 
-    def get_redeem_scheduled_events(self):
-        return self.event_fetcher.parse_typed_logs(
+    def get_redeem_scheduled_events(self, provider):
+        return parse_typed_logs( provider,
             "ArbRetryableTx", self.logs, "RedeemScheduled"
         )
 
@@ -78,7 +78,7 @@ class L2TransactionReceipt:
 
         return [
             L2ToL1Message.from_event(l1_signer_or_provider, log)
-            for log in self.get_l2_to_l1_events()
+            for log in self.get_l2_to_l1_events(provider)
         ]
 
     def get_batch_confirmations(self, web3_instance: Web3) -> int:
