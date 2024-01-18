@@ -242,17 +242,17 @@ class Erc20Bridger(AssetBridger):
         transaction['gas'] = l1_provider.eth.estimate_gas(transaction)
         transaction['nonce'] = l1_provider.eth.get_transaction_count(params['l1Signer'].account.address)
         transaction['chainId'] = l1_provider.eth.chain_id
-        print('transaction', transaction)
+        
         # Sign the transaction with the private key
         signed_txn = params['l1Signer'].account.sign_transaction(transaction)
 
         # Send the transaction
         tx_hash = params['l1Signer'].provider.eth.send_raw_transaction(signed_txn.rawTransaction)
 
-        # Wait for the transaction to be mined and get the receipt
-        tx_receipt = params['l1Signer'].provider.eth.wait_for_transaction_receipt(tx_hash)
+        # # Wait for the transaction to be mined and get the receipt
+        # tx_receipt = params['l1Signer'].provider.eth.wait_for_transaction_receipt(tx_hash)
 
-        return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
+        return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_hash)
 
 
     def solidity_encode(self, types, values):

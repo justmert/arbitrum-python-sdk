@@ -267,10 +267,18 @@ class L1ContractCallTransactionReceipt(L1TransactionReceipt):
         timeout: Optional[int] = None,
     ):
         messages = await self.get_l1_to_l2_messages(l2_signer_or_provider)
+        
         if not messages:
             raise ArbSdkError("Unexpected missing L1ToL2 message.")
 
         message = messages[0]
+        print('message', message)
+        print(message.chain_id)
+        print(message.message_data)
+        print(message.message_number)
+        print(message.l1_base_fee)
+        print(message.sender)
+
         result = await message.wait_for_status(confirmations, timeout)
 
         return {

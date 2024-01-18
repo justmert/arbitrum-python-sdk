@@ -21,7 +21,7 @@ from web3.contract import Contract
 from src.lib.utils.helper import load_contract
 from eth_utils import keccak, to_bytes
 from src.lib.message.l2_transaction import L2TransactionReceipt
-
+from src.lib.utils.lib import get_transaction_receipt
 # Additional imports and utility functions might be required.
 from eth_utils import to_checksum_address, keccak, to_bytes
 
@@ -229,7 +229,7 @@ class L1ToL2MessageReader(L1ToL2Message):
     async def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
         if not self.retryable_creation_receipt:
             self.retryable_creation_receipt = (
-                self.l2_provider.eth.get_transaction_receipt(
+                await get_transaction_receipt(
                     self.l2_provider, self.retryable_creation_id, confirmations, timeout
                 )
             )
@@ -245,7 +245,7 @@ class L1ToL2MessageReader(L1ToL2Message):
             redeem_events = l2_receipt.get_redeem_scheduled_events()
 
             if len(redeem_events) == 1:
-                return await self.l2_provider.eth.get_transaction_receipt(
+                return await get_transaction_receipt(
                     redeem_events[0]["retryTxHash"]
                 )
             elif len(redeem_events) > 1:
@@ -300,7 +300,7 @@ class L1ToL2MessageReader(L1ToL2Message):
             redeem_events = redeem_filter.get_all_entries()
 
             for event in redeem_events:
-                receipt = self.l2_provider.eth.get_transaction_receipt(
+                receipt = await get_transaction_receipt(
                     event["retryTxHash"]
                 )
                 if receipt and receipt.status == 1:
@@ -372,6 +372,7 @@ class L1ToL2MessageReader(L1ToL2Message):
         chosen_timeout = (
             timeout if timeout is not None else l2_network["deposit_timeout"]
         )
+        print('chosen_timeout', chosen_timeout)
 
         _retryable_creation_receipt = await self.get_retryable_creation_receipt(
             confirmations, chosen_timeout
@@ -448,7 +449,7 @@ class L1ToL2MessageReaderClassic:
     async def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
         if self.retryable_creation_receipt is None:
             self.retryable_creation_receipt = (
-                await self.l2_provider.eth.get_transaction_receipt(
+                await get_transaction_receipt(
                     self.l2_provider, self.retryable_creation_id, confirmations, timeout
                 )
             )
@@ -460,7 +461,7 @@ class L1ToL2MessageReaderClassic:
             return L1ToL2MessageStatus.NOT_YET_CREATED
         if creation_receipt.status == 0:
             return L1ToL2MessageStatus.CREATION_FAILED
-        l2_tx_receipt = await self.l2_provider.eth.get_transaction_receipt(
+        l2_tx_receipt = await get_transaction_receipt(
             self.l2_tx_hash
         )
         if l2_tx_receipt and l2_tx_receipt.status == 1:
@@ -620,7 +621,7 @@ class EthDepositMessage:
         return {"to": to_address, "value": value}
 
     async def status(self):
-        receipt = await self.l2_provider.eth.get_transaction_receipt(
+        receipt = await get_transaction_receipt(
             self.l2_deposit_tx_hash
         )
         if receipt is None:
@@ -645,7 +646,7 @@ class EthDepositMessage:
             try:
                 # Attempt to get the transaction receipt
                 self.l2_deposit_tx_receipt = (
-                    await self.l2_provider.eth.get_transaction_receipt(
+                    await get_transaction_receipt(
                         self.l2_deposit_tx_hash
                     )
                 )
