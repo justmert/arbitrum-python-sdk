@@ -181,28 +181,28 @@ class L1TransactionReceipt():
 
     @staticmethod
     def monkey_patch_wait(contract_transaction: Contract):
-        original_wait = contract_transaction.wait
+        # original_wait = contract_transaction.wait
 
-        async def patched_wait(
-            confirmations: Optional[int] = None
-        ) -> L1TransactionReceipt:
-            result = await original_wait(confirmations)
-            return L1TransactionReceipt(result)
+        # async def patched_wait(
+        #     confirmations: Optional[int] = None
+        # ) -> L1TransactionReceipt:
+        #     result = await original_wait(confirmations)
+        #     return L1TransactionReceipt(result)
 
-        contract_transaction.wait = patched_wait
+        # contract_transaction.wait = patched_wait
         return contract_transaction
 
     @staticmethod
     def monkey_patch_eth_deposit_wait(contract_transaction: Contract):
-        original_wait = contract_transaction.wait
+        # original_wait = contract_transaction.wait
 
-        async def patched_wait(
-            confirmations: Optional[int] = None
-        ) -> L1EthDepositTransactionReceipt:
-            result = await original_wait(confirmations)
-            return L1EthDepositTransactionReceipt(result)
+        # async def patched_wait(
+        #     confirmations: Optional[int] = None
+        # ) -> L1EthDepositTransactionReceipt:
+        #     result = await original_wait(confirmations)
+        #     return L1EthDepositTransactionReceipt(result)
 
-        contract_transaction.wait = patched_wait
+        # contract_transaction.wait = patched_wait
         return contract_transaction
 
     # @staticmethod

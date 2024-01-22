@@ -96,7 +96,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
 
 
         node_interface_contract = l2_provider.eth.contract(address=NODE_INTERFACE_ADDRESS, abi=node_interface_abi)
-        outbox_proof_params = await node_interface_contract.functions.constructOutboxProof(send_root_size, self.event['position']).call()
+        outbox_proof_params = node_interface_contract.functions.constructOutboxProof(send_root_size, self.event['position']).call()
         return outbox_proof_params['proof']
 
     async def has_executed(self, l2_provider):
@@ -106,7 +106,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
             outbox_abi = json.load(f)
 
         outbox_contract = l2_provider.eth.contract(address=l2_network.ethBridge.outbox, abi=outbox_abi)
-        return await outbox_contract.functions.isSpent(self.event['position']).call()
+        return outbox_contract.functions.isSpent(self.event['position']).call()
 
 
     async def status(self, l2_provider):
@@ -147,7 +147,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
         rollup_contract = l2_provider.eth.contract(address=rollup_address, abi=rollup_user_logic_abi)
 
         # Fetch node information
-        node = await rollup_contract.functions.getNode(node_num).call()
+        node = rollup_contract.functions.getNode(node_num).call()
         created_at_block = node['createdAtBlock']
 
         created_from_block = created_at_block
@@ -191,7 +191,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
 
 
                 node_interface_contract = l2_provider.eth.contract(address=NODE_INTERFACE_ADDRESS, abi=node_interface_abi)
-                res = await node_interface_contract.functions.findBatchContainingBlock(self.event['arbBlockNum']).call()
+                res = node_interface_contract.functions.findBatchContainingBlock(self.event['arbBlockNum']).call()
                 self.l1_batch_number = res
             except Exception as err:
                 # Errors are expected here; do nothing
@@ -206,7 +206,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
                 rollup_user_logic_abi = json.load(f)
 
             rollup_contract = l2_provider.eth.contract(address=l2_network.ethBridge.rollup, abi=rollup_user_logic_abi)
-            latest_confirmed_node_num = await rollup_contract.functions.latestConfirmed().call()
+            latest_confirmed_node_num = rollup_contract.functions.latestConfirmed().call()
             l2_block_confirmed = await self.get_block_from_node_num(rollup_contract, latest_confirmed_node_num, l2_provider)
 
             send_root_size_confirmed = l2_block_confirmed['sendCount']
@@ -215,7 +215,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
                 self.send_root_hash = l2_block_confirmed['sendRoot']
                 self.send_root_confirmed = True
             else:
-                latest_node_num = await rollup_contract.functions.latestNodeCreated().call()
+                latest_node_num = rollup_contract.functions.latestNodeCreated().call()
                 if latest_node_num > latest_confirmed_node_num:
                     l2_block = await self.get_block_from_node_num(rollup_contract, latest_node_num, l2_provider)
                     send_root_size = l2_block['sendCount']
@@ -285,7 +285,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
                 left = mid + 1
 
         earliest_node_with_exit = found_log['event']['nodeNum']
-        node = await rollup_contract.functions.getNode(earliest_node_with_exit).call()
+        node = rollup_contract.functions.getNode(earliest_node_with_exit).call()
         return node['deadlineBlock'] + ASSERTION_CONFIRMED_PADDING
 
 

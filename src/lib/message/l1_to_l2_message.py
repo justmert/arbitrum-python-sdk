@@ -342,8 +342,25 @@ class L1ToL2MessageReader(L1ToL2Message):
         current_timestamp = (self.l2_provider.eth.get_block("latest")).timestamp
         try:
             timeout_timestamp = await self.get_timeout()
+            print("timeout", type(timeout_timestamp))
+            print("current",type(current_timestamp))
+            print(current_timestamp <= timeout_timestamp)
             return current_timestamp <= timeout_timestamp
         except Exception as err:
+
+            #       if (
+            #     err instanceof Error &&
+            #     (err as unknown as RetryableExistsError).code ===
+            #     Logger.errors.CALL_EXCEPTION &&
+            #     (err as unknown as RetryableExistsError).errorName === 'NoTicketWithID'
+            # ) {
+            #     return false
+            # }
+            # throw err
+            print("err", err)
+            print('BURADAYIM    ')
+            # exit()
+
             # Assuming RetryableExistsError is a custom exception you define for handling specific error cases
             # if isinstance(err, RetryableExistsError) and err.code == Logger.errors.CALL_EXCEPTION and err.error_name == 'NoTicketWithID':
             #     return False
@@ -382,23 +399,23 @@ class L1ToL2MessageReader(L1ToL2Message):
     @staticmethod
     async def get_lifetime(l2_provider):
         arb_retryable_tx_contract = load_contract(
-            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, l2_provider, is_classic=False
+            contract_name="ArbRetryableTx",address= ARB_RETRYABLE_TX_ADDRESS, provider=l2_provider, is_classic=False
         )
-        return await arb_retryable_tx_contract.functions.getLifetime().call()
+        return arb_retryable_tx_contract.functions.getLifetime().call()
 
     async def get_timeout(self):
         arb_retryable_tx_contract = load_contract(
-            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_provider, is_classic=False
+            contract_name="ArbRetryableTx", address=ARB_RETRYABLE_TX_ADDRESS, provider=self.l2_provider, is_classic=False
         )
-        return await arb_retryable_tx_contract.functions.getTimeout(
+        return arb_retryable_tx_contract.functions.getTimeout(
             self.retryable_creation_id
         ).call()
 
     async def get_beneficiary(self):
         arb_retryable_tx_contract = load_contract(
-            "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_provider, is_classic=False
+            contract_name="ArbRetryableTx", address=ARB_RETRYABLE_TX_ADDRESS, provider=self.l2_provider, is_classic=False
         )
-        return await arb_retryable_tx_contract.functions.getBeneficiary(
+        return arb_retryable_tx_contract.functions.getBeneficiary(
             self.retryable_creation_id
         ).call()
 
@@ -488,21 +505,30 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             print("a-funds deposited on l2")
             # Load the ArbRetryableTx contract
             arb_retryable_tx = load_contract(
-                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer, is_classic=False
+                contract_name="ArbRetryableTx", address=ARB_RETRYABLE_TX_ADDRESS, provider=self.l2_signer.provider, is_classic=False
             )
 
             # Send the redeem transaction
-            redeem_tx = await arb_retryable_tx.functions.redeem(
+            redeem_tx = arb_retryable_tx.functions.redeem(
                 self.retryable_creation_id
-            ).transact(overrides or {})
+            ).build_transaction({
+                "from": self.l2_signer.account.address,
+                'gasPrice': self.l2_signer.provider.eth.gas_price,
+                'nonce': self.l2_signer.provider.eth.get_transaction_count(self.l2_signer.account.address),
+                'chainId': self.l2_signer.provider.eth.chain_id
+            })
 
-            # Wait for the transaction receipt
-            receipt = await self.l2_signer.provider.eth.wait_for_transaction_receipt(
-                redeem_tx
-            )
+            redeem_tx['gas'] = self.l2_signer.provider.eth.estimate_gas(redeem_tx) if overrides.get('gasLimit', None) is None else overrides['gasLimit']
+
+            signed_txn = self.l2_signer.account.sign_transaction(redeem_tx)
+            print("signed", signed_txn)
+            tx_hash = self.l2_signer.provider.eth.send_raw_transaction(signed_txn.rawTransaction)
+            # Wait for the transaction to be mined
+            tx_receipt = self.l2_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+            print('mytex', tx_receipt)
 
             # Apply monkey patch to the transaction receipt
-            monkey_patched_receipt = L2TransactionReceipt.monkey_patch_wait(receipt)
+            monkey_patched_receipt = L2TransactionReceipt.monkey_patch_wait(tx_receipt)
 
             # Convert the monkey patched receipt to a redeem transaction
             redeem_transaction = L2TransactionReceipt.to_redeem_transaction(
@@ -523,7 +549,7 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             print("a-funds deposited on l2")
             # Load the ArbRetryableTx contract
             arb_retryable_tx = load_contract(
-                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer, is_classic=False
+                contract_name="ArbRetryableTx", address=ARB_RETRYABLE_TX_ADDRESS, provider=self.l2_signer.provider, is_classic=False
             )
 
             # Send the cancel transaction
@@ -547,7 +573,7 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
         if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
             # Load the ArbRetryableTx contract
             arb_retryable_tx = load_contract(
-                "ArbRetryableTx", ARB_RETRYABLE_TX_ADDRESS, self.l2_signer, is_classic=False
+                contract_name="ArbRetryableTx", address=ARB_RETRYABLE_TX_ADDRESS, provider=self.l2_signer.provider, is_classic=False
             )
 
             # Send the keepalive transaction

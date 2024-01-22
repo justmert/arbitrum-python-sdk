@@ -94,7 +94,7 @@ class Erc20Bridger(AssetBridger):
         try:   
             potential_weth_gateway = load_contract(provider=l1_provider, contract_name='L1WethGateway', address=potential_weth_gateway_address, is_classic=True)
             # potential_weth_gateway = L1WethGateway(potential_weth_gateway_address, l1_provider)
-            await potential_weth_gateway.functions.l1Weth().call()
+            potential_weth_gateway.functions.l1Weth().call()
             return True
         except Exception as err:
             if isinstance(err, Web3.exceptions.ContractLogicError) and 'CALL_EXCEPTION' in str(err):
@@ -128,9 +128,8 @@ class Erc20Bridger(AssetBridger):
         if erc20_l2_address.lower() == self.l2_network.token_bridge.l2_weth.lower():
             return self.l2_network.token_bridge.l1_weth
         
-
         arb_erc20 = load_contract(provider=l2_provider, contract_name='L2GatewayToken', address=erc20_l2_address, is_classic=True)
-        # arb_erc20 = L2GatewayToken(erc20_l2_address, l2_provider)
+
         l1_address = arb_erc20.functions.l1Address().call()
 
         l2_gateway_router = load_contract(provider=l2_provider, contract_name='L2GatewayRouter', address=self.l2_network.token_bridge.l2_gateway_router, is_classic=True)

@@ -5,17 +5,19 @@ import json
 import asyncio
 from .signer_or_provider import SignerProviderUtils
 import os
-from src.lib.utils.helper import CamelSnakeCaseMixin
+from src.lib.utils.helper import CaseDict
 from web3.middleware import geth_poa_middleware
 
 
-class Network(CamelSnakeCaseMixin):
+class Network(CaseDict):
     def __init__(self, chainID, name, explorerUrl, isCustom, gif=None):
-        self.chainID = chainID
-        self.name = name
-        self.explorerUrl = explorerUrl
-        self.isCustom = isCustom
-        self.gif = gif
+        super().__init__({
+            'chainID': chainID,
+            'name': name,
+            'explorerUrl': explorerUrl,
+            'isCustom': isCustom,
+            'gif': gif
+        })
 
 
 class L1Network(Network):
@@ -52,7 +54,7 @@ class L2Network(Network):
         self.depositTimeout = depositTimeout
 
 
-class TokenBridge(CamelSnakeCaseMixin):
+class TokenBridge(CaseDict):
     def __init__(
         self,
         l1GatewayRouter,
@@ -71,35 +73,37 @@ class TokenBridge(CamelSnakeCaseMixin):
         l2Multicall,
         l2MultiCall = None
     ):
-        self.l1GatewayRouter = l1GatewayRouter
-        self.l2GatewayRouter = l2GatewayRouter
-        self.l1ERC20Gateway = l1ERC20Gateway
-        self.l2ERC20Gateway = l2ERC20Gateway
-        self.l1CustomGateway = l1CustomGateway
-        self.l2CustomGateway = l2CustomGateway
-        self.l1WethGateway = l1WethGateway
-        self.l2WethGateway = l2WethGateway
-        self.l2Weth = l2Weth
-        self.l1Weth = l1Weth
-        self.l1ProxyAdmin = l1ProxyAdmin
-        self.l2ProxyAdmin = l2ProxyAdmin
-        self.l1MultiCall = l1MultiCall
-        self.l2Multicall = l2Multicall
-        self.l2MultiCall = (
-            l2Multicall  # also define this since Multicall may be spelled wrong
-        )
+        super().__init__({
+            'l1GatewayRouter': l1GatewayRouter,
+            'l2GatewayRouter': l2GatewayRouter,
+            'l1ERC20Gateway': l1ERC20Gateway,
+            'l2ERC20Gateway': l2ERC20Gateway,
+            'l1CustomGateway': l1CustomGateway,
+            'l2CustomGateway': l2CustomGateway,
+            'l1WethGateway': l1WethGateway,
+            'l2WethGateway': l2WethGateway,
+            'l2Weth': l2Weth,
+            'l1Weth': l1Weth,
+            'l1ProxyAdmin': l1ProxyAdmin,
+            'l2ProxyAdmin': l2ProxyAdmin,
+            'l1MultiCall': l1MultiCall,
+            'l2Multicall': l2Multicall,
+            'l2MultiCall': l2MultiCall if l2MultiCall is not None else l2Multicall
+        })
 
 
-class EthBridge(CamelSnakeCaseMixin):
+class EthBridge(CaseDict):
     def __init__(
         self, bridge, inbox, sequencerInbox, outbox, rollup, classicOutboxes=None
     ):
-        self.bridge = bridge
-        self.inbox = inbox
-        self.sequencerInbox = sequencerInbox
-        self.outbox = outbox
-        self.rollup = rollup
-        self.classicOutboxes = classicOutboxes if classicOutboxes else {}
+        super().__init__({
+            'bridge': bridge,
+            'inbox': inbox,
+            'sequencerInbox': sequencerInbox,
+            'outbox': outbox,
+            'rollup': rollup,
+            'classicOutboxes': classicOutboxes if classicOutboxes else {}
+        })
 
 
 mainnet_token_bridge = TokenBridge(

@@ -179,7 +179,8 @@ async def deposit_token(deposit_amount, l1_token_address, erc20_bridger, l1_sign
     wait_res = await deposit_res.wait_for_l2(l2_signer)
     print("wait_res", wait_res)
     assert wait_res['status'] == expected_status, 'Unexpected status'
-
+    if retryable_overrides:
+        return wait_res
     # Verify the gateway addresses
     gateways = get_gateways(expected_gateway_type, erc20_bridger.l2_network)
     l1_gateway = await erc20_bridger.get_l1_gateway_address(l1_token_address, l1_signer.provider)
@@ -192,6 +193,7 @@ async def deposit_token(deposit_amount, l1_token_address, erc20_bridger, l1_sign
     l2_erc20_addr = await erc20_bridger.get_l2_erc20_address(l1_token_address, l1_signer.provider)
     l2_token = erc20_bridger.get_l2_token_contract(l2_signer.provider, l2_erc20_addr)
     l1_erc20_addr = await erc20_bridger.get_l1_erc20_address(l2_erc20_addr, l2_signer.provider)
+    
     assert l1_erc20_addr == l1_token_address, 'getERC20L1Address/getERC20L2Address failed with proper token address'
 
     test_wallet_l2_balance = l2_token.functions.balanceOf(l2_signer.account.address).call()

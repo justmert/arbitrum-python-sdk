@@ -194,7 +194,7 @@ class L1ToL2MessageGasEstimator:
         retryable_data = None
         print('NULL_DATA_REQUEST', null_data_request)
         try:
-            res = await l1_provider.eth.call(null_data_request)
+            res = l1_provider.eth.call(null_data_request)
             print('RESSSSS', res)
             retryable_data = RetryableDataTools.try_parse_error(str(res))
         except Exception as err:

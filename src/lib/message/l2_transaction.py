@@ -15,28 +15,29 @@ from src.lib.data_entities.event import parse_typed_logs
 
 
 class RedeemTransaction:
-    def __init__(self, transaction, web3_instance):
+    def __init__(self, transaction, provider):
         self.transaction = transaction
-        self.web3 = web3_instance
+        self.provider = provider
 
     async def wait(self):
         # Wait for the transaction to be mined
-        return await self.web3.eth.wait_for_transaction_receipt(
-            self.transaction.transaction_hash
-        )
+        # return await self.web3.eth.wait_for_transaction_receipt(
+        #     self.transaction.transaction_hash
+        # )
+        return self.transaction
 
-    async def wait_for_redeem(self, provider):
-        rec = await self.wait()
-        l2_receipt = L2TransactionReceipt(rec)
+    async def wait_for_redeem(self):
+        # rec = await self.wait()
+        l2_receipt = L2TransactionReceipt(self.transaction)
 
-        redeem_scheduled_events = l2_receipt.get_redeem_scheduled_events(provider)
+        redeem_scheduled_events = l2_receipt.get_redeem_scheduled_events(self.provider)
 
         if len(redeem_scheduled_events) != 1:
             raise ArbSdkError(
-                f"Transaction is not a redeem transaction: {rec.transactionHash}"
+                f"Transaction is not a redeem transaction: {self.transaction.transactionHash}"
             )
 
-        return await self.web3.eth.get_transaction_receipt(
+        return self.provider.eth.get_transaction_receipt(
             redeem_scheduled_events[0]["retryTxHash"]
         )
 
@@ -107,15 +108,16 @@ class L2TransactionReceipt:
 
     @staticmethod
     def monkey_patch_wait(contract_transaction):
-        original_wait = contract_transaction.wait
+        # original_wait = contract_transaction.wait
 
-        async def patched_wait(_confirmations: Optional[int] = None):
-            result = await original_wait()
-            return L2TransactionReceipt(result)
+        # async def patched_wait(_confirmations: Optional[int] = None):
+        #     result = await original_wait()
+        #     return L2TransactionReceipt(result)
 
-        contract_transaction.wait = patched_wait
+        # contract_transaction.wait = patched_wait
+        # return L2TransactionReceipt(contract_transaction)
         return contract_transaction
-
+    
     @staticmethod
     def to_redeem_transaction(redeem_tx, web3_instance):
         return RedeemTransaction(redeem_tx, web3_instance)

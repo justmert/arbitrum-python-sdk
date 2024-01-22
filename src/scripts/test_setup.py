@@ -140,7 +140,7 @@ async def setup_networks(l1_url: str, l2_url: str, l1_deployer: SignerOrProvider
     )
     l1_network = custom_networks['l1Network']
     
-    def convert_to_address(network_data: Dict):
+    def convert_to_address(network_data):
         for key, value in network_data.items():
             if isinstance(value, str):
                 network_data[key] = Web3.to_checksum_address(value)
@@ -148,9 +148,10 @@ async def setup_networks(l1_url: str, l2_url: str, l1_deployer: SignerOrProvider
             elif isinstance(value, Contract):
                 network_data[key] = Web3.to_checksum_address(value.address)
 
-    convert_to_address(l1_network.ethBridge)
     convert_to_address(l2_network.ethBridge)
-
+    convert_to_address(l2_network.tokenBridge)
+    print('L2_NETWORK_HERE', l2_network)
+    print('L1_NETWORK_HERE', l1_network)
     add_custom_network(l1_network, l2_network)
     
     # Register the WETH gateway and other necessary setups
@@ -230,7 +231,7 @@ async def test_setup() -> CaseDict:
         print(local_network_file.exists())
         if local_network_file.exists():
             with open(local_network_file, 'r') as file:
-                network_data = json.load(file)
+                network_data = json.load(file)            
             set_l1_network = L1Network(**network_data['l1Network'])
 
             network_data['l2Network']['tokenBridge'] = TokenBridge(**network_data['l2Network']['tokenBridge'])

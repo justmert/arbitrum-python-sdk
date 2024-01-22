@@ -89,7 +89,7 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
             outbox_abi = json.load(f)
 
         outbox_contract = l2_provider.eth.contract(address=outbox_address, abi=outbox_abi)
-        return await outbox_contract.functions.outboxEntryExists(self.batch_number).call()
+        return outbox_contract.functions.outboxEntryExists(self.batch_number).call()
 
     @staticmethod
     async def try_get_proof_static(l2_provider, batch_number, index_in_batch):
@@ -98,7 +98,7 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
 
         node_interface_contract = l2_provider.eth.contract(address=NODE_INTERFACE_ADDRESS, abi=node_interface_abi)
         try:
-            return await node_interface_contract.functions.legacyLookupMessageBatchProof(batch_number, index_in_batch).call()
+            return node_interface_contract.functions.legacyLookupMessageBatchProof(batch_number, index_in_batch).call()
         except Exception as e:
             if "batch doesn't exist" in str(e):
                 return None
@@ -125,7 +125,7 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
 
         try:
             # Call the executeTransaction method statically to check if the message has already been executed
-            await outbox_contract.functions.executeTransaction(
+            outbox_contract.functions.executeTransaction(
                 self.batch_number,
                 proof_info.proof,
                 proof_info.path,
