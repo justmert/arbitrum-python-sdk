@@ -39,6 +39,7 @@ async def get_transaction_receipt(web3_instance, tx_hash, confirmations=None, ti
             return receipt
         except TimeExhausted:
             return None
+        
         except Exception as e:
             print("Error waiting for transaction receipt")
             raise e
@@ -49,6 +50,7 @@ async def get_transaction_receipt(web3_instance, tx_hash, confirmations=None, ti
             return receipt
         except TransactionNotFound:
             return None
+        
         except Exception as e:
             print("Error getting transaction receipt")
             raise e

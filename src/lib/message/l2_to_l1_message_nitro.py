@@ -70,7 +70,7 @@ class L2ToL1MessageNitro:
             filters['hash'] = hash_
 
         # Fetch the events
-        events = arb_sys_contract.events.L2ToL1Tx.createFilter(fromBlock=from_block, toBlock=to_block, argument_filters=filters).get_all_entries()
+        events = arb_sys_contract.events.L2ToL1Tx.create_filter(fromBlock=from_block, toBlock=to_block, argument_filters=filters).get_all_entries()
         return [{'event': event.args, 'transactionHash': event.transactionHash} for event in events]
 
 

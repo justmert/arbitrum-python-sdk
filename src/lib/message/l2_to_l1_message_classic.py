@@ -51,7 +51,7 @@ class L2ToL1MessageClassic:
         if unique_id:
             filters['uniqueId'] = unique_id
 
-        events = arb_sys_contract.events.L2ToL1Transaction.createFilter(fromBlock=from_block, toBlock=to_block, argument_filters=filters).get_all_entries()
+        events = arb_sys_contract.events.L2ToL1Transaction.create_filter(fromBlock=from_block, toBlock=to_block, argument_filters=filters).get_all_entries()
 
         if index_in_batch is not None:
             return [event for event in events if event.args.indexInBatch == index_in_batch]

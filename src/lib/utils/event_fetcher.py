@@ -70,7 +70,7 @@ class EventFetcher():
         contract = self.w3.eth.contract(address=address, abi=abi)
 
         try:
-            event_filter = contract.events[event_name].createFilter(
+            event_filter = contract.events[event_name].create_filter(
                 fromBlock=from_block, toBlock=to_block
             )
         except BadFunctionCallOutput:

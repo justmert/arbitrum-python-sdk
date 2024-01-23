@@ -8,6 +8,7 @@ from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.utils.helper import load_contract
 from src.lib.data_entities.retryable_data import RetryableDataTools, RetryableData
 from src.lib.data_entities.networks import get_l2_network
+from collections import namedtuple
 
 # Constants and imports for BigNumber handling, error classes, etc.
 DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = 300

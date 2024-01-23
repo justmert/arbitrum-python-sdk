@@ -10,12 +10,13 @@ from src.lib.data_entities.retryable_data import RetryableDataTools
 from web3.providers import BaseProvider
 from web3.contract import Contract
 from web3 import Web3
-from src.lib.utils.helper import CaseDict, load_contract
+from src.lib.utils.helper import CaseDict, deploy_abi_contract, is_contract_deployed, load_contract
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.data_entities.transaction_request import is_l1_to_l2_transaction_request, is_l2_to_l1_transaction_request
 from src.lib.data_entities.networks import L1Network, L2Network, EthBridge, TokenBridge
 from eth_abi import encode
 from web3 import Web3
+from collections import namedtuple
 
 MAX_APPROVAL = 2**256 - 1
 MIN_CUSTOM_DEPOSIT_GAS_LIMIT = 275000
@@ -111,7 +112,7 @@ class Erc20Bridger(AssetBridger):
             return True
         return False
 
-    def get_l2_token_contract(self, l2_provider, l2_token_addr):
+    def get_l2_token_contract(self, l2_provider, l2_token_addr) -> Contract:
         return load_contract(provider=l2_provider, contract_name='L2GatewayToken', address=l2_token_addr, is_classic=True)
 
     def get_l1_token_contract(self, l1_provider, l1_token_addr):
@@ -358,70 +359,122 @@ class Erc20Bridger(AssetBridger):
 class AdminErc20Bridger(Erc20Bridger):
     async def register_custom_token(
         self, l1_token_address, l2_token_address,
-        l1_signer, l2_provider
+        l1_signer: SignerOrProvider, l2_provider
     ) -> Contract:
         if not SignerProviderUtils.signer_has_provider(l1_signer):
             raise MissingProviderArbSdkError('l1Signer')
         await self.check_l1_network(l1_signer)
         await self.check_l2_network(l2_provider)
 
-        l1_sender_address = await l1_signer.get_address()
+        l1_sender_address = l1_signer.account.address
+        
         print('admin_erc20_bridger')
-        l1_token = load_contract(provider=l1_signer, contract_name='ICustomToken', address=l1_token_address, is_classic=True)
-        # l1_token = ICustomToken(l1_token_address, l1_signer)
+        # l1_token = load_contract(provider=l1_signer.provider, contract_name='ICustomToken', address=l1_token_address, is_classic=True)
+        # l2_token = load_contract(provider=l2_provider, contract_name='IArbToken', address=l2_token_address, is_classic=True)
+        
+        # l1_token_addr = deploy_abi_contract(provider=l1_signer.provider, contract_name="ICustomToken", is_classic=True, deployer=l1_signer.account, constructor_args=[])
+
+        # l2_token_addr = deploy_abi_contract(provider=l2_provider, contract_name="IArbToken", is_classic=True, deployer=l2_signer.account, constructor_args=[])
+
+        from web3.exceptions import BadFunctionCallOutput
+
+        def is_contract_deployed(provider: Web3, contract_address: str) -> bool:
+            return provider.eth.get_code(contract_address) != '0x'
+
+        l1_token = load_contract(provider=l1_signer.provider, contract_name='ICustomToken', address=l1_token_address, is_classic=True)
         l2_token = load_contract(provider=l2_provider, contract_name='IArbToken', address=l2_token_address, is_classic=True)
-        # l2_token = IArbToken(l2_token_address, l2_provider)
 
         # Sanity checks
-        if not l1_token.is_deployed():
-            raise ArbSdkError('L1 token is not deployed.')
-        if not l2_token.is_deployed():
-            raise ArbSdkError('L2 token is not deployed.')
+        if not is_contract_deployed(l1_signer.provider, l1_token.address):
+            raise Exception('L1 token is not deployed.')
+        if not is_contract_deployed(l2_provider, l2_token.address):
+            raise Exception('L2 token is not deployed.')
 
-        l1_address_from_l2 = await l2_token.l1_address()
+        # Call the contract function
+        try:
+            l1_address_from_l2 = l2_token.functions.l1Address().call()
+        except BadFunctionCallOutput:
+            raise Exception("Failed to call l1Address on L2 token. The contract may not be deployed correctly.")
+
+        # # Sanity checks
+        # if not is_contract_deployed(l1_signer.provider, l1_token.address):
+        #     raise ArbSdkError('L1 token is not deployed.')
+        
+        # # if not l2_token.is_deployed():
+        # if not is_contract_deployed(l2_provider, l2_token.address):
+        #     raise ArbSdkError('L2 token is not deployed.')
+    
+        l1_address_from_l2 = l2_token.functions.l1Address().call()
         if l1_address_from_l2 != l1_token_address:
             raise ArbSdkError(
                 f"L2 token does not have l1 address set. Set address: {l1_address_from_l2}, expected address: {l1_token_address}."
             )
+        
         print('admin_erc20_bridger1')
-        from_address = await l1_signer.get_address()
-        encode_func_data = self._encode_func_data
+        
+        from_address = l1_signer.account.address
 
-        l1_provider = l1_signer.provider
+        
+        # # Define gas parameter types
+        GasParams = namedtuple('GasParams', ['max_submission_cost', 'gas_limit'])
+
+        async def encode_func_data(set_token_gas, set_gateway_gas, max_fee_per_gas: int):
+            # Calculate deposit values for token and gateway registration
+            double_fee_per_gas = max_fee_per_gas * 2
+            set_token_deposit = set_token_gas.gas_limit * double_fee_per_gas + set_token_gas.max_submission_cost
+            set_gateway_deposit = set_gateway_gas.gas_limit * double_fee_per_gas + set_gateway_gas.max_submission_cost
+
+            # Encode function data for registerTokenOnL2
+            data = l1_token.functions.registerTokenOnL2(
+                l2_token_address,
+                set_token_gas.max_submission_cost,
+                set_gateway_gas.max_submission_cost,
+                set_token_gas.gas_limit,
+                set_gateway_gas.gas_limit,
+                double_fee_per_gas,
+                set_token_deposit,
+                set_gateway_deposit,
+                l1_sender_address
+            ).buildTransaction({"from": l1_sender_address})["data"]
+
+            return {
+                "data": data,
+                "value": set_token_deposit + set_gateway_deposit,
+                "to": l1_token.address,
+                "from": l1_sender_address
+            }
+
+        # Estimate gas for setting token and gateway parameters
+        # Assuming L1ToL2MessageGasEstimator and RetryableDataTools are implemented
         g_estimator = L1ToL2MessageGasEstimator(l2_provider)
-        set_token_estimates2 = await g_estimator.populate_function_params(
+        set_token_estimates = await g_estimator.populate_function_params(
             lambda params: encode_func_data(
-                set_token_gas={
-                    'gasLimit': params['gasLimit'],
-                    'maxSubmissionCost': params['maxSubmissionCost'],
-                },
-                set_gateway_gas={
-                    'gasLimit': RetryableDataTools.ErrorTriggeringParams['gasLimit'],
-                    'maxSubmissionCost': 1,
-                },
-                max_fee_per_gas=params['maxFeePerGas']
+                GasParams(params['gas_limit'], params['max_submission_cost']),
+                GasParams(RetryableDataTools.ErrorTriggeringParams.gas_limit, 1),
+                params['max_fee_per_gas']
             ),
-            l1_provider
-        )
-        print('admin_erc20_bridger2')
-        set_gateway_estimates2 = await g_estimator.populate_function_params(
-            lambda params: encode_func_data(
-                set_token_gas=set_token_estimates2['estimates'],
-                set_gateway_gas={
-                    'gasLimit': params['gasLimit'],
-                    'maxSubmissionCost': params['maxSubmissionCost'],
-                },
-                max_fee_per_gas=params['maxFeePerGas']
-            ),
-            l1_provider
+            l1_signer.provider
         )
 
+        set_gateway_estimates = await g_estimator.populate_function_params(
+            lambda params: encode_func_data(
+                GasParams(set_token_estimates['estimates']['gas_limit'], set_token_estimates['estimates']['max_submission_cost']),
+                GasParams(params['gas_limit'], params['max_submission_cost']),
+                params['max_fee_per_gas']
+            ),
+            l1_signer.provider
+        )
+
+        # Send the transaction
         register_tx = await l1_signer.send_transaction({
-            'to': l1_token.address,
-            'data': set_gateway_estimates2['data'],
-            'value': set_gateway_estimates2['value'],
+            "to": l1_token.address,
+            "data": set_gateway_estimates['data'],
+            "value": set_gateway_estimates['value'],
         })
-        print('admin_erc20_bridger3')
+
+        # Wait for the transaction to be mined and get the receipt
+        register_tx_receipt = await l1_signer.provider.wait_for_transaction_receipt(register_tx)
+        return register_tx_receipt
         return L1TransactionReceipt.monkey_patch_contract_call_wait(register_tx)
 
 

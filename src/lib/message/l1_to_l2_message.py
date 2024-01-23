@@ -24,7 +24,7 @@ from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.utils.lib import get_transaction_receipt
 # Additional imports and utility functions might be required.
 from eth_utils import to_checksum_address, keccak, to_bytes
-
+from web3.exceptions import ContractCustomError
 
 def int_to_bytes(value: int) -> bytes:
     return to_bytes(value)
@@ -260,9 +260,12 @@ class L1ToL2MessageReader(L1ToL2Message):
             return {"status": L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}
 
         increment = 1000
-        from_block = creation_receipt.blockNumber
+        from_block_number = creation_receipt.blockNumber
         max_block = self.l2_provider.eth.block_number
+            
+        from_block = self.l2_provider.eth.get_block(from_block_number)
         timeout = from_block.timestamp + l2_network.retryable_lifetime_seconds
+
         queried_range = []
 
         while from_block.number < max_block:
@@ -270,26 +273,30 @@ class L1ToL2MessageReader(L1ToL2Message):
             outer_block_range = {"from": from_block.number, "to": to_block_number}
             queried_range.append(outer_block_range)
 
-            arb_retryable_tx_contract = self.l2_provider.eth.contract(
-                address=Web3.to_checksum_address(ARB_RETRYABLE_TX_ADDRESS),
-                abi=self.arb_retryable_tx_abi,
-            )
-
+            arb_retryable_tx_contract = load_contract(
+            contract_name="ArbRetryableTx", address=ARB_RETRYABLE_TX_ADDRESS, provider=self.l2_provider, is_classic=False
+        )
+            
+            print("retry_id", self.retryable_creation_id)
             redeem_filter = (
-                arb_retryable_tx_contract.events.RedeemScheduled.createFilter(
+                arb_retryable_tx_contract.events.RedeemScheduled.create_filter(
                     fromBlock=outer_block_range["from"],
                     toBlock=outer_block_range["to"],
+                    address=ARB_RETRYABLE_TX_ADDRESS,
                     argument_filters={
-                        "retryableCreationId": self.retryable_creation_id
+                        "ticketId": self.retryable_creation_id
                     },
                 )
             )
+            
             redeem_events = redeem_filter.get_all_entries()
-
+            print('reedem_events', redeem_events)
             for event in redeem_events:
+                print('event', event)
                 receipt = await get_transaction_receipt(self.l2_provider,
-                    event["retryTxHash"]
+                    event.args["retryTxHash"]
                 )
+                print('receipt', receipt)
                 if receipt and receipt.status == 1:
                     print('e-REDEEMED')
                     return {
@@ -302,7 +309,7 @@ class L1ToL2MessageReader(L1ToL2Message):
                 while queried_range:
                     block_range = queried_range.pop(0)
                     lifetime_extended_filter = (
-                        arb_retryable_tx_contract.events.LifetimeExtended.createFilter(
+                        arb_retryable_tx_contract.events.LifetimeExtended.create_filter(
                             fromBlock=block_range["from"],
                             toBlock=block_range["to"],
                             argument_filters={
@@ -346,6 +353,12 @@ class L1ToL2MessageReader(L1ToL2Message):
             print("current",type(current_timestamp))
             print(current_timestamp <= timeout_timestamp)
             return current_timestamp <= timeout_timestamp
+        
+        except ContractCustomError as err:
+            if (err.data == "0x80698456"):
+                print("bura")
+                return False
+
         except Exception as err:
 
             #       if (
@@ -358,6 +371,8 @@ class L1ToL2MessageReader(L1ToL2Message):
             # }
             # throw err
             print("err", err)
+            print(err.args)
+            print(err.data)
             print('BURADAYIM    ')
             # exit()
 
