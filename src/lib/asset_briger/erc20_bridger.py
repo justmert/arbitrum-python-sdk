@@ -376,25 +376,30 @@ class AdminErc20Bridger(Erc20Bridger):
 
         # l2_token_addr = deploy_abi_contract(provider=l2_provider, contract_name="IArbToken", is_classic=True, deployer=l2_signer.account, constructor_args=[])
 
-        from web3.exceptions import BadFunctionCallOutput
+        # from web3.exceptions import BadFunctionCallOutput
 
-        def is_contract_deployed(provider: Web3, contract_address: str) -> bool:
-            return provider.eth.get_code(contract_address) != '0x'
+        # def is_contract_deployed(provider: Web3, contract_address: str) -> bool:
+        #     print('coddeee', provider.eth.get_code(contract_address))
+        #     return provider.eth.get_code(contract_address) != '0x'
 
         l1_token = load_contract(provider=l1_signer.provider, contract_name='ICustomToken', address=l1_token_address, is_classic=True)
+        
+        # l1_token_addr = deploy_abi_contract(
+        #     provider=l1_signer.provider, deployer = l1_signer.account, contract_name = 'ICustomToken', is_classic=True, constructor_args=[]
+        # )
         l2_token = load_contract(provider=l2_provider, contract_name='IArbToken', address=l2_token_address, is_classic=True)
 
         # Sanity checks
-        if not is_contract_deployed(l1_signer.provider, l1_token.address):
-            raise Exception('L1 token is not deployed.')
-        if not is_contract_deployed(l2_provider, l2_token.address):
-            raise Exception('L2 token is not deployed.')
+        # if not is_contract_deployed(l1_signer.provider, l1_token.address):
+        #     raise Exception('L1 token is not deployed.')
+        
+        # if not is_contract_deployed(l2_provider, l2_token.address):
+        #     raise Exception('L2 token is not deployed.')
 
         # Call the contract function
-        try:
-            l1_address_from_l2 = l2_token.functions.l1Address().call()
-        except BadFunctionCallOutput:
-            raise Exception("Failed to call l1Address on L2 token. The contract may not be deployed correctly.")
+        # try:
+        #     l1_address_from_l2 = l2_token.functions.l1Address().call()
+        #     raise Exception("Failed to call l1Address on L2 token. The contract may not be deployed correctly.")
 
         # # Sanity checks
         # if not is_contract_deployed(l1_signer.provider, l1_token.address):
@@ -416,51 +421,75 @@ class AdminErc20Bridger(Erc20Bridger):
 
         
         # # Define gas parameter types
-        GasParams = namedtuple('GasParams', ['max_submission_cost', 'gas_limit'])
+        GasParams = namedtuple('GasParams', ['maxSubmissionCost', 'gasLimit'])
 
-        async def encode_func_data(set_token_gas, set_gateway_gas, max_fee_per_gas: int):
+        
+        def encode_func_data(set_token_gas, set_gateway_gas, max_fee_per_gas: int):
             # Calculate deposit values for token and gateway registration
-            double_fee_per_gas = max_fee_per_gas * 2
-            set_token_deposit = set_token_gas.gas_limit * double_fee_per_gas + set_token_gas.max_submission_cost
-            set_gateway_deposit = set_gateway_gas.gas_limit * double_fee_per_gas + set_gateway_gas.max_submission_cost
+            # The above code is calculating the value of `double_fee_per_gas` by multiplying the value
 
-            # Encode function data for registerTokenOnL2
-            data = l1_token.functions.registerTokenOnL2(
+            if (max_fee_per_gas == RetryableDataTools.ErrorTriggeringParams['maxFeePerGas']):
+                  double_fee_per_gas = max_fee_per_gas * 2
+            else:
+                  double_fee_per_gas = max_fee_per_gas
+
+            set_token_deposit = set_token_gas.gasLimit * double_fee_per_gas + set_token_gas.maxSubmissionCost
+            set_gateway_deposit = set_gateway_gas.gasLimit * double_fee_per_gas + set_gateway_gas.maxSubmissionCost
+
+
+            print('l2_token_address', l2_token_address)
+            print('l1_token_address', l1_token_address)
+            print('set_token_gas.maxSubmissionCost', set_token_gas.maxSubmissionCost)
+            print('set_gateway_gas.maxSubmissionCost', set_gateway_gas.maxSubmissionCost)
+            print('set_token_gas.gasLimit', set_token_gas.gasLimit)
+            print('set_gateway_gas.gasLimit', set_gateway_gas.gasLimit)
+            print('double_fee_per_gas', double_fee_per_gas)
+            print('set_token_deposit', set_token_deposit)
+            print('set_gateway_deposit', set_gateway_deposit)
+            print('l1_sender_address', l1_sender_address)
+            
+            encoded_data = l1_token.functions.registerTokenOnL2(
                 l2_token_address,
-                set_token_gas.max_submission_cost,
-                set_gateway_gas.max_submission_cost,
-                set_token_gas.gas_limit,
-                set_gateway_gas.gas_limit,
+                set_token_gas.maxSubmissionCost,
+                set_gateway_gas.maxSubmissionCost,
+                set_token_gas.gasLimit,
+                set_gateway_gas.gasLimit,
                 double_fee_per_gas,
                 set_token_deposit,
                 set_gateway_deposit,
                 l1_sender_address
-            ).buildTransaction({"from": l1_sender_address})["data"]
-
-            return {
-                "data": data,
-                "value": set_token_deposit + set_gateway_deposit,
-                "to": l1_token.address,
-                "from": l1_sender_address
-            }
+            ).build_transaction({
+                                "from": from_address,
+                                "gas": 22780,
+                                'gasPrice': Web3.to_wei('21', 'gwei'),
+                                'value': set_token_deposit + set_gateway_deposit
+                                })
+            
+            return {'data': encoded_data['data'], 'to': l2_token_address, 'value': set_token_deposit + set_gateway_deposit, 'from': from_address}
+            # return {
+            #     "data": encoded_data,
+            #     "value": set_token_deposit + set_gateway_deposit,
+            #     "to": l1_token.address,
+            #     "from": l1_sender_address
+            # }
 
         # Estimate gas for setting token and gateway parameters
         # Assuming L1ToL2MessageGasEstimator and RetryableDataTools are implemented
         g_estimator = L1ToL2MessageGasEstimator(l2_provider)
         set_token_estimates = await g_estimator.populate_function_params(
             lambda params: encode_func_data(
-                GasParams(params['gas_limit'], params['max_submission_cost']),
-                GasParams(RetryableDataTools.ErrorTriggeringParams.gas_limit, 1),
-                params['max_fee_per_gas']
+                GasParams(params['gasLimit'], params['maxSubmissionCost']),
+                GasParams(RetryableDataTools.ErrorTriggeringParams['gasLimit'], 1),
+                params['maxFeePerGas']
             ),
             l1_signer.provider
         )
 
         set_gateway_estimates = await g_estimator.populate_function_params(
             lambda params: encode_func_data(
-                GasParams(set_token_estimates['estimates']['gas_limit'], set_token_estimates['estimates']['max_submission_cost']),
-                GasParams(params['gas_limit'], params['max_submission_cost']),
-                params['max_fee_per_gas']
+                GasParams(set_token_estimates['estimates']['gasLimit'], set_token_estimates['estimates']['maxSubmissionCost']),
+                GasParams(params['gasLimit'], params['maxSubmissionCost']),
+                params['maxFeePerGas']
             ),
             l1_signer.provider
         )

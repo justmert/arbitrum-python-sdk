@@ -95,7 +95,7 @@ async def register_custom_token(l2_network, l1_signer, l2_signer, admin_erc20_br
     # Send the registration messages
     reg_tx = await admin_erc20_bridger.register_custom_token(
         l1_custom_token_address,
-        l1_custom_token_address,
+        l2_custom_token_address,
         l1_signer,
         l2_signer.provider,
     )

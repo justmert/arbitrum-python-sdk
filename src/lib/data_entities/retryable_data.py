@@ -5,6 +5,8 @@ import json
 import re
 from eth_abi import abi
 
+from test import CaseDict
+
 class RetryableData:
     """
     Equivalent of TypeScript's RetryableData interface

@@ -10,6 +10,8 @@ from src.lib.data_entities.retryable_data import RetryableDataTools, RetryableDa
 from src.lib.data_entities.networks import get_l2_network
 from collections import namedtuple
 
+from test import CaseDict
+
 # Constants and imports for BigNumber handling, error classes, etc.
 DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = 300
 DEFAULT_GAS_PRICE_PERCENT_INCREASE = 200
@@ -186,11 +188,11 @@ class L1ToL2MessageGasEstimator:
         self, data_func, l1_provider, gas_overrides=None
     ):
         # Dummy values to trigger a special revert containing the real params
-        dummy_params = {
+        dummy_params = CaseDict({
             "gasLimit": 1,
             "maxFeePerGas": 1,
             "maxSubmissionCost": 1,
-        }
+        })
         null_data_request = data_func(dummy_params)
         retryable_data = None
         print('NULL_DATA_REQUEST', null_data_request)
@@ -198,10 +200,12 @@ class L1ToL2MessageGasEstimator:
             res = l1_provider.eth.call(null_data_request)
             print('RESSSSS', res)
             retryable_data = RetryableDataTools.try_parse_error(str(res))
+            print('reett', retryable_data)
         except Exception as err:
+            # raise err
             print('errora goirdiii')
             print('bu da hatasi', err)
-            print(err.data)
+            # print(err.data)
             if hasattr(err, "data"):
                 retryable_data = err.data
                 retryable_data = RetryableDataTools.try_parse_error(str(err))
