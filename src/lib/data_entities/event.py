@@ -7,6 +7,8 @@ import copy
 
 def parse_typed_logs(provider, contract_name: str, logs, event_name: str):
     contract_abi = load_abi(contract_name)
+    print(type(provider))
+    print(provider)
     contract = provider.eth.contract(abi=contract_abi)
 
     # Find the correct event ABI

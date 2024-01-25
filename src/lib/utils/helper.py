@@ -3,6 +3,8 @@ from web3 import Web3
 from web3.contract import Contract
 from web3 import Account
 
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
+
 
 def load_contract(
     provider: Web3, contract_name: str, address: str = None, is_classic: bool = False
@@ -41,7 +43,7 @@ def deploy_abi_contract(
     contract_name: str,
     is_classic=False,
     constructor_args=[],
-):
+) -> Contract:
     contract = load_contract(
         provider=provider, contract_name=contract_name, is_classic=is_classic
     )
@@ -62,9 +64,14 @@ def deploy_abi_contract(
     tx_hash = provider.eth.send_raw_transaction(signed_txn.rawTransaction)
     tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
     contract_address = tx_receipt.contractAddress
-    print('txxx', tx_receipt)
-    return contract_address
+    
+    # Create a new contract instance at the deployed address
+    deployed_contract = provider.eth.contract(
+        address=contract_address,
+        abi=contract.abi
+    )
 
+    return deployed_contract
 
 def load_abi(contract_name: str, is_classic=False) -> Contract:
     if is_classic:

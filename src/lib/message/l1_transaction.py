@@ -82,6 +82,7 @@ class L1TransactionReceipt():
         return self.block_number < network.nitro_genesis_l1_block
 
     def get_message_delivered_events(self, provider):
+        print("my_logss",self.logs)
         return  parse_typed_logs(provider,
             "Bridge", self.logs, "MessageDelivered"
         )
@@ -154,7 +155,8 @@ class L1TransactionReceipt():
                 "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
             )
 
-        events = self.get_message_events(l2_signer_or_provider.provider)
+        events = self.get_message_events(provider)
+        print('eventsss', events)
         return  [
             L1ToL2Message.from_event_components(
                 l2_signer_or_provider,
