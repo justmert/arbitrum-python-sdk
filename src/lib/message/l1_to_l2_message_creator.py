@@ -45,12 +45,14 @@ class L1ToL2MessageCreator:
         if call_value_refund_address is None:
             call_value_refund_address = params.get("from")
 
+        print('paramssss', params)
         parsed_params = {
             **params,
             "excessFeeRefundAddress": excess_fee_refund_address,
             "callValueRefundAddress": call_value_refund_address,
         }
 
+        print('parsed_params', parsed_params)
         estimates = await L1ToL2MessageCreator.get_ticket_estimate(
             parsed_params, l1_provider, l2_provider, options
         )
@@ -113,9 +115,9 @@ class L1ToL2MessageCreator:
             )
 
         return {
-            "tx_request": tx_request,
-            "retryable_data": retryable_data,
-            "is_valid": is_valid,
+            "txRequest": tx_request,
+            "retryableData": retryable_data,
+            "isValid": is_valid,
         }
 
     async def create_retryable_ticket(self, params, l2_provider, options=None):
@@ -126,15 +128,17 @@ class L1ToL2MessageCreator:
             overrides = {}
 
         l1_provider = self.l1_signer.provider
+        print('buuuneee', is_l1_to_l2_transaction_request(params))
         if is_l1_to_l2_transaction_request(params):
             create_request = params
         else:
+            print('HEYYY PARAMSS', params)
             create_request = await L1ToL2MessageCreator.get_ticket_creation_request(
                 params, l1_provider, l2_provider, options
             )
 
-        print('BURAYI_INCELE', {**create_request["tx_request"], **overrides})
-        tx = sign_and_sent_raw_transaction(self.l1_signer, {**create_request["tx_request"], **overrides})
+        print('BURAYI_INCELE', {**create_request["txRequest"], **overrides})
+        tx = sign_and_sent_raw_transaction(self.l1_signer, {**create_request["txRequest"], **overrides})
 
         # The monkeyPatchWait function needs to be implemented
         return L1TransactionReceipt.monkey_patch_wait(tx)

@@ -23,8 +23,14 @@ class L2ToL1TransactionRequest:
         self.tx_request = tx_request
         self.estimate_l1_gas_limit = estimate_l1_gas_limit
 
-def is_l1_to_l2_transaction_request(possible_request) -> bool:
-    return isinstance(possible_request, L1ToL2TransactionRequest)
+def is_l1_to_l2_transaction_request(possible_request):
+    """
+    Check if an object is of L1ToL2TransactionRequest type
+    """
+    return 'txRequest' in possible_request and possible_request['txRequest'] is not None
 
-def is_l2_to_l1_transaction_request(possible_request) -> bool:
-    return isinstance(possible_request, L2ToL1TransactionRequest)
+def is_l2_to_l1_transaction_request(possible_request):
+    """
+    Check if an object is of L2ToL1TransactionRequest type
+    """
+    return 'txRequest' in possible_request and possible_request['txRequest'] is not None

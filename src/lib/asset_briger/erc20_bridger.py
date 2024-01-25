@@ -300,7 +300,7 @@ class Erc20Bridger(AssetBridger):
         gas_estimate = Web3.toInt(180000) if is_weth else Web3.toInt(160000)
 
         return {
-            "tx_request": {
+            "txRequest": {
                 "data": function_data,
                 "to": self.l2_network.token_bridge.l2_gateway_router,
                 "value": Web3.toInt(0),
@@ -359,7 +359,7 @@ class Erc20Bridger(AssetBridger):
         # convert from and to addresses to checksum addresses
         # Combine with overrides
         transaction = {
-            **token_deposit["tx_request"],
+            **token_deposit["txRequest"],
             **params.get("overrides", {"gasPrice": Web3.to_wei("21", "gwei")}),
         }
 
@@ -494,14 +494,14 @@ class Erc20Bridger(AssetBridger):
         print("estimates", estimates)
         print("o1o1o1o1o1o1oo1o1o1o1oo1o1o")
         return {
-            "tx_request": {
+            "txRequest": {
                 "to": self.l2_network.tokenBridge.l1GatewayRouter,
                 "data": estimates["data"],
                 "value": estimates["value"],
                 "from": params["from"],
             },
-            "retryable_data": {**estimates["retryable"], **estimates["estimates"]},
-            "is_valid": lambda: L1ToL2MessageGasEstimator.is_valid(
+            "retryableData": {**estimates["retryable"], **estimates["estimates"]},
+            "isValid": lambda: L1ToL2MessageGasEstimator.is_valid(
                 estimates["estimates"], re_estimates["estimates"]
             ),
         }
