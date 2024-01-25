@@ -30,7 +30,11 @@ async def get_transaction_receipt(web3_instance, tx_hash, confirmations=None, ti
     # Check if confirmations or timeout is provided
     if confirmations or timeout:
         try:
-            receipt = web3_instance.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
+            print('buraya girdi')
+            print(confirmations)
+            print(timeout)
+            print('tx_hash', tx_hash)
+            receipt = web3_instance.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout / 1000) 
             # Additional check for confirmations if needed
             if confirmations:
                 latest_block = web3_instance.eth.block_number

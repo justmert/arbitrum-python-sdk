@@ -306,7 +306,7 @@ async def deposit_token(
 #     })).wait()
 
 
-def fund(web3_instance, to_address, amount, funding_private_key=None):
+def fund(provider, to_address, amount, funding_private_key=None):
     if funding_private_key is None:
         raise ValueError("Funding private key is required")
 
@@ -314,9 +314,9 @@ def fund(web3_instance, to_address, amount, funding_private_key=None):
     funding_account = Account.from_key(funding_private_key)
 
     # Fetch the current chain ID
-    chain_id = web3_instance.eth.chain_id
+    chain_id = provider.eth.chain_id
 
-    estimated_gas = web3_instance.eth.estimate_gas(
+    estimated_gas = provider.eth.estimate_gas(
         {
             "from": funding_account.address,
             "to": to_address,
@@ -326,31 +326,31 @@ def fund(web3_instance, to_address, amount, funding_private_key=None):
 
     # Build the transaction
     tx = {
-        "nonce": web3_instance.eth.get_transaction_count(funding_account.address),
+        "nonce": provider.eth.get_transaction_count(funding_account.address),
         "to": to_address,
         "value": amount,
         "gas": estimated_gas,  # Standard gas limit for Ether transfer
-        "gasPrice": web3_instance.eth.gas_price,
+        "gasPrice": provider.eth.gas_price,
         "chainId": chain_id,  # Include the chain ID
     }
     # Sign the transaction
     signed_tx = funding_account.sign_transaction(tx)
 
     # Send the transaction
-    tx_hash = web3_instance.eth.send_raw_transaction(signed_tx.rawTransaction)
+    tx_hash = provider.eth.send_raw_transaction(signed_tx.rawTransaction)
 
     # Wait for the transaction to be mined
-    tx_receipt = web3_instance.eth.wait_for_transaction_receipt(tx_hash)
+    tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
 
     return tx_receipt
 
 
-def fund_l1(l1_provider, l1_signer_address, amount=PRE_FUND_AMOUNT):
-    fund(l1_provider, l1_signer_address, amount, config["ETH_KEY"])
+def fund_l1(l1_signer: SignerOrProvider, amount=PRE_FUND_AMOUNT):
+    fund(l1_signer.provider, l1_signer.account.address, amount, config["ETH_KEY"])
 
 
-def fund_l2(l2_provider, l2_signer, amount=PRE_FUND_AMOUNT):
-    fund(l2_provider, l2_signer, amount, config["ARB_KEY"])
+def fund_l2(l2_signer: SignerOrProvider, amount=PRE_FUND_AMOUNT):
+    fund(l2_signer.provider, l2_signer.account.address, amount, config["ARB_KEY"])
 
 
 def wait(ms=0):

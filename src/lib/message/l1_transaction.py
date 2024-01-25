@@ -192,7 +192,7 @@ class L1TransactionReceipt():
         #     return L1TransactionReceipt(result)
 
         # contract_transaction.wait = patched_wait
-        return contract_transaction
+        return L1TransactionReceipt(contract_transaction)
 
     @staticmethod
     def monkey_patch_eth_deposit_wait(contract_transaction: Contract):
@@ -205,20 +205,8 @@ class L1TransactionReceipt():
         #     return L1EthDepositTransactionReceipt(result)
 
         # contract_transaction.wait = patched_wait
-        return contract_transaction
+        return L1EthDepositTransactionReceipt(contract_transaction)
 
-    # @staticmethod
-    # def monkey_patch_contract_call_wait(contract_transaction: Contract):
-    #     original_wait = contract_transaction.wait
-
-    #     async def patched_wait(
-    #         confirmations: Optional[int] = None
-    #     ) -> L1ContractCallTransactionReceipt:
-    #         result = await original_wait(confirmations)
-    #         return L1ContractCallTransactionReceipt(result)
-
-    #     contract_transaction.wait = patched_wait
-    #     return contract_transaction
 
 
     # web3.py handles the transaction receipt differently compared to ethers

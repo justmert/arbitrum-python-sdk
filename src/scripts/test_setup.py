@@ -205,7 +205,10 @@ async def test_setup() -> CaseDict:
 
 
     # Generate a new account for l1 and l2 signers
-    seed = Account.create()
+    # seed = Account.create()
+    # seed = Account.create()
+    seed = Account.from_key('0x289ff350bbfd21499d32608d5c133869be9b9202cdd792a91ce3920dcabcc28a')
+    
     l1_signer_address = Web3.to_checksum_address(seed.address)
     l2_signer_address = Web3.to_checksum_address(seed.address)
 
@@ -218,6 +221,8 @@ async def test_setup() -> CaseDict:
     
     l1_signer = SignerOrProvider(signer_account, eth_provider)
     l2_signer = SignerOrProvider(signer_account, arb_provider)
+    # print("SEED", seed.address)
+    # print("priv", signer_private_key)
 
 
    # Try to get the network configurations

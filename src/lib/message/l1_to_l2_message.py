@@ -86,13 +86,24 @@ class L1ToL2Message:
         self.message_number = message_number
         self.l1_base_fee = l1_base_fee
         self.message_data = message_data
+        print('***************')
         print(
-            "chain_id", chain_id, "\n",
-            "sender", sender, "\n",
-            "message_number", message_number, "\n",
-            "l1_base_fee", l1_base_fee, "\n",
-            "message_data", message_data, "\n",
+            chain_id,
+            sender,
+            message_number,
+            l1_base_fee,
+            message_data["destAddress"],
+            message_data["l2CallValue"],
+            message_data["l1Value"],
+            message_data["maxSubmissionFee"],
+            message_data["excessFeeRefundAddress"],
+            message_data["callValueRefundAddress"],
+            message_data["gasLimit"],
+            message_data["maxFeePerGas"],
+            message_data["data"],
+
         )
+        print('***************')
         self.retryable_creation_id = self.calculate_submit_retryable_id(
             chain_id,
             sender,
@@ -209,11 +220,13 @@ class L1ToL2MessageReader(L1ToL2Message):
 
     async def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
         if not self.retryable_creation_receipt:
+            print('BURAYA GIRIYOIR!', self.retryable_creation_id)
             self.retryable_creation_receipt = (
                 await get_transaction_receipt(
                     self.l2_provider, self.retryable_creation_id, confirmations, timeout
                 )
             )
+            print('sonuc', self.retryable_creation_receipt)
 
         return self.retryable_creation_receipt or None
 

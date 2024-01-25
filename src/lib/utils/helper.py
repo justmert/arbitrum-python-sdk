@@ -105,6 +105,32 @@ def snake_to_camel(name):
     )
     return camel_case_name
 
+def sign_and_sent_raw_transaction(signer: SignerOrProvider, tx: dict):
+    # Build the transaction
+    
+    if 'gasPrice' not in tx:
+        tx['gasPrice'] = signer.provider.eth.gas_price
+
+    if 'nonce' not in tx:
+        tx['nonce'] = signer.provider.eth.get_transaction_count(signer.account.address)
+
+    if 'chainId' not in tx:
+        tx['chainId'] = signer.provider.eth.chain_id
+
+    gas_estimate = signer.provider.eth.estimate_gas(tx)
+
+    tx['gas'] = gas_estimate
+
+    signed_tx = signer.account.sign_transaction(tx)
+
+    # Send the raw transaction
+    tx_hash = signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+    tx_receipt = signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+    print("tx_receipt", tx_receipt)
+
+    # Return the transaction receipt
+    return tx_receipt
 
 class CaseDict:
     def __init__(self, x):

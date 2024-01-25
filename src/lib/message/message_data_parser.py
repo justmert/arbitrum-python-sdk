@@ -11,6 +11,10 @@ class SubmitRetryableMessageDataParser:
     """
     @staticmethod
     def parse(event_data):
+
+        if isinstance(event_data, bytes):
+            event_data = event_data.hex()
+
         # Assuming event_data is a hex string
         if isinstance(event_data, str):
             decoded_data = decode(

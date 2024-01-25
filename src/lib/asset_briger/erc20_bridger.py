@@ -18,6 +18,7 @@ from src.lib.utils.helper import (
     deploy_abi_contract,
     is_contract_deployed,
     load_contract,
+    sign_and_sent_raw_transaction,
 )
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.data_entities.transaction_request import (
@@ -324,13 +325,15 @@ class Erc20Bridger(AssetBridger):
             params
             if SignerProviderUtils.signer_has_provider(params["l2Signer"])
             else await self.get_withdrawal_request(
-                {**params, "from": await params["l2Signer"].get_address()}
+                {**params, "from": params["l2Signer"].account.address}
             )
         )
 
-        tx = await params["l2Signer"].send_transaction(
+        tx = await params["l2Signer"].provider.send_transaction(
             {**withdrawal_request["txRequest"], **params.get("overrides", {})}
         )
+
+        
         return L2TransactionReceipt.monkey_patch_wait(tx)
 
     async def deposit(self, params):
@@ -674,32 +677,9 @@ class AdminErc20Bridger(Erc20Bridger):
             "data": set_gateway_estimates["data"],
             "value": set_gateway_estimates["value"],
             "from": l1_signer.account.address,
-            # "gas": set_gateway_estimates["estimates"]["gasLimit"],
-            "gasPrice": Web3.to_wei("21", "gwei"),
-            "nonce": l1_signer.provider.eth.get_transaction_count(l1_signer.account.address),
-            'chainId': l1_signer.provider.eth.chain_id
         } 
-        transaction["gas"] = l1_signer.provider.eth.estimate_gas(transaction)
-        print('estimated_gas', transaction["gas"])
-        # signed_txn = l1_signer.account.sign_transaction(transaction)
-        # tx_hash = l1_signer.provider.eth.send_transaction(signed_txn.rawTransaction)
-        # tx_receipt = l1_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
-        # print('hereistx', tx_receipt)
-        # return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
-
-        signed_txn = l1_signer.account.sign_transaction(transaction)
-
-        # Step 3: Send the signed transaction
-        tx_hash = l1_signer.provider.eth.send_raw_transaction(signed_txn.rawTransaction)
-
-
-        # register_tx = l1_signer.provider.eth.send_raw_transaction(signed_txn.rawTransaction)
-        register_tx_receipt = l1_signer.provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
-        print('register_tx_receipt', register_tx_receipt)
-        # Wait for the transaction to be mined and get the receipt
-        # return register_tx_receipt
+        register_tx_receipt = sign_and_sent_raw_transaction(l1_signer, transaction)
+        
         return L1TransactionReceipt.monkey_patch_contract_call_wait(register_tx_receipt)
 
     async def get_l1_gateway_set_events(

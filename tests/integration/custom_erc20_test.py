@@ -142,8 +142,8 @@ async def register_custom_token(l2_network, l1_signer, l2_signer, admin_erc20_br
 @pytest.fixture
 async def setup_state():
     setup = await test_setup()
-    fund_l1(setup.l1_signer.provider, setup.l1_signer.account.address)
-    fund_l2(setup.l2_signer.provider, setup.l2_signer.account.address)
+    fund_l1(setup.l1_signer)
+    fund_l2(setup.l2_signer)
 
     l1_token, l2_token = await register_custom_token(
         setup.l2_network,

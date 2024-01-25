@@ -34,8 +34,8 @@ WITHDRAWAL_AMOUNT = 10
 async def setup_state():
     setup = await test_setup()
     # print(setup)
-    fund_l1(setup.l1_signer.provider, setup.l1_signer.account.address)
-    fund_l2(setup.l2_signer.provider, setup.l2_signer.account.address)
+    fund_l1(setup.l1_signer)
+    fund_l2(setup.l2_signer)
 
     contract_address = deploy_test_erc20(
         setup.l1_signer.provider, setup.l1_signer.account
