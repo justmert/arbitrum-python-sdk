@@ -13,6 +13,7 @@ from src.lib.message.l2_to_l1_message import L2ToL1MessageStatus
 from web3 import Account
 import json
 import time
+import asyncio
 
 # Constants and utility functions
 PRE_FUND_AMOUNT = Web3.to_wei(0.1, "ether")
@@ -26,6 +27,7 @@ class GatewayType:
 
 
 async def mine_until_stop(miner, state):
+    print("stateee", state)
     while state["mining"]:
         print('my_mining')
         # miner.provider.eth.send_transaction(
@@ -46,18 +48,20 @@ async def mine_until_stop(miner, state):
             "nonce": miner.provider.eth.get_transaction_count(miner.account.address),
         }
 
-        # gas_estimate = miner.provider.eth.estimate_gas(tx)
+        gas_estimate = miner.provider.eth.estimate_gas(tx)
 
-        # tx['gas'] = gas_estimate
+        tx['gas'] = gas_estimate
 
         signed_tx = miner.account.sign_transaction(tx)
 
         # Send the raw transaction
         tx_hash = miner.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-
+        print("MINER_HASH", tx_hash)
         # tx_receipt = signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
-        wait(15000)
+        # wait(15000)
+        await asyncio.sleep(15)
+    print('miner done')
 
 
 async def withdraw_token(params):

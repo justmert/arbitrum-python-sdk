@@ -37,19 +37,19 @@ async def setup_state():
     fund_l1(setup.l1_signer)
     fund_l2(setup.l2_signer)
 
-    contract_address = deploy_test_erc20(
+    contract = deploy_test_erc20(
         setup.l1_signer.provider, setup.l1_signer.account
     )
-    print("deployed_erc20_address", contract_address)
+    print("deployed_erc20_address", contract)
 
     # # Mint tokens
     mint_receipt = mint_tokens(
-        setup.l1_signer.provider, contract_address, setup.l1_signer.account
+        setup.l1_signer.provider, contract, setup.l1_signer.account
     )
     print("mint_receipt", mint_receipt)
 
     # # Add the contract address to the setup
-    setup["l1_token_address"] = contract_address
+    setup["l1_token_address"] = contract.address
     return setup
 
 

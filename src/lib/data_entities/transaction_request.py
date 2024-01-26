@@ -27,10 +27,11 @@ def is_l1_to_l2_transaction_request(possible_request):
     """
     Check if an object is of L1ToL2TransactionRequest type
     """
-    return 'txRequest' in possible_request and possible_request['txRequest'] is not None
+    print('possible_request', possible_request)
+    return possible_request.get('txRequest', None) is not None
 
 def is_l2_to_l1_transaction_request(possible_request):
     """
     Check if an object is of L2ToL1TransactionRequest type
     """
-    return 'txRequest' in possible_request and possible_request['txRequest'] is not None
+    return possible_request.get('txRequest', None) is not None

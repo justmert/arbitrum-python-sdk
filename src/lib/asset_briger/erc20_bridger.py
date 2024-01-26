@@ -1,3 +1,4 @@
+from pkg_resources import get_provider
 from src.lib.message.l1_to_l2_message_gas_estimator import L1ToL2MessageGasEstimator
 from src.lib.data_entities.errors import ArbSdkError, MissingProviderArbSdkError
 from src.lib.data_entities.networks import get_l2_network
@@ -69,7 +70,7 @@ class Erc20Bridger(AssetBridger):
         return l2_gateway_router.functions.getGateway(erc20_l1_address).call()
 
     async def get_approve_token_request(self, params):
-        print("aaa", SignerProviderUtils.get_provider_or_throw(params["l1Provider"]))
+        # print("aaa", SignerProviderUtils.get_provider_or_throw(params["l1Provider"]))
         gateway_address = await self.get_l1_gateway_address(
             params["erc20L1Address"],
             SignerProviderUtils.get_provider_or_throw(params["l1Provider"]),
@@ -89,39 +90,56 @@ class Erc20Bridger(AssetBridger):
                 # 'from': w3.eth.default_account  # This needs to be the account that will send the transaction
             }
         )["data"]
+
+        # data = i_erc20_interface.encodeABI(
+        #     fn_name="approve",
+        #     args=[
+        #         gateway_address, 
+        #         params.get("amount", MAX_APPROVAL)
+        #     ],
+        # )
+
+
         return {"to": params["erc20L1Address"], "data": data, "value": 0}
 
     async def approve_token(self, params):
-        await self.check_l1_network(params["l1Provider"])
+        await self.check_l1_network(params["l1Signer"])
         approve_request = (
-            await self.get_approve_token_request(params)
+            await self.get_approve_token_request({
+                **params,
+                "l1Provider": SignerProviderUtils.get_provider_or_throw(params['l1Signer']),
+            })
             if SignerProviderUtils.get_provider_or_throw(params["l1Signer"])
             else params["txRequest"]
         )
 
+        # l1_provider = SignerProviderUtils.get_provider_or_throw(params["l1Signer"])
         # Merge any overrides
         transaction = {
             **approve_request,
             **params.get("overrides", {"gasPrice": Web3.to_wei("21", "gwei")}),
         }
 
-        # Estimate gas and set the transaction parameters
-        transaction["gas"] = params["l1Provider"].eth.estimate_gas(transaction)
-        transaction["nonce"] = params["l1Provider"].eth.get_transaction_count(
-            params["l1Signer"].account.address
+        tx_receipt = sign_and_sent_raw_transaction(
+            signer=params["l1Signer"], tx = transaction
         )
-        transaction["chainId"] = params["l1Provider"].eth.chain_id
-        print(transaction)
-        # Sign the transaction
-        signed_txn = params["l1Signer"].account.sign_transaction(transaction)
+        # # Estimate gas and set the transaction parameters
+        # transaction["gas"] = l1_provider.eth.estimate_gas(transaction)
+        # transaction["nonce"] = l1_provider.eth.get_transaction_count(
+        #     params["l1Signer"].account.address
+        # )
+        # transaction["chainId"] = l1_provider.eth.chain_id
 
-        # Send the transaction
-        tx_hash = params["l1_provider"].eth.send_raw_transaction(
-            signed_txn.rawTransaction
-        )
+        # # Sign the transaction
+        # signed_txn = params["l1Signer"].account.sign_transaction(transaction)
 
-        # Wait for the transaction to be mined
-        tx_receipt = params["l1_provider"].eth.wait_for_transaction_receipt(tx_hash)
+        # # Send the transaction
+        # tx_hash = l1_provider.eth.send_raw_transaction(
+        #     signed_txn.rawTransaction
+        # )
+
+        # # Wait for the transaction to be mined
+        # tx_receipt = l1_provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return tx_receipt
 
@@ -337,11 +355,12 @@ class Erc20Bridger(AssetBridger):
         return L2TransactionReceipt.monkey_patch_wait(tx)
 
     async def deposit(self, params):
+        print('hi0')
         if not SignerProviderUtils.signer_has_provider(params["l1Signer"]):
             raise MissingProviderArbSdkError("l1Signer")
 
         await self.check_l1_network(params["l1Signer"])
-
+        print('hi1')
         l1_provider = SignerProviderUtils.get_provider_or_throw(params["l1Signer"])
 
         print("deposit_params", params)
@@ -350,11 +369,12 @@ class Erc20Bridger(AssetBridger):
             token_deposit = params
         else:
             # Prepare the deposit request
-            token_deposit = await self.get_deposit_request(
-                {**params, "from": params["l1Signer"].account.address},
-                l1_provider=l1_provider,
-                l2_provider=params["l2Provider"],
-            )
+            token_deposit = await self.get_deposit_request({
+                **params,
+                "l1Provider": l1_provider,
+                "from": params["l1Signer"].account.address,
+            })
+        print('hi2')
 
         # convert from and to addresses to checksum addresses
         # Combine with overrides
@@ -374,34 +394,39 @@ class Erc20Bridger(AssetBridger):
 
         # elif isinstance(transaction['to'], str):
         #     transaction['to'] = Web3.to_checksum_address(transaction['to'])
-
-        transaction["value"] = (
-            int(transaction["value"]) if "value" in transaction else 0
+        tx_receipt = sign_and_sent_raw_transaction(
+            signer = params["l1Signer"], tx = transaction
         )
-        # Estimate gas and set the transaction parameters
-        print("HEREISMYTRANSACTIONNNN", transaction)
-        transaction["gas"] = l1_provider.eth.estimate_gas(transaction)
-        transaction["nonce"] = l1_provider.eth.get_transaction_count(
-            params["l1Signer"].account.address
-        )
-        transaction["chainId"] = l1_provider.eth.chain_id
+        # print('hi3')
 
-        # Sign the transaction with the private key
-        signed_txn = params["l1Signer"].account.sign_transaction(transaction)
+        # transaction["value"] = (
+        #     int(transaction["value"]) if "value" in transaction else 0
+        # )
+        # # Estimate gas and set the transaction parameters
+        # print("HEREISMYTRANSACTIONNNN", transaction)
+        # transaction["gas"] = l1_provider.eth.estimate_gas(transaction)
+        # transaction["nonce"] = l1_provider.eth.get_transaction_count(
+        #     params["l1Signer"].account.address
+        # )
+        # transaction["chainId"] = l1_provider.eth.chain_id
 
-        # Send the transaction
-        tx_hash = params["l1Signer"].provider.eth.send_raw_transaction(
-            signed_txn.rawTransaction
-        )
+        # # Sign the transaction with the private key
+        # signed_txn = params["l1Signer"].account.sign_transaction(transaction)
 
-        print("---------------------TX_HASH", tx_hash)
-        print("---------------------TX_HASH_HASH", Web3.to_hex(tx_hash))
-        # # Wait for the transaction to be mined and get the receipt
-        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
-        print("---------------------TX_RECEIPT", tx_receipt)
+        # # Send the transaction
+        # tx_hash = params["l1Signer"].provider.eth.send_raw_transaction(
+        #     signed_txn.rawTransaction
+        # )
+        # print('hi4')
 
+        # print("---------------------TX_HASH", tx_hash)
+        # print("---------------------TX_HASH_HASH", Web3.to_hex(tx_hash))
+        # # # Wait for the transaction to be mined and get the receipt
+        # tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(
+        #     tx_hash
+        # )
+        # print("---------------------TX_RECEIPT", tx_receipt)
+    
         # TO-DO
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
@@ -413,11 +438,12 @@ class Erc20Bridger(AssetBridger):
         encoded_values = encode(types, values)
         return encoded_values
 
-    async def get_deposit_request(self, params, l1_provider, l2_provider):
+    async def get_deposit_request(self, params):
         # Check networks
+        
         # Implement checkL1Network and checkL2Network
-        await self.check_l1_network(l1_provider)
-        await self.check_l2_network(l2_provider)
+        await self.check_l1_network(params["l1Provider"])
+        await self.check_l2_network(params["l2Provider"])
 
         # Apply defaults to the parameters
         # Implement apply_defaults
@@ -428,7 +454,10 @@ class Erc20Bridger(AssetBridger):
         amount = defaulted_params["amount"]
         destination_address = defaulted_params["destination_address"]
         erc20_l1_address = defaulted_params["erc20_l1_address"]
+        l1_provider = defaulted_params["l1Provider"]
+        l2_provider = defaulted_params["l2Provider"]
         retryable_gas_overrides = defaulted_params.get("retryable_gas_overrides", {})
+
         if retryable_gas_overrides is None:
             retryable_gas_overrides = {}
         print("retryable_gas_overrides", retryable_gas_overrides)
@@ -493,18 +522,18 @@ class Erc20Bridger(AssetBridger):
         )
         print("estimates", estimates)
         print("o1o1o1o1o1o1oo1o1o1o1oo1o1o")
-        return {
-            "txRequest": {
+        return CaseDict({
+            "txRequest": CaseDict({
                 "to": self.l2_network.tokenBridge.l1GatewayRouter,
                 "data": estimates["data"],
                 "value": estimates["value"],
                 "from": params["from"],
-            },
-            "retryableData": {**estimates["retryable"], **estimates["estimates"]},
+            }),
+            "retryableData": CaseDict({**estimates["retryable"], **estimates["estimates"]}),
             "isValid": lambda: L1ToL2MessageGasEstimator.is_valid(
                 estimates["estimates"], re_estimates["estimates"]
             ),
-        }
+        })
 
 
 class AdminErc20Bridger(Erc20Bridger):

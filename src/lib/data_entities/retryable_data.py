@@ -51,7 +51,7 @@ class RetryableDataTools:
                 print('Error decoding retryable data')
                 return None
             else:
-                return {
+                return CaseDict({
                     'from': Web3.to_checksum_address(decoded_data[0]),
                     'to': Web3.to_checksum_address(decoded_data[1]),
                     'l2CallValue': decoded_data[2],
@@ -63,7 +63,7 @@ class RetryableDataTools:
                     'maxFeePerGas': decoded_data[8],
                     # 'data': decoded_data[9].hex()  if str(decoded_data[9].hex()).startswith('0x')  else '0x' + decoded_data[9].hex()
                     'data': decoded_data[9]
-                }
+                })
         except Exception as ex:
             return None
 

@@ -257,7 +257,6 @@ async def test_setup() -> CaseDict:
     eth_bridger = EthBridger(set_l2_network)
     inbox_tools = InboxTools(l1_signer_address, set_l2_network)
 
-    print('********* SET_L2_NETWORK', set_l2_network)
     return CaseDict({
         'l1_signer': l1_signer,
         'l2_signer': l2_signer,
