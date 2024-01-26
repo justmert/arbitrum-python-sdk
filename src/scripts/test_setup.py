@@ -206,7 +206,6 @@ async def test_setup() -> CaseDict:
 
     # Generate a new account for l1 and l2 signers
     # seed = Account.create()
-    # seed = Account.create()
     seed = Account.from_key('0x289ff350bbfd21499d32608d5c133869be9b9202cdd792a91ce3920dcabcc28a')
     
     l1_signer_address = Web3.to_checksum_address(seed.address)

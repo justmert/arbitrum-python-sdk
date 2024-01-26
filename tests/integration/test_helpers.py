@@ -7,11 +7,12 @@ from src.lib.asset_briger.erc20_bridger import (
     MAX_UINT256,
 )
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.utils.helper import CaseDict, deploy_abi_contract, load_contract
+from src.lib.utils.helper import CaseDict, deploy_abi_contract, load_contract, sign_and_sent_raw_transaction
 from src.scripts.test_setup import config, get_signer, test_setup
 from src.lib.message.l2_to_l1_message import L2ToL1MessageStatus
 from web3 import Account
 import json
+import time
 
 # Constants and utility functions
 PRE_FUND_AMOUNT = Web3.to_wei(0.1, "ether")
@@ -26,8 +27,37 @@ class GatewayType:
 
 async def mine_until_stop(miner, state):
     while state["mining"]:
-        await miner.send_transaction({"to": miner.address, "value": 0})
-        await wait(15000)
+        print('my_mining')
+        # miner.provider.eth.send_transaction(
+        #     {"from": miner.account.address, "to": miner.account.address, "value": 0}
+        # )
+        # sign_and_sent_raw_transaction(
+        #     signer= miner,
+        #     tx = {
+        #         "to": miner.account.address,
+        #         "value": 0
+        #     }
+        # )
+        tx = {
+            "to": miner.account.address,
+            "value": 0,
+            "chainId": miner.provider.eth.chain_id,
+            "gasPrice": miner.provider.eth.gas_price,
+            "nonce": miner.provider.eth.get_transaction_count(miner.account.address),
+        }
+
+        # gas_estimate = miner.provider.eth.estimate_gas(tx)
+
+        # tx['gas'] = gas_estimate
+
+        signed_tx = miner.account.sign_transaction(tx)
+
+        # Send the raw transaction
+        tx_hash = miner.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        # tx_receipt = signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+
+        wait(15000)
 
 
 async def withdraw_token(params):
@@ -354,8 +384,6 @@ def fund_l2(l2_signer: SignerOrProvider, amount=PRE_FUND_AMOUNT):
 
 
 def wait(ms=0):
-    import time
-
     time.sleep(ms / 1000)
 
 

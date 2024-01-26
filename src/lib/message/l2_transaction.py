@@ -82,16 +82,16 @@ class L2TransactionReceipt:
             for log in self.get_l2_to_l1_events(provider)
         ]
 
-    def get_batch_confirmations(self, web3_instance: Web3) -> int:
+    def get_batch_confirmations(self, provider: Web3) -> int:
         node_interface = load_contract(
-            "NodeInterface", NODE_INTERFACE_ADDRESS, web3_instance
+            contract_name="NodeInterface", address=NODE_INTERFACE_ADDRESS, provider=provider, is_classic=False
         ) # also available in classic!
         return node_interface.functions.getL1Confirmations(self.block_hash).call()
 
-    async def get_batch_number(self, web3_instance) -> int:
-        arb_provider = ArbitrumProvider(web3_instance)
+    async def get_batch_number(self, l2_provider) -> int:
+        arb_provider = ArbitrumProvider(l2_provider)
         node_interface = load_contract(
-            "NodeInterface", NODE_INTERFACE_ADDRESS, arb_provider.w3
+            contract_name="NodeInterface", address=NODE_INTERFACE_ADDRESS, provider=l2_provider, is_classic=False
         ) # also available in classic
         rec = await arb_provider.get_transaction_receipt(self.transaction_hash)
 
@@ -101,9 +101,9 @@ class L2TransactionReceipt:
         return node_interface.functions.findBatchContainingBlock(rec.blockNumber).call()
 
     async def is_data_available(
-        self, web3_instance: Web3, confirmations: int = 10
+        self, provider: Web3, confirmations: int = 10
     ) -> bool:
-        batch_confirmations = self.get_batch_confirmations(web3_instance)
+        batch_confirmations = self.get_batch_confirmations(provider)
         return batch_confirmations > confirmations
 
     @staticmethod
