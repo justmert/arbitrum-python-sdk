@@ -98,35 +98,58 @@ class EthBridger(AssetBridger):
     async def get_deposit_to_request(self, params):
         request_params = {
             **params,
-            'to': params.destinationAddress,
-            'l2CallValue': params.amount,
-            'callValueRefundAddress': params.destinationAddress,
+            'to': params['destinationAddress'],
+            'l2CallValue': params['amount'],
+            'callValueRefundAddress': params['destinationAddress'],
             'data': '0x',
         }
-        gas_overrides = params.retryableGasOverrides or {}
+        gas_overrides = params.get('retryableGasOverrides', {})
         return await L1ToL2MessageCreator.get_ticket_creation_request(
-            request_params, params.l1Provider, params.l2Provider, gas_overrides
+            request_params, params['l1Provider'], params['l2Provider'], gas_overrides
         )
 
     async def deposit_to(self, params):
-        if isinstance(params, L1ToL2TxReqAndSigner):
+        await self.check_l1_network(params['l1Signer'])
+        await self.check_l2_network(params['l2Provider'])
+
+        if is_l1_to_l2_transaction_request(params):
             retryable_ticket_request = params
         else:
-            retryable_ticket_request = await self.get_deposit_to_request(params)
-        tx = params.l1Signer.send_transaction({
-            **retryable_ticket_request.txRequest,
-            **params.overrides
-        })
-        return L1TransactionReceipt.monkey_patch_contract_call_wait(tx)
+            retryable_ticket_request = await self.get_deposit_to_request({
+                **params,
+                'from': params['l1Signer'].account.address,
+                'l1Provider': params['l1Signer'].provider}
+                )
+        
+        tx = {
+            **retryable_ticket_request['txRequest'],
+            **params.get('overrides', {})
+        }
+
+        gas_estimate = params['l1Signer'].provider.eth.estimate_gas(tx)
+
+        tx['gas'] = gas_estimate
+        tx['gasPrice'] = params['l1Signer'].provider.eth.gas_price
+        tx['nonce'] = params['l1Signer'].provider.eth.get_transaction_count(params['l1Signer'].account.address)
+        tx['chainId'] = params['l1Signer'].provider.eth.chain_id
+
+        signed_tx = params['l1Signer'].account.sign_transaction(tx)
+
+        # Send the raw transaction
+        tx_hash = params['l1Signer'].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        tx_receipt = params['l1Signer'].provider.eth.wait_for_transaction_receipt(tx_hash)
+
+        return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
     async def get_withdrawal_request(self, params):
         arb_sys = load_contract(provider=self.l2_provider, contract_name='ArbSys', address=ARB_SYS_ADDRESS) # also available in classic!
-        function_data = arb_sys.encodeFunctionData('withdrawEth', [params.destinationAddress])
+        function_data = arb_sys.encodeFunctionData('withdrawEth', [params['destinationAddress']])
         return {
             'txRequest': {
                 'to': ARB_SYS_ADDRESS,
                 'data': function_data,
-                'value': Web3.to_wei(params.amount, 'ether'),
+                'value': Web3.to_wei(params['amount'], 'ether'),
                 'from': params['from'],
             },
             'estimateL1GasLimit': lambda l1_provider: 130000
