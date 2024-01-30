@@ -154,7 +154,7 @@ async def test_deposit_with_only_low_gas_limit_manual_redeem_success(setup_state
     print("reee", redeems_scheduled[0])
     retry_receipt = await get_transaction_receipt(
         tx_hash=redeems_scheduled[0]["retryTxHash"],
-        web3_instance=setup_state.l2_signer.provider,
+        provider=setup_state.l2_signer.provider,
     )
     assert retry_receipt is None, "Retry should not exist"
 

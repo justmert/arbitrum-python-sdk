@@ -124,7 +124,7 @@ class L1TransactionReceipt():
         return messages
 
     async def get_eth_deposits(self, l2_provider: Web3) -> List[EthDepositMessage]:
-        messages = self.get_message_events()
+        messages = self.get_message_events(l2_provider)
         eth_deposit_messages = []
 
         for e in messages:
@@ -236,8 +236,11 @@ class L1EthDepositTransactionReceipt(L1TransactionReceipt):
             raise ArbSdkError("Unexpected missing Eth Deposit message.")
 
         message = messages[0]
+        print('my_messagw', message)
+        print('confirmations', confirmations)
+        print('timeout', timeout)
         result = await message.wait(confirmations, timeout)
-
+        print("HERE_IS", result)
         return {
             "complete": is_defined(result),
             "l2_tx_receipt": result,

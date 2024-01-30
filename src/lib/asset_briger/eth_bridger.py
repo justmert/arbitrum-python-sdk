@@ -2,7 +2,7 @@ from web3 import Web3
 from web3.contract import Contract
 import json
 from src.lib.asset_briger.asset_bridger import AssetBridger
-from src.lib.data_entities.transaction_request import L2ToL1TransactionRequest
+from src.lib.data_entities.transaction_request import L2ToL1TransactionRequest, is_l1_to_l2_transaction_request
 from src.lib.message.l1_to_l2_message_creator import L1ToL2MessageCreator
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.message.l1_transaction import L1TransactionReceipt
@@ -40,12 +40,12 @@ class EthBridger(AssetBridger):
 
     async def get_deposit_request(self, params):
         inbox = load_contract(provider=params['l1Signer'].provider, contract_name='Inbox', address=self.l2_network.eth_bridge.inbox, is_classic=False)
-
+        print(params['amount'])
         function_data = inbox.functions.depositEth().build_transaction(
             {
-
             }
         )['data']
+        print("function_data", function_data)
         return {
             'txRequest': {
                 'to': self.l2_network.eth_bridge.inbox,
@@ -57,24 +57,41 @@ class EthBridger(AssetBridger):
         }
 
     async def deposit(self, params: Union[EthDepositParams, L1ToL2TxReqAndSigner]) -> L1EthDepositTransaction:
-        if isinstance(params, L1ToL2TxReqAndSigner):
-            eth_deposit = params.tx_request
-            l1_signer = params.l1_signer
-            overrides = params.overrides
+        
+        if is_l1_to_l2_transaction_request(params):
+            eth_deposit = params
+            # l1_signer = params.l1_signer
+            # overrides = params.overrides
         else:
             eth_deposit = await self.get_deposit_request({
                 **params,
                 'from': params['l1Signer'].account.address,
             })
-            l1_signer = params['l1Signer']
-            overrides = params.get('overrides', {})
+            # l1_signer = params['l1Signer']
+            # overrides = params.get('overrides', {})
 
         tx = {
             **eth_deposit['txRequest'],
-            **overrides
+            **params.get('overrides', {})
         }
-        print('params',tx)
-        tx_receipt = sign_and_sent_raw_transaction(l1_signer, tx)
+
+        gas_estimate = params['l1Signer'].provider.eth.estimate_gas(tx)
+
+        tx['gas'] = gas_estimate
+        tx['gasPrice'] = params['l1Signer'].provider.eth.gas_price
+        tx['nonce'] = params['l1Signer'].provider.eth.get_transaction_count(params['l1Signer'].account.address)
+        tx['chainId'] = params['l1Signer'].provider.eth.chain_id
+
+        signed_tx = params['l1Signer'].account.sign_transaction(tx)
+
+        # Send the raw transaction
+        tx_hash = params['l1Signer'].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        tx_receipt = params['l1Signer'].provider.eth.wait_for_transaction_receipt(tx_hash)
+
+
+        print('params',tx_receipt)
+        # tx_receipt = sign_and_sent_raw_transaction(params['l1Signer'], tx_receipt)
 
         return L1TransactionReceipt.monkey_patch_eth_deposit_wait(tx_receipt)
 

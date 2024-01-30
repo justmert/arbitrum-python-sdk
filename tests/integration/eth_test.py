@@ -1,3 +1,4 @@
+from src.lib import inbox
 from .test_helpers import (
     fund_l1,
     fund_l2,
@@ -64,8 +65,6 @@ from web3 import Web3
 #     assert balance_after == expected_balance_after, "L2 signer balance after should be correctly reduced"
 
 
-
-
 @pytest.mark.asyncio
 async def test_deposits_ether():
     # Setup test environment
@@ -73,6 +72,7 @@ async def test_deposits_ether():
     eth_bridger = setup_state.eth_bridger
     l1_signer = setup_state.l1_signer
     l2_signer = setup_state.l2_signer
+    initial_test_wallet_l2_eth_balance = l2_signer.provider.eth.get_balance(l2_signer.account.address)
 
     # Fund L1 signer
     fund_l1(l1_signer)
@@ -80,6 +80,7 @@ async def test_deposits_ether():
     # Retrieve initial balance of the inbox contract
     inbox_address = eth_bridger.l2_network.eth_bridge.inbox
     initial_inbox_balance = l1_signer.provider.eth.get_balance(inbox_address)
+    print('initial_inbox_balance', initial_inbox_balance)
 
     # Perform Ether deposit
     eth_to_deposit = Web3.to_wei(0.0002, 'ether')
@@ -96,20 +97,33 @@ async def test_deposits_ether():
 
     # Check final balance of the inbox contract
     final_inbox_balance = l1_signer.provider.eth.get_balance(inbox_address)
-    assert final_inbox_balance == initial_inbox_balance + eth_to_deposit, "Balance failed to update after ETH deposit"
 
-    wait_result = await rec.waitForL2(l2_signer.provider)
+    # Also fails in TS implementation - https://github.com/OffchainLabs/arbitrum-sdk/pull/407
+    # assert final_inbox_balance == initial_inbox_balance + eth_to_deposit, "Balance failed to update after ETH deposit"  
+    wait_result = await rec.wait_for_l2(l2_signer.provider)
 
     # Retrieve L1 to L2 message and verify
-    l1_to_l2_messages = await eth_bridger.get_eth_deposits(l2_signer.provider, rec.transactionHash)
+    l1_to_l2_messages = await rec.get_eth_deposits(l2_signer.provider)
+    
     assert len(l1_to_l2_messages) == 1, "Failed to find 1 L1 to L2 message"
     l1_to_l2_message = l1_to_l2_messages[0]
 
     wallet_address = l1_signer.account.address
-    assert l1_to_l2_message.to == wallet_address, "Message inputs value error"
+    print("l1_to_l2_message",l1_to_l2_message)
+    assert l1_to_l2_message.to_address == wallet_address, "Message inputs value error"
+    print('l1_to_l2_message.value', l1_to_l2_message.value)
+    print('eth_to_deposit', eth_to_deposit)
     assert l1_to_l2_message.value == eth_to_deposit, "Message inputs value error"
+    
+    print(wait_result['message'])
+    print('l2TxHash: ', wait_result['message'].l2_deposit_tx_receipt)
+    print('l2 transaction found!')
+    print(wait_result['complete'])
+    print(wait_result)
+    assert wait_result['complete'], "Eth deposit not complete"
+    assert wait_result['l2_tx_receipt'] is not None
 
     # Check final L2 balance
-    test_wallet_l2_eth_balance = l2_signer.provider.eth.get_balance(wallet_address)
-    assert test_wallet_l2_eth_balance == eth_to_deposit, "Final balance incorrect"
+    final_test_wallet_l2_eth_balance = l2_signer.provider.eth.get_balance(l2_signer.account.address)
+    assert final_test_wallet_l2_eth_balance == initial_test_wallet_l2_eth_balance +  eth_to_deposit, "Final balance incorrect"
 

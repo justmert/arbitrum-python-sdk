@@ -26,7 +26,7 @@ async def wait(ms: int):
     await asyncio.sleep(ms/1000)
 
 # Get transaction receipt
-async def get_transaction_receipt(web3_instance, tx_hash, confirmations=None, timeout=None):
+async def get_transaction_receipt(provider, tx_hash, confirmations=None, timeout=None):
     # Check if confirmations or timeout is provided
     if confirmations or timeout:
         try:
@@ -34,10 +34,10 @@ async def get_transaction_receipt(web3_instance, tx_hash, confirmations=None, ti
             print(confirmations)
             print(timeout)
             print('tx_hash', tx_hash)
-            receipt = web3_instance.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout / 1000) 
+            receipt = provider.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout / 1000) 
             # Additional check for confirmations if needed
             if confirmations:
-                latest_block = web3_instance.eth.block_number
+                latest_block = provider.eth.block_number
                 if latest_block - receipt.blockNumber < confirmations:
                     return None
             return receipt
@@ -50,9 +50,12 @@ async def get_transaction_receipt(web3_instance, tx_hash, confirmations=None, ti
     else:
         # No confirmations or timeout provided, directly get the receipt
         try:
-            receipt = web3_instance.eth.get_transaction_receipt(tx_hash)
+            print('tx_hash', tx_hash)
+            receipt = provider.eth.get_transaction_receipt(tx_hash)
             return receipt
+        
         except TransactionNotFound:
+            print('hey none')
             return None
         
         except Exception as e:

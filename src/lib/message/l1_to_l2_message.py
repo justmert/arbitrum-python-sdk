@@ -18,7 +18,7 @@ from src.lib.utils.event_fetcher import EventFetcher
 import math
 from src.lib.data_entities.constants import ARB_RETRYABLE_TX_ADDRESS
 from web3.contract import Contract
-from src.lib.utils.helper import load_contract
+from src.lib.utils.helper import get_address, load_contract
 from eth_utils import keccak, to_bytes
 from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.utils.lib import get_transaction_receipt
@@ -636,22 +636,56 @@ class EthDepositMessage:
         )
         self.l2_deposit_tx_receipt = None
 
+    # @staticmethod
+    # def calculate_deposit_tx_id(
+    #     l2_chain_id, message_number, from_address, to_address, value
+    # ):
+    #     chain_id = Web3.to_bytes(l2_chain_id).rjust(32, b"\0")
+    #     msg_num = Web3.to_bytes(message_number).rjust(32, b"\0")
+    #     from_addr = Web3.to_bytes(hexstr=Web3.to_checksum_address(from_address))
+    #     to_addr = Web3.to_bytes(hexstr=Web3.to_checksum_address(to_address))
+    #     value_bytes = Web3.to_bytes(value).rjust(32, b"\0")
+
+    #     fields = [chain_id, msg_num, from_addr, to_addr, value_bytes]
+
+    #     rlp_encoded = Web3.encode_rlp(fields)
+    #     rlp_encoded_with_type = b"\x64" + rlp_encoded
+
+    #     return encode_hex(keccak(rlp_encoded_with_type))
+
+
     @staticmethod
     def calculate_deposit_tx_id(
         l2_chain_id, message_number, from_address, to_address, value
     ):
-        chain_id = Web3.to_bytes(l2_chain_id).rjust(32, b"\0")
-        msg_num = Web3.to_bytes(message_number).rjust(32, b"\0")
-        from_addr = Web3.to_bytes(hexstr=Web3.to_checksum_address(from_address))
-        to_addr = Web3.to_bytes(hexstr=Web3.to_checksum_address(to_address))
-        value_bytes = Web3.to_bytes(value).rjust(32, b"\0")
+        chain_id = l2_chain_id
+        msg_num = message_number
 
-        fields = [chain_id, msg_num, from_addr, to_addr, value_bytes]
+        print('chain_id', chain_id)
+        print('msg_num', msg_num)
+        print('from_address', from_address)
+        print('to_address', to_address)
+        print('value', value)
 
-        rlp_encoded = Web3.encode_rlp(fields)
-        rlp_encoded_with_type = b"\x64" + rlp_encoded
+        fields = [
+            format_number(chain_id),
+            zero_pad(format_number(msg_num), 32),
+            bytes.fromhex(get_address(from_address)[2:]),
+            bytes.fromhex(get_address(to_address)[2:]),
+            format_number(value),
+        ]
 
-        return encode_hex(keccak(rlp_encoded_with_type))
+        print(fields)
+        rlp_encoded = rlp.encode(fields)
+        rlp_enc_with_type = b'\x64' + rlp_encoded
+
+        retryable_tx_id = Web3.keccak(rlp_enc_with_type)
+        # retryable_tx_id2 = Web3.keccak(rlp_encoded)
+        # print(retryable_tx_id2.hex())
+
+        return retryable_tx_id.hex()
+
+
 
     @staticmethod
     def from_event_components(
@@ -659,6 +693,7 @@ class EthDepositMessage:
     ):
         chain_id = l2_provider.eth.chain_id
         parsed_data = EthDepositMessage.parse_eth_deposit_data(inbox_message_event_data)
+        print("parsed_data", parsed_data)
         return EthDepositMessage(
             l2_provider,
             chain_id,
@@ -670,9 +705,18 @@ class EthDepositMessage:
 
     @staticmethod
     def parse_eth_deposit_data(event_data):
+        # print(Web3.to_hex(event_data))
+        if isinstance(event_data, bytes):
+            event_data = Web3.to_hex(event_data)
+        
         address_end = 2 + 20 * 2
-        to_address = Web3.to_checksum_address("0x" + event_data[2:address_end])
-        value = Web3.to_bytes(hexstr="0x" + event_data[address_end:])
+        to_address = get_address("0x" + event_data[2:address_end])
+        value_hex = event_data[address_end:]
+        if value_hex.startswith("0"):
+            # remove all the leading zeros
+            value_hex = value_hex.lstrip("0")
+
+        value = int("0x" + value_hex, 16)
         return {"to": to_address, "value": value}
 
     async def status(self):
@@ -684,7 +728,58 @@ class EthDepositMessage:
         else:
             return "DEPOSITED"
 
+    # async def wait(self, confirmations=None, timeout=None):
+    #     # Get the L2 network information
+    #     l2_network = get_l2_network(self.l2_chain_id)
+
+    #     # Set the chosen timeout based on the provided timeout or the network's default deposit timeout
+    #     chosen_timeout = (
+    #         timeout if timeout is not None else l2_network["depositTimeout"]
+    #     )
+
+    #     # Start time for timeout calculation
+    #     start_time = asyncio.get_event_loop().time()
+
+    #     # Loop until the transaction is confirmed or the timeout is reached
+    #     while True:
+    #         print('loop1')
+    #         if self.l2_deposit_tx_receipt is None:
+    #             try:
+    #                 print("hash", self.l2_deposit_tx_hash)
+    #                 # Attempt to get the transaction receipt
+    #                 self.l2_deposit_tx_receipt = (
+    #                     await get_transaction_receipt( self.l2_provider,
+    #                         self.l2_deposit_tx_hash
+    #                     )
+    #                 )
+    #                 print('self.l2_deposit_tx_receipt', self.l2_deposit_tx_receipt)
+
+    #                 # Check if the number of confirmations is met
+    #                 current_block = self.l2_provider.eth.block_number
+    #                 if (
+    #                     confirmations is None
+    #                     or current_block - self.l2_deposit_tx_receipt.blockNumber
+    #                     >= confirmations
+    #                 ):
+    #                     return self.l2_deposit_tx_receipt
+
+    #             except TransactionNotFound:
+    #                 # If the transaction is not found, continue the loop
+    #                 pass
+
+    #             # Check if the timeout is reached
+    #             if asyncio.get_event_loop().time() - start_time > chosen_timeout:
+    #                 raise TimeoutError(
+    #                     f"Timeout reached waiting for transaction receipt: {self.l2_deposit_tx_hash}"
+    #                 )
+
+    #             # Wait a short time before trying again
+    #             await asyncio.sleep(5)
+
+    
     async def wait(self, confirmations=None, timeout=None):
+        # THIS FUNCTION IS REWRITTEN FROM ABOVE
+
         # Get the L2 network information
         l2_network = get_l2_network(self.l2_chain_id)
 
@@ -693,37 +788,14 @@ class EthDepositMessage:
             timeout if timeout is not None else l2_network["depositTimeout"]
         )
 
-        # Start time for timeout calculation
-        start_time = asyncio.get_event_loop().time()
-
-        # Loop until the transaction is confirmed or the timeout is reached
-        while True:
-            try:
-                # Attempt to get the transaction receipt
-                self.l2_deposit_tx_receipt = (
-                    await get_transaction_receipt( self.l2_provider,
-                        self.l2_deposit_tx_hash
-                    )
+        if (self.l2_deposit_tx_receipt is None):
+            self.l2_deposit_tx_receipt = (
+                await get_transaction_receipt( self.l2_provider,
+                    self.l2_deposit_tx_hash,
+                    confirmations,
+                    chosen_timeout
                 )
+            )
+            print('self.l2_deposit_tx_receipt', self.l2_deposit_tx_receipt)
 
-                # Check if the number of confirmations is met
-                current_block = await self.l2_provider.eth.block_number
-                if (
-                    confirmations is None
-                    or current_block - self.l2_deposit_tx_receipt.blockNumber
-                    >= confirmations
-                ):
-                    return self.l2_deposit_tx_receipt
-
-            except TransactionNotFound:
-                # If the transaction is not found, continue the loop
-                pass
-
-            # Check if the timeout is reached
-            if asyncio.get_event_loop().time() - start_time > chosen_timeout:
-                raise TimeoutError(
-                    f"Timeout reached waiting for transaction receipt: {self.l2_deposit_tx_hash}"
-                )
-
-            # Wait a short time before trying again
-            await asyncio.sleep(5)
+        return self.l2_deposit_tx_receipt
