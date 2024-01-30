@@ -210,7 +210,10 @@ async def test_setup() -> CaseDict:
     
     l1_signer_address = Web3.to_checksum_address(seed.address)
     l2_signer_address = Web3.to_checksum_address(seed.address)
-
+    print('L1_SIGNER_ADDRESS', l1_signer_address)
+    print('L2_SIGNER_ADDRESS', l2_signer_address)
+    print('L1_DEPLOYER_ADDRESS', l1_deployer.account.address)
+    print('L2_DEPLOYER_ADDRESS', l2_deployer.account.address)
     # Set the default account for each provider to the new signer accounts
     eth_provider.eth.default_account = l1_signer_address
     arb_provider.eth.default_account = l2_signer_address

@@ -9,7 +9,7 @@ from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS
 from typing import Union, Optional, Dict, Any
-from src.lib.utils.helper import load_contract
+from src.lib.utils.helper import load_contract, sign_and_sent_raw_transaction
 
 # Not sure about the types...
 EthDepositParams = Dict[str, Any]  # Replace with actual structure
@@ -39,13 +39,17 @@ class EthBridger(AssetBridger):
         return EthBridger(await get_l2_network(l2_provider))
 
     async def get_deposit_request(self, params):
-        inbox = load_contract(provider=self.l2_provider, contract_name='Inbox', address=self.l2_network.eth_bridge.inbox, is_classic=False)
+        inbox = load_contract(provider=params['l1Signer'].provider, contract_name='Inbox', address=self.l2_network.eth_bridge.inbox, is_classic=False)
 
-        function_data = inbox.encodeFunctionData('depositEth()')
+        function_data = inbox.functions.depositEth().build_transaction(
+            {
+
+            }
+        )['data']
         return {
             'txRequest': {
                 'to': self.l2_network.eth_bridge.inbox,
-                'value': Web3.to_wei(params.amount, 'ether'),
+                'value': params['amount'],
                 'data': function_data,
                 'from': params['from'],
             },
@@ -60,17 +64,19 @@ class EthBridger(AssetBridger):
         else:
             eth_deposit = await self.get_deposit_request({
                 **params,
-                'from': await params['l1Signer'].getAddress(),
+                'from': params['l1Signer'].account.address,
             })
             l1_signer = params['l1Signer']
             overrides = params.get('overrides', {})
 
-        tx = await l1_signer.send_transaction({
+        tx = {
             **eth_deposit['txRequest'],
             **overrides
-        })
+        }
+        print('params',tx)
+        tx_receipt = sign_and_sent_raw_transaction(l1_signer, tx)
 
-        return L1TransactionReceipt.monkey_patch_eth_deposit_wait(tx)
+        return L1TransactionReceipt.monkey_patch_eth_deposit_wait(tx_receipt)
 
     async def get_deposit_to_request(self, params):
         request_params = {

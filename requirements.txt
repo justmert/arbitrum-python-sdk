@@ -1,13 +1,13 @@
 web3==v6.3.0
-rlp 
-eth-utils
-python-dotenv
-pytest
-eth-typing
-asyncio
-pytest-asyncio
-eth-abi
-pyyaml
-mock
-# attrdict
-addict
+rlp==3.0.0
+eth-utils==2.3.1
+python-dotenv==1.0.0
+pytest==7.4.4
+eth-typing==3.5.2
+asyncio==3.4.3
+pytest-asyncio==0.23.3
+eth-abi==4.2.1
+pyyaml==6.0.1
+mock==5.1.0
+addict==2.4.0
+py-evm==0.8.0b1

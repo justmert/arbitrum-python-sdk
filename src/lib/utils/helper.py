@@ -4,6 +4,68 @@ from web3.contract import Contract
 from web3 import Account
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from hexbytes import HexBytes
+from web3 import Web3
+from web3.types import AccessList, Nonce, TxData, Wei
+from eth_utils import encode_hex, to_bytes
+from eth.abc import SignedTransactionAPI
+from eth.vm.forks.arrow_glacier.transactions import (
+    ArrowGlacierTransactionBuilder as TransactionBuilder,
+)
+from typing import Any, Dict, cast
+import rlp
+
+def parse_raw_tx_pyevm(raw_tx: str) -> SignedTransactionAPI:
+    """Convert a raw transaction to a py-evm signed transaction object.
+
+    Inspired by:
+     - https://github.com/ethereum/web3.py/issues/3109#issuecomment-1737744506
+     - https://snakecharmers.ethereum.org/web3-py-patterns-decoding-signed-transactions/
+    """
+    return TransactionBuilder().decode(raw_tx)
+
+
+def get_contract_address(sender_address, nonce):
+    """Compute the contract address like Ethereum does."""
+    # RLP-encode the sender address and nonce
+    encoded_data = rlp.encode([bytes.fromhex(sender_address[2:]), nonce])
+    # Keccak hash the encoded data
+    hashed_data = Web3.solidity_keccak(['bytes'], [encoded_data])
+    # The contract address is the last 20 bytes of the hash
+    contract_address = hashed_data[-20:].hex()
+    return contract_address
+
+
+def parse_raw_tx(raw_tx: str) -> TxData:
+    """Convert a raw transaction to a web3.py TxData dict.
+
+    Inspired by:
+     - https://ethereum.stackexchange.com/a/83855/89782
+     - https://docs.ethers.org/v5/api/utils/transactions/#utils-parseTransaction
+    """
+    tx = parse_raw_tx_pyevm(raw_tx)
+    return {
+        "accessList": cast(AccessList, tx.access_list),
+        "blockHash": None,
+        "blockNumber": None,
+        "chainId": tx.chain_id,
+        "data": HexBytes(Web3.to_hex(tx.data)),
+        "from": Web3.to_checksum_address(encode_hex(tx.sender)),
+        "gas": tx.gas,
+        "gasPrice": None if tx.type_id is not None else cast(Wei, tx.gas_price),
+        "maxFeePerGas": cast(Wei, tx.max_fee_per_gas),
+        "maxPriorityFeePerGas": cast(Wei, tx.max_priority_fee_per_gas),
+        "hash": HexBytes(tx.hash),
+        "input": None,
+        "nonce": cast(Nonce, tx.nonce),
+        "r": HexBytes(tx.r),
+        "s": HexBytes(tx.s),
+        "to": Web3.to_checksum_address("0x0000000000000000000000000000000000000000") if (tx.to.hex() == "0x" or tx.to.hex() == "") else Web3.to_checksum_address(tx.to),
+        "transactionIndex": None,
+        "type": tx.type_id,
+        "v": None,
+        "value": cast(Wei, tx.value),
+    }
 
 
 def load_contract(

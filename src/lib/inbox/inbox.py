@@ -2,8 +2,9 @@ from web3 import Web3
 from web3.contract import Contract
 from typing import Any, Dict, Tuple
 
-
-from src.lib.utils.helper import load_contract
+from eth_abi import encode
+from src.lib.message import l1_to_l2_message_gas_estimator
+from src.lib.utils.helper import load_contract, sign_and_sent_raw_transaction
 from src.lib.data_entities.networks import l1_networks
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.utils.event_fetcher import EventFetcher
@@ -11,12 +12,15 @@ from src.lib.utils.multi_call import MultiCaller
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.message import InboxMessageKind
+import struct
 
 
 class InboxTools:
     def __init__(self, l1_signer: Any, l2_network: Any):
+        self.l1_signer = l1_signer
         self.l1_provider = SignerProviderUtils.get_provider(l1_signer)
         self.l1_network = l1_networks[l2_network.partner_chain_id]
+        self.l2_network = l2_network
         if not self.l1_network:
             raise ArbSdkError(f"L1Network not found for chain id: {l2_network.partner_chain_id}.")
 
@@ -31,24 +35,55 @@ class InboxTools:
 
     def is_contract_creation(self, transaction_l2_request: Any) -> bool:
         return (
-            transaction_l2_request.to == '0x' or
-            not transaction_l2_request.to or
-            transaction_l2_request.to == Web3.to_checksum_address('0x0000000000000000000000000000000000000000')
+            transaction_l2_request['to'] == '0x' or
+            not transaction_l2_request['to'] or
+            transaction_l2_request['to'] == Web3.to_checksum_address('0x0000000000000000000000000000000000000000')
         )
 
     async def estimate_arbitrum_gas(self, transaction_l2_request, l2_provider) -> Dict[str, Any]:
-        node_interface = load_contract(provider=l2_provider, contract_name='NodeInterface', address=NODE_INTERFACE_ADDRESS) # also available in classic!
+        node_interface = load_contract(provider=l2_provider, contract_name='NodeInterface', address=NODE_INTERFACE_ADDRESS, is_classic=False) # also available in classic!
         contract_creation = self.is_contract_creation(transaction_l2_request)
-        gas_components = await node_interface.callStatic.gasEstimateComponents(
-            transaction_l2_request.to or Web3.to_checksum_address('0x0000000000000000000000000000000000000000'),
+
+        gas_components = node_interface.functions.gasEstimateComponents(
+            transaction_l2_request['to'] or Web3.to_checksum_address('0x0000000000000000000000000000000000000000'),
             contract_creation,
-            transaction_l2_request.data,
-            {
-                'from': transaction_l2_request.from_address,
-                'value': transaction_l2_request.value,
-            }
-        )
-        gas_estimate_for_l2 = gas_components.gasEstimate - gas_components.gasEstimateForL1
+            transaction_l2_request['data'],
+            
+        ).call({
+                'from': transaction_l2_request['from'],
+                'value': transaction_l2_request['value'],
+            })
+        print("gas_components", gas_components)
+    #   "outputs": [
+    #     {
+    #       "internalType": "uint64",
+    #       "name": "gasEstimate",
+    #       "type": "uint64"
+    #     },
+    #     {
+    #       "internalType": "uint64",
+    #       "name": "gasEstimateForL1",
+    #       "type": "uint64"
+    #     },
+    #     {
+    #       "internalType": "uint256",
+    #       "name": "baseFee",
+    #       "type": "uint256"
+    #     },
+    #     {
+    #       "internalType": "uint256",
+    #       "name": "l1BaseFeeEstimate",
+    #       "type": "uint256"
+    #     }
+    #   ],
+        gas_components = {
+            'gasEstimate': gas_components[0],
+            'gasEstimateForL1': gas_components[1],
+            'baseFee': gas_components[2],
+            'l1BaseFeeEstimate': gas_components[3],
+        }
+
+        gas_estimate_for_l2 = gas_components["gasEstimate"] - gas_components["gasEstimateForL1"]
         return {**gas_components, 'gasEstimateForL2': gas_estimate_for_l2}
 
     async def get_force_includable_block_range(self, block_number_range_size: int) -> Dict[str, int]:
@@ -122,7 +157,7 @@ class InboxTools:
 
     async def force_include(self, message_delivered_event = None, overrides = None):
         
-        sequencer_inbox = load_contract(provider=self.l1_signer, contract_name='SequencerInbox', address=self.l2_network.eth_bridge.sequencer_inbox, is_classic=False)
+        sequencer_inbox = load_contract(provider=self.l1_provider, contract_name='SequencerInbox', address=self.l2_network.eth_bridge.sequencer_inbox, is_classic=False)
 
         event_info = message_delivered_event or await self.get_force_includable_event()
 
@@ -135,42 +170,73 @@ class InboxTools:
                                                             event_info.event.base_fee_l1, event_info.event.sender,
                                                             event_info.event.message_data_hash, overrides or {})
 
-    async def send_l2_signed_tx(self, signed_tx: str):
+    async def send_l2_signed_tx(self, signed_tx: str, l2_deployer):
+        delayed_inbox = load_contract(provider=self.l1_provider, contract_name='IInbox', address=self.l2_network.eth_bridge.inbox, is_classic=False)
+        print('signed_tx', signed_tx)
+
+        # print(signed_tx.rawTransaction)
+        # Convert hex string to bytes
+        # signed_tx_bytes = Web3.to_bytes(hexstr=signed_tx.rawTransaction)
+        signed_tx_bytes = signed_tx.rawTransaction
+
+        # InboxMessageKind.L2MessageType_signedTx as an integer
+        message_type = InboxMessageKind.L2MessageType_signedTx.value
+
+        # Pack the uint8 integer
+        packed_message_type = struct.pack("B", message_type)  # 'B' is the format code for uint8
+
+        # Concatenate the packed uint8 with the signed transaction bytes
+        send_data_bytes = packed_message_type + signed_tx_bytes
+
+        # Convert result to hex string if needed
+        # send_data_hex = Web3.to_hex(send_data_bytes)
+
+        transaction = delayed_inbox.functions.sendL2Message(send_data_bytes).transact({
+        'from': self.l1_signer.account.address,
+        })
+
+        tx_receipt = self.l1_provider.eth.wait_for_transaction_receipt(transaction)        
+        return tx_receipt
         
-        delayed_inbox = load_contract(provider=self.l1_signer, contract_name='IInbox', address=self.l2_network.eth_bridge.inbox) # also available in classic!
 
-        send_data = Web3.solidityPack(['uint8', 'bytes'], [Web3.to_hex(InboxMessageKind.L2MessageType_signedTx), signed_tx])
-        return await delayed_inbox.functions.sendL2Message(send_data)
 
-    async def sign_l2_tx(self, tx_request, l2_signer: Any) -> str:
+    async def sign_l2_tx(self, tx_request, l2_signer: SignerProviderUtils) -> str:
         tx = {**tx_request}
         contract_creation = self.is_contract_creation(tx)
-
+        print("****", contract_creation)
         if 'nonce' not in tx:
-            tx['nonce'] = await l2_signer.get_transaction_count()
+            tx['nonce'] = l2_signer.provider.eth.get_transaction_count(l2_signer.account.address)
 
         if tx.get('type') == 1 or 'gasPrice' in tx:
             if 'gasPrice' in tx:
-                tx['gasPrice'] = await l2_signer.getGasPrice()
+                tx['gasPrice'] = l2_signer.provider.eth.gas_price
         else:
-            if 'maxFeePerGas' not in tx:
-                fee_data = await l2_signer.getFeeData()
-                tx['maxPriorityFeePerGas'] = fee_data.maxPriorityFeePerGas
-                tx['maxFeePerGas'] = fee_data.maxFeePerGas
+            # Check if maxFeePerGas is not set in the transaction
+            if 'maxFeePerGas' not in tx or tx['maxFeePerGas'] is None:
+                # Fetch the current fee data from the network
+                fee_data = l2_signer.provider.eth.fee_history(1, 'latest', reward_percentiles=[])
+
+                # Set maxPriorityFeePerGas and maxFeePerGas
+                # Note: 'maxPriorityFeePerGas' might need a default value if not provided by fee_data
+                base_fee = fee_data['baseFeePerGas'][0]  # Base fee of the latest block
+                priority_fee = Web3.to_wei(2, 'gwei')     # A default priority fee, adjust as needed
+
+                tx['maxPriorityFeePerGas'] = priority_fee
+                tx['maxFeePerGas'] = base_fee + priority_fee
             tx['type'] = 2
 
-        tx['from'] = await l2_signer.getAddress()
-        tx['chainId'] = await l2_signer.getChainId()
+        tx['from'] = l2_signer.account.address
+        tx['chainId'] = l2_signer.provider.eth.chain_id
 
         if 'to' not in tx:
             tx['to'] = Web3.to_checksum_address('0x0000000000000000000000000000000000000000')
 
         try:
-            tx['gasLimit'] = (await self.estimate_arbitrum_gas(tx, l2_signer.provider)).gasEstimateForL2
+            tx['gas'] = (await self.estimate_arbitrum_gas(tx, l2_signer.provider))["gasEstimateForL2"]
         except Exception:
             raise ArbSdkError('execution failed (estimate gas failed)')
 
         if contract_creation:
             del tx['to']
-
-        return await l2_signer.signTransaction(tx)
+        print('tx', tx)
+        return l2_signer.account.sign_transaction(tx)
