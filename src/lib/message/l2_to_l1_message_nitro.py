@@ -3,6 +3,7 @@ import asyncio
 from web3 import Web3
 from web3.providers.rpc import HTTPProvider
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS
+from src.lib.utils.helper import load_contract
 from src.lib.utils.lib import get_block_ranges_for_l1_block
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.networks import get_l2_network
@@ -53,25 +54,49 @@ class L2ToL1MessageNitro:
             return L2ToL1MessageReaderNitro(l1_signer_or_provider, event)
 
     @staticmethod
-    async def get_l2_to_l1_events(l2_provider, from_block, to_block, position=None, destination=None, hash_=None):
-        with open('src/abi/ArbSys.json') as f:
-            arb_sys_abi = json.load(f)
-        
-        # Connect to the ArbSys contract
-        arb_sys_contract = l2_provider.eth.contract(address=ARB_SYS_ADDRESS, abi=arb_sys_abi)
+    async def get_l2_to_l1_events(l2_provider, filter, position=None, destination=None, hash=None):
+        # Assuming EventFetcher is an equivalent class in Python that can fetch events
+        event_fetcher = EventFetcher(l2_provider)
 
-        # Set up the filters for the event
-        filters = {}
+        argument_filters = {}
         if position:
-            filters['position'] = position
+            argument_filters['position'] = position
         if destination:
-            filters['destination'] = destination
-        if hash_:
-            filters['hash'] = hash_
+            argument_filters['destination'] = destination
+        if hash:
+            argument_filters['hash'] = hash
 
         # Fetch the events
-        events = arb_sys_contract.events.L2ToL1Tx.create_filter(fromBlock=from_block, toBlock=to_block, argument_filters=filters).get_all_entries()
-        return [{'event': event.args, 'transactionHash': event.transactionHash} for event in events]
+        events = await event_fetcher.get_events(
+            contract_factory_name = 'ArbSys',
+            topic_generator=lambda t: t.events.L2ToL1Tx.create_filter(fromBlock=filter['fromBlock'], toBlock = filter['toBlock'], argument_filters = argument_filters).get_all_entries(),
+            filter = {**filter, 'address': ARB_SYS_ADDRESS},
+        )
+
+        return events
+
+    # async def get_l2_to_l1_events(l2_provider, filter, position=None, destination=None, hash_=None):
+    #     # with open('src/abi/ArbSys.json') as f:
+    #     #     arb_sys_abi = json.load(f)
+
+    #     arb_sys_contract = load_contract(provider=l2_provider, contract_name='ArbSys', address=ARB_SYS_ADDRESS, is_classic=False)
+        
+    #     # # Connect to the ArbSys contract
+    #     # arb_sys_contract = l2_provider.eth.contract(address=ARB_SYS_ADDRESS, abi=arb_sys_abi)
+
+    #     # Set up the filters for the event
+    #     filters = {}
+    #     if position:
+    #         filters['position'] = position
+    #     if destination:
+    #         filters['destination'] = destination
+    #     if hash_:
+    #         filters['hash'] = hash_
+
+    #     # Fetch the events
+    #     events = arb_sys_contract.events.L2ToL1Tx.create_filter(fromBlock=filter['fromBlock'], toBlock=filter['toBlock'], argument_filters=filters).get_all_entries()
+    #     x =  [{'event': event.args, 'transactionHash': event.transactionHash} for event in events]
+    #     print('x', x)
 
 
 class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
@@ -202,11 +227,15 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
         if not self.send_root_confirmed:
             l2_network = get_l2_network(l2_provider)  # Ensure get_l2_network is defined
 
-            with open('src/abi/RollupUserLogic.json') as f:
-                rollup_user_logic_abi = json.load(f)
+            # with open('src/abi/RollupUserLogic.json') as f:
+            #     rollup_user_logic_abi = json.load(f)
 
-            rollup_contract = l2_provider.eth.contract(address=l2_network.ethBridge.rollup, abi=rollup_user_logic_abi)
+            # rollup_contract = l2_provider.eth.contract(address=l2_network.ethBridge.rollup, abi=rollup_user_logic_abi)
+            
+            rollup_contract = load_contract(provider=l2_provider, contract_name='RollupUserLogic', address=l2_network.ethBridge.rollup, is_classic=False)
+
             latest_confirmed_node_num = rollup_contract.functions.latestConfirmed().call()
+
             l2_block_confirmed = await self.get_block_from_node_num(rollup_contract, latest_confirmed_node_num, l2_provider)
 
             send_root_size_confirmed = l2_block_confirmed['sendCount']

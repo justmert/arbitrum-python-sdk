@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import json
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from src.lib.utils.helper import load_contract
 
 
 class FetchedEvent:
@@ -66,35 +67,47 @@ class EventFetcher():
     #     return fetched_events
 
 
-    def get_events(self, abi: List[Dict[str, Any]], address: str, event_name: str, from_block: int, to_block: int) -> List[Dict[str, Any]]:
-        contract = self.w3.eth.contract(address=address, abi=abi)
+    # def get_events(self, abi: List[Dict[str, Any]], address: str, event_name: str, from_block: int, to_block: int) -> List[Dict[str, Any]]:
+    #     contract = self.w3.eth.contract(address=address, abi=abi)
 
-        try:
-            event_filter = contract.events[event_name].create_filter(
-                fromBlock=from_block, toBlock=to_block
-            )
-        except BadFunctionCallOutput:
-            # Handle cases where the event is not found in the ABI or other issues
-            return []
+    #     try:
+    #         event_filter = contract.events[event_name].create_filter(
+    #             fromBlock=from_block, toBlock=to_block
+    #         )
+    #     except BadFunctionCallOutput:
+    #         # Handle cases where the event is not found in the ABI or other issues
+    #         return []
 
-        events = event_filter.get_all_entries()
+    #     events = event_filter.get_all_entries()
 
-        return self._format_events(events)
+    #     return self._format_events(events)
 
-    def _format_events(self, events: List[Any]) -> List[Dict[str, Any]]:
-        fetched_events = []
-        for event in events:
-            fetched_event = {
-                'event': event['args'],
-                'topic': event['topics'][0] if event['topics'] else None,
-                'name': event.event,
-                'blockNumber': event.blockNumber,
-                'blockHash': event.blockHash.hex(),
-                'transactionHash': event.transactionHash.hex(),
-                'address': event.address,
-                'topics': [topic.hex() for topic in event['topics']],
-                'data': event['data']
-            }
-            fetched_events.append(fetched_event)
+    # def _format_events(self, events: List[Any]) -> List[Dict[str, Any]]:
+    #     fetched_events = []
+    #     for event in events:
+    #         fetched_event = {
+    #             'event': event['args'],
+    #             'topic': event['topics'][0] if event['topics'] else None,
+    #             'name': event.event,
+    #             'blockNumber': event.blockNumber,
+    #             'blockHash': event.blockHash.hex(),
+    #             'transactionHash': event.transactionHash.hex(),
+    #             'address': event.address,
+    #             'topics': [topic.hex() for topic in event['topics']],
+    #             'data': event['data']
+    #         }
+    #         fetched_events.append(fetched_event)
 
-        return fetched_events
+    #     return fetched_events
+
+    async def get_events(self, contract_factory_name, topic_generator, filter):
+        # Assuming contract_factory is a factory method or class to create a contract instance
+        # and topic_generator is a function that takes a contract and returns a filter object
+        contract_address = filter.get('address', Web3.to_checksum_address('0x0000000000000000000000000000000000000000'))
+        # contract = contract_factory(contract_address, self.provider)
+
+        contract = load_contract(provider=self.provider, contract_name=contract_factory_name, address=contract_address, is_classic=False)
+
+        events = topic_generator(contract)
+
+        return  [{'event': event.args, 'transactionHash': event.transactionHash} for event in events]

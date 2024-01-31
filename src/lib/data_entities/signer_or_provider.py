@@ -76,6 +76,8 @@ class SignerProviderUtils:
 
     @staticmethod
     def signer_has_provider(signer):
+        print("signer", signer)
+        print(type(signer))
         return isinstance(signer, SignerOrProvider)
 
     @staticmethod

@@ -24,25 +24,25 @@ from web3.types import BlockIdentifier
 # Base functionality for L2->L1 messages
 
 # Define helper functions
-def in_classic_range(block_tag: BlockIdentifier, nitro_gen_block: int):
-    if isinstance(block_tag, str):
-        if block_tag == 'earliest':
-            return 0
-        elif block_tag in ['latest', 'pending']:
-            return nitro_gen_block
-        else:
-            raise ArbSdkError(f"Unrecognised block tag: {block_tag}")
-    return min(block_tag, nitro_gen_block)
+# def in_classic_range(block_tag: BlockIdentifier, nitro_gen_block: int):
+#     if isinstance(block_tag, str):
+#         if block_tag == 'earliest':
+#             return 0
+#         elif block_tag in ['latest', 'pending']:
+#             return nitro_gen_block
+#         else:
+#             raise ArbSdkError(f"Unrecognised block tag: {block_tag}")
+#     return min(block_tag, nitro_gen_block)
 
-def in_nitro_range(block_tag: BlockIdentifier, nitro_gen_block: int):
-    if isinstance(block_tag, str):
-        if block_tag == 'earliest':
-            return nitro_gen_block
-        elif block_tag in ['latest', 'pending']:
-            return block_tag
-        else:
-            raise ArbSdkError(f"Unrecognised block tag: {block_tag}")
-    return max(block_tag, nitro_gen_block)
+# def in_nitro_range(block_tag: BlockIdentifier, nitro_gen_block: int):
+#     if isinstance(block_tag, str):
+#         if block_tag == 'earliest':
+#             return nitro_gen_block
+#         elif block_tag in ['latest', 'pending']:
+#             return block_tag
+#         else:
+#             raise ArbSdkError(f"Unrecognised block tag: {block_tag}")
+#     return max(block_tag, nitro_gen_block)
 
 
 class L2ToL1Message:
@@ -59,29 +59,65 @@ class L2ToL1Message:
 
 
     @staticmethod
-    async def get_l2_to_l1_events(l2_provider: BaseProvider, filter: Dict[str, BlockIdentifier], position: Optional[int] = None, destination: Optional[str] = None, hash: Optional[int] = None, index_in_batch: Optional[int] = None) -> List[Dict[str, Union[int, str]]]:
+    async def get_l2_to_l1_events(l2_provider, filter, position=None, destination=None, hash=None, index_in_batch=None):
         l2_network = get_l2_network(l2_provider)
+
+        def in_classic_range(block_tag, nitro_gen_block):
+            if isinstance(block_tag, str):
+                if block_tag == 'earliest':
+                    return 0
+                elif block_tag in ['latest', 'pending']:
+                    return nitro_gen_block
+                else:
+                    raise ArbSdkError(f"Unrecognised block tag. {block_tag}")
+            return min(block_tag, nitro_gen_block)
+
+        def in_nitro_range(block_tag, nitro_gen_block):
+            if isinstance(block_tag, str):
+                if block_tag == 'earliest':
+                    return nitro_gen_block
+                elif block_tag in ['latest', 'pending']:
+                    return block_tag
+                else:
+                    raise ArbSdkError(f"Unrecognised block tag. {block_tag}")
+            return max(block_tag, nitro_gen_block)
 
         classic_filter = {
             'fromBlock': in_classic_range(filter['fromBlock'], l2_network.nitro_genesis_block),
-            'toBlock': in_classic_range(filter['toBlock'], l2_network.nitro_genesis_block)
+            'toBlock': in_classic_range(filter['toBlock'], l2_network.nitro_genesis_block),
         }
 
         nitro_filter = {
             'fromBlock': in_nitro_range(filter['fromBlock'], l2_network.nitro_genesis_block),
-            'toBlock': in_nitro_range(filter['toBlock'], l2_network.nitro_genesis_block)
+            'toBlock': in_nitro_range(filter['toBlock'], l2_network.nitro_genesis_block),
         }
 
         log_queries = []
         if classic_filter['fromBlock'] != classic_filter['toBlock']:
-            log_queries.append(classic.L2ToL1MessageClassic.get_l2_to_l1_events(l2_provider, classic_filter, position, destination, hash, index_in_batch))
+            log_queries.append(
+                classic.L2ToL1MessageClassic.get_l2_to_l1_events(
+                    l2_provider,
+                    classic_filter,
+                    position,
+                    destination,
+                    hash,
+                    index_in_batch
+                )
+            )
 
         if nitro_filter['fromBlock'] != nitro_filter['toBlock']:
-            log_queries.append(nitro.L2ToL1MessageNitro.get_l2_to_l1_events(l2_provider, nitro_filter, position, destination, hash))
+            log_queries.append(
+                nitro.L2ToL1MessageNitro.get_l2_to_l1_events(
+                    l2_provider,
+                    nitro_filter,
+                    position,
+                    destination,
+                    hash
+                )
+            )
 
-        results = log_queries
-        print(results)
-        return [event for sublist in results for event in sublist]  # Flattening the list
+        results = await asyncio.gather(*log_queries)
+        return [event for result in results for event in result]
 
 
 

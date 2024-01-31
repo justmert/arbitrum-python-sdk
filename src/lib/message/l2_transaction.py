@@ -63,9 +63,14 @@ class L2TransactionReceipt:
         self.status = tx.get("status")
 
     def get_l2_to_l1_events(self, provider):
-        return parse_typed_logs( provider,
+        classic_logs = parse_typed_logs( provider,
             "ArbSys", self.logs, "L2ToL1Transaction"
         )
+    
+        nitro_logs = parse_typed_logs(provider, 'ArbSys', self.logs, 'L2ToL1Tx')
+        
+        return [*classic_logs, *nitro_logs]
+
 
     def get_redeem_scheduled_events(self, provider):
         return parse_typed_logs( provider,
@@ -76,7 +81,7 @@ class L2TransactionReceipt:
         provider = SignerProviderUtils.get_provider(l1_signer_or_provider)
         if not provider:
             raise ArbSdkError("Signer not connected to provider.")
-
+        
         return [
             L2ToL1Message.from_event(l1_signer_or_provider, log)
             for log in self.get_l2_to_l1_events(provider)
@@ -115,8 +120,9 @@ class L2TransactionReceipt:
         #     return L2TransactionReceipt(result)
 
         # contract_transaction.wait = patched_wait
-        # return L2TransactionReceipt(contract_transaction)
-        return contract_transaction
+        print('tx', contract_transaction)
+        return L2TransactionReceipt(contract_transaction)
+        # return contract_transaction
     
     @staticmethod
     def to_redeem_transaction(redeem_tx, web3_instance):

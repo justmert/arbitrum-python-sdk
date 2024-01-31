@@ -94,6 +94,13 @@ def parse_raw_tx(raw_tx: str) -> TxData:
 def load_contract(
     provider: Web3, contract_name: str, address: str = None, is_classic: bool = False
 ) -> Contract:
+    
+    if isinstance(provider, SignerOrProvider):
+        provider = provider.provider
+
+    else:
+        provider = provider
+
     if is_classic:
         file_path = f"src/abi/classic/{contract_name}.json"
     else:

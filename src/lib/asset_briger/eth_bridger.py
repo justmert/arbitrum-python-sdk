@@ -2,7 +2,9 @@ from web3 import Web3
 from web3.contract import Contract
 import json
 from src.lib.asset_briger.asset_bridger import AssetBridger
-from src.lib.data_entities.transaction_request import L2ToL1TransactionRequest, is_l1_to_l2_transaction_request
+from src.lib.data_entities.errors import MissingProviderArbSdkError
+from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+from src.lib.data_entities.transaction_request import L2ToL1TransactionRequest, is_l1_to_l2_transaction_request, is_l2_to_l1_transaction_request
 from src.lib.message.l1_to_l2_message_creator import L1ToL2MessageCreator
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.message.l1_transaction import L1TransactionReceipt
@@ -143,25 +145,54 @@ class EthBridger(AssetBridger):
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
     async def get_withdrawal_request(self, params):
-        arb_sys = load_contract(provider=self.l2_provider, contract_name='ArbSys', address=ARB_SYS_ADDRESS) # also available in classic!
-        function_data = arb_sys.encodeFunctionData('withdrawEth', [params['destinationAddress']])
+        print('params', params)
+        arb_sys = load_contract(provider=params['l2Signer'].provider, contract_name='ArbSys', address=ARB_SYS_ADDRESS, is_classic=False)
+
+        function_data = arb_sys.encodeABI(
+            fn_name="withdrawEth",
+            args=[
+                params['destinationAddress']
+            ],
+        )
+
         return {
             'txRequest': {
                 'to': ARB_SYS_ADDRESS,
                 'data': function_data,
-                'value': Web3.to_wei(params['amount'], 'ether'),
+                'value': params['amount'],
                 'from': params['from'],
             },
-            'estimateL1GasLimit': lambda l1_provider: 130000
+            'estimateL1GasLimit': lambda _: 130000
         }
 
     async def withdraw(self, params):
-        if isinstance(params, L2ToL1TxReqAndSigner):
+
+        if(not SignerProviderUtils.signer_has_provider(params['l2Signer'])):
+            raise MissingProviderArbSdkError('l2Signer')
+        
+        await self.check_l2_network(params['l2Signer'])
+
+        if is_l2_to_l1_transaction_request(params):
             request = params
         else:
             request = await self.get_withdrawal_request(params)
-        tx = params.l2Signer.send_transaction({
-            **request.txRequest,
-            **params.overrides
-        })
-        return L2TransactionReceipt.monkey_patch_wait(tx)
+
+        tx = {
+            **request['txRequest'],
+            **params.get('overrides', {})
+        }
+
+        gas_estimate = params['l2Signer'].provider.eth.estimate_gas(tx)
+
+        tx['gas'] = gas_estimate
+        tx['gasPrice'] = params['l2Signer'].provider.eth.gas_price
+        tx['nonce'] = params['l2Signer'].provider.eth.get_transaction_count(params['l2Signer'].account.address)
+
+        signed_tx = params['l2Signer'].account.sign_transaction(tx)
+
+        # Send the raw transaction
+        tx_hash = params['l2Signer'].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        tx_receipt = params['l2Signer'].provider.eth.wait_for_transaction_receipt(tx_hash)
+
+        return L2TransactionReceipt.monkey_patch_wait(tx_receipt)
