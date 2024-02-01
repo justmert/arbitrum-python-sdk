@@ -154,19 +154,23 @@ class Erc20Bridger(AssetBridger):
     ):
         await self.check_l2_network(l2_provider)
         event_fetcher = EventFetcher(l2_provider)
-        l2_arbitrum_gateway = load_contract(
-            provider=l2_provider,
-            contract_name="L2ArbitrumGateway",
-            address=gateway_address,
+
+        argument_filters = {}
+        # Fetch the events
+        events = await event_fetcher.get_events(
+            contract_factory="L2ArbitrumGateway",
+
+            topic_generator=lambda t: t.events.WithdrawalInitiated.create_filter(
+                fromBlock=filter["fromBlock"],
+                toBlock=filter["toBlock"],
+                argument_filters=argument_filters,
+            ),
+
+            filter={**filter, "address": gateway_address},
             is_classic=True,
         )
-        events = await event_fetcher.get_events(
-            l2_arbitrum_gateway.abi,
-            lambda contract: contract.filters.WithdrawalInitiated(
-                None, from_address, to_address
-            ),
-            {**filter, "address": gateway_address},
-        )
+
+
         return (
             [
                 event
@@ -723,17 +727,23 @@ class AdminErc20Bridger(Erc20Bridger):
             or self.l2_network.token_bridge.l1_gateway_router
         )
         event_fetcher = EventFetcher(l1_provider)
-        L1GatewayRouter = load_contract(
-            provider=l1_provider,
-            contract_name="L1GatewayRouter",
-            address=l1_gateway_router_address,
+
+        argument_filters = {}
+        # Fetch the events
+        events = await event_fetcher.get_events(
+            contract_factory="L1GatewayRouter",
+
+            topic_generator=lambda t: t.events.GatewaySet.create_filter(
+                fromBlock=filter["fromBlock"],
+                toBlock=filter["toBlock"],
+                argument_filters=argument_filters,
+            ),
+
+            filter={**filter, "address": l1_gateway_router_address},
             is_classic=True,
         )
-        events = await event_fetcher.get_events(
-            L1GatewayRouter,
-            lambda t: t.filters.GatewaySet(),
-            {**filter, "address": l1_gateway_router_address},
-        )
+
+
         return [a["event"] for a in events]
 
     async def get_l2_gateway_set_events(
@@ -748,17 +758,22 @@ class AdminErc20Bridger(Erc20Bridger):
             or self.l2_network.token_bridge.l2_gateway_router
         )
         event_fetcher = EventFetcher(l2_provider)
-        L2GatewayRouter = load_contract(
-            provider=l2_provider,
-            contract_name="L2GatewayRouter",
-            address=l2_gateway_router_address,
+        
+        argument_filters = {}
+        # Fetch the events
+        events = await event_fetcher.get_events(
+            contract_factory_name="L2GatewayRouter",
+
+            topic_generator=lambda t: t.events.GatewaySet.create_filter(
+                fromBlock=filter["fromBlock"],
+                toBlock=filter["toBlock"],
+                argument_filters=argument_filters,
+            ),
+
+            filter={**filter, "address": l2_gateway_router_address},
             is_classic=True,
         )
-        events = await event_fetcher.get_events(
-            L2GatewayRouter,
-            lambda t: t.filters.GatewaySet(),
-            {**filter, "address": l2_gateway_router_address},
-        )
+
         return [a["event"] for a in events]
 
     def _encode_set_gateways_data(

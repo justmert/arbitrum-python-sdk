@@ -3,10 +3,11 @@ from web3.types import LogReceipt
 from web3.exceptions import BadFunctionCallOutput
 from typing import Any, Dict, List, Optional
 import json
+from src.lib.data_entities.errors import ArbSdkError
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.helper import load_contract
-
+from web3.contract import Contract
 
 class FetchedEvent:
     def __init__(self, event, topic, name, block_number, block_hash, transaction_hash, address, topics, data):
@@ -100,14 +101,20 @@ class EventFetcher():
 
     #     return fetched_events
 
-    async def get_events(self, contract_factory_name, topic_generator, filter):
+    async def get_events(self, contract_factory, topic_generator, filter, is_classic=False):
         # Assuming contract_factory is a factory method or class to create a contract instance
         # and topic_generator is a function that takes a contract and returns a filter object
         contract_address = filter.get('address', Web3.to_checksum_address('0x0000000000000000000000000000000000000000'))
         # contract = contract_factory(contract_address, self.provider)
 
-        contract = load_contract(provider=self.provider, contract_name=contract_factory_name, address=contract_address, is_classic=False)
-
-        events = topic_generator(contract)
+        if isinstance(contract_factory, str):
+            contract = load_contract(provider=self.provider, contract_name=contract_factory, address=contract_address, is_classic=is_classic)
+        
+        elif isinstance(contract_factory, Contract):
+            contract = contract_factory
+        else:
+            raise ArbSdkError("Invalid contract factory type")
+        
+        events = topic_generator(contract).get_all_entries()
 
         return  [{'event': event.args, 'transactionHash': event.transactionHash} for event in events]

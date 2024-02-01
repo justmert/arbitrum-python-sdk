@@ -117,13 +117,25 @@ class InboxTools:
 
     async def get_events_and_increase_range(self, bridge: Contract, search_range_blocks: int, 
                                                 max_search_range_blocks: int, range_multiplier: int):
-            e_fetcher = EventFetcher(self.l1_provider)
+            event_fetcher = EventFetcher(self.l1_provider)
 
             capped_search_range_blocks = min(search_range_blocks, max_search_range_blocks)
             block_range = await self.get_force_includable_block_range(capped_search_range_blocks)
 
-            events = await e_fetcher.get_events(bridge.abi, lambda b: b.filters.MessageDelivered(),
-                                                {'fromBlock': block_range['startBlock'], 'toBlock': block_range['endBlock'], 'address': bridge.address})
+            argument_filters = {}
+            # Fetch the events
+            events = await event_fetcher.get_events(
+                contract_factory=bridge,
+
+                topic_generator=lambda t: t.events.MessageDelivered.create_filter(
+                    fromBlock=block_range['startBlock'],
+                    toBlock=block_range['endBlock'],
+                    argument_filters=argument_filters,
+                ),
+
+                filter={"address": bridge.address},
+            )
+
 
             if events:
                 return events

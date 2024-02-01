@@ -1,4 +1,5 @@
 from src.lib import inbox
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from .test_helpers import (
     fund_l1,
     fund_l2,
@@ -252,17 +253,41 @@ async def test_withdraw_ether_transaction_succeeds():
     message_status = await withdraw_message.status(l2_signer.provider)
     assert message_status == L2ToL1MessageStatus.UNCONFIRMED, f"ETH withdraw status returned {message_status}"
 
-    # Create miners and run them
-    miner1 = Account.create().connect(l1_signer.provider)
-    miner2 = Account.create().connect(l2_signer.provider)
-    await fund_l1(miner1, Web3.to_wei(1, 'ether'))
-    await fund_l2(miner2, Web3.to_wei(1, 'ether'))
+    # # Create miners and run them
+    # miner1 = Account.create().connect(l1_signer.provider)
+    # miner2 = Account.create().connect(l2_signer.provider)
+
+
+        # Set up miners (using random accounts for mining)
+    miner1_seed = Account.create()
+    miner2_seed = Account.create()
+
+    # miner1_address = Web3.to_checksum_address(miner1_seed.address)
+    # miner2_address = Web3.to_checksum_address(miner2_seed.address)
+
+    miner1_private_key = miner1_seed.key.hex()
+    miner2_private_key = miner2_seed.key.hex()
+
+    miner1_account = Account.from_key(miner1_private_key)
+    miner2_account = Account.from_key(miner2_private_key)
+    
+    miner1 = SignerOrProvider(miner1_account, l1_signer.provider)
+    miner2 = SignerOrProvider(miner2_account, l2_signer.provider)
+
+
+
+    fund_l1(miner1, Web3.to_wei(1, 'ether'))
+    fund_l2(miner2, Web3.to_wei(1, 'ether'))
     state = {'mining': True}
-    await asyncio.gather(
+
+    tasks = [
         mine_until_stop(miner1, state),
         mine_until_stop(miner2, state),
         withdraw_message.wait_until_ready_to_execute(l2_signer.provider)
-    )
+    ]
+
+    done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+
     state['mining'] = False
 
     # Check message status after mining

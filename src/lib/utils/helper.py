@@ -16,6 +16,45 @@ from typing import Any, Dict, cast
 import rlp
 import re
 
+
+
+def format_contract_output(contract: Contract, function_name: str, output):
+    # Find the ABI for the given function
+    func_abi = next((item for item in contract.abi if item.get('name') == function_name and item.get('type') == 'function'), None)
+    if not func_abi:
+        raise ValueError(f"Function {function_name} not found in contract ABI")
+
+    # Function to format output recursively based on ABI
+    def format_output(abi_outputs, output_values):
+        if not isinstance(abi_outputs, list) or not abi_outputs:
+            return output_values
+
+        # Handle the case when the function returns a single tuple without a name
+        if len(abi_outputs) == 1 and abi_outputs[0].get('type').startswith('tuple') and not abi_outputs[0].get('name'):
+            return format_output(abi_outputs[0].get('components', []), output_values)
+
+        formatted_output = {}
+        for i, output in enumerate(abi_outputs):
+            output_type = output.get('type')
+            output_name = output.get('name', f'output_{i}')  # Use index as name if name is not provided
+
+            if output_type.startswith('tuple'):
+                # Recursive case for tuples
+                if isinstance(output_values, list) or isinstance(output_values, tuple):
+                    formatted_output[output_name] = format_output(output.get('components', []), output_values[i])
+                else:
+                    # Handle single tuple output
+                    formatted_output[output_name] = format_output(output.get('components', []), output_values)
+            else:
+                # Base case
+                formatted_output[output_name] = output_values[i]
+
+        return formatted_output
+
+    # Format the output based on the ABI
+    return format_output(func_abi.get('outputs', []), output)
+
+
 def get_address(address):
     # Validate if input is a string
     if not isinstance(address, str):
