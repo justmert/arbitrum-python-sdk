@@ -238,9 +238,11 @@ def snake_to_camel(name):
 
 def sign_and_sent_raw_transaction(signer: SignerOrProvider, tx: dict):
     # Build the transaction
-    
     if 'gasPrice' not in tx:
-        tx['gasPrice'] = signer.provider.eth.gas_price
+        if  'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+            pass
+        else:
+            tx['gasPrice'] = signer.provider.eth.gas_price
 
     if 'nonce' not in tx:
         tx['nonce'] = signer.provider.eth.get_transaction_count(signer.account.address)

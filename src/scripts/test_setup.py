@@ -19,6 +19,7 @@ from src.scripts import PROJECT_DIRECTORY
 from .deploy_bridge import deploy_erc20_and_init
 from src.lib.data_entities.networks import L1Network, L2Network, EthBridge, TokenBridge
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from web3.middleware import construct_sign_and_send_raw_middleware
 
 config = {
     'ARB_URL': os.getenv('ARB_URL'),
@@ -215,12 +216,22 @@ async def test_setup() -> CaseDict:
     print('L1_DEPLOYER_ADDRESS', l1_deployer.account.address)
     print('L2_DEPLOYER_ADDRESS', l2_deployer.account.address)
     # Set the default account for each provider to the new signer accounts
-    eth_provider.eth.default_account = l1_signer_address
-    arb_provider.eth.default_account = l2_signer_address
+
     signer_private_key = seed.key.hex()  
     signer_account = Account.from_key(signer_private_key)
 
     
+
+    # acct = eth_provider.eth.account.from_key(os.environ.get('PRIVATE_KEY'))
+    eth_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
+
+    arb_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
+
+    # w3.eth.default_account = acct.address
+
+    eth_provider.eth.default_account = l1_signer_address
+    arb_provider.eth.default_account = l2_signer_address
+
     l1_signer = SignerOrProvider(signer_account, eth_provider)
     l2_signer = SignerOrProvider(signer_account, arb_provider)
     # print("SEED", seed.address)
