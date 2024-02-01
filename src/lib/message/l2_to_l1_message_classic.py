@@ -8,6 +8,9 @@ from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.message import L2ToL1MessageStatus
+from src.lib.utils.event_fetcher import EventFetcher
+from src.lib.utils.helper import load_contract
+from src.lib.utils.lib import is_defined
 
 
 class MessageBatchProofInfo:
@@ -36,25 +39,37 @@ class L2ToL1MessageClassic:
             return L2ToL1MessageReaderClassic(l1_signer_or_provider, batch_number, index_in_batch)
 
     @staticmethod
-    def get_l2_to_l1_events(l2_provider, from_block, to_block, batch_number=None, destination=None, unique_id=None, index_in_batch=None):
-        # Load ABI files for ArbSys
-        with open('src/abi/ArbSys.json') as f:
-            arb_sys_abi = json.load(f)
+    async def get_l2_to_l1_events(l2_provider, filter, batch_number=None, destination=None, unique_id=None, index_in_batch=None):        
+        event_fetcher = EventFetcher(l2_provider)
 
-        arb_sys_contract = l2_provider.eth.contract(address=Web3.to_checksum_address(ARB_SYS_ADDRESS), abi=arb_sys_abi)
-
-        filters = {}
+        argument_filters = {}
         if batch_number:
-            filters['batchNumber'] = batch_number
+            argument_filters['batchNumber'] = batch_number
         if destination:
-            filters['destination'] = destination
+            argument_filters['destination'] = destination
         if unique_id:
-            filters['uniqueId'] = unique_id
+            argument_filters['uniqueId'] = unique_id
 
-        events = arb_sys_contract.events.L2ToL1Transaction.create_filter(fromBlock=from_block, toBlock=to_block, argument_filters=filters).get_all_entries()
+
+        events = [{**l.event, 'transactionHash': l.transactionHash} for l in await event_fetcher.get_events(
+            contract_factory="ArbSys",
+
+            topic_generator=lambda t: t.events.L2ToL1Transaction.create_filter(
+                fromBlock=filter["fromBlock"],
+                toBlock=filter["toBlock"],
+                argument_filters=argument_filters,
+            ),
+
+            filter={**filter, "address": ARB_SYS_ADDRESS},
+            is_classic=False,
+        )]
 
         if index_in_batch is not None:
-            return [event for event in events if event.args.indexInBatch == index_in_batch]
+            index_items =  [event for event in events if event.args.indexInBatch == index_in_batch]
+            if index_items:
+                raise ArbSdkError("More than one indexed item found in batch.")
+            else:
+                return []
         else:
             return events
         
@@ -67,20 +82,21 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
         self.proof = None
 
     async def get_outbox_address(self, l2_provider, batch_number):
-        if self.outbox_address is None:
+        
+        if (not is_defined(self.outbox_address)):
             l2_network = get_l2_network(l2_provider)
 
-            outboxes = l2_network.eth_bridge.classic_outboxes.items() if l2_network.eth_bridge.classic_outboxes else []
+            outboxes = l2_network.eth_bridge.classic_outboxes.items() if is_defined(l2_network.eth_bridge.classic_outboxes) else []
+
             sorted_outboxes = sorted(outboxes, key=lambda x: x[1])
 
-            for outbox, activation_batch_number in sorted_outboxes:
-                if activation_batch_number > batch_number:
-                    self.outbox_address = outbox
-                    break
+            res = next((item for index, item in enumerate(sorted_outboxes) if index == len(sorted_outboxes) - 1 or sorted_outboxes[index + 1][1] > batch_number), None)
 
-            if self.outbox_address is None:
+            if(not res):
                 self.outbox_address = '0x0000000000000000000000000000000000000000'
-
+            else:
+                self.outbox_address = res[0]
+            
         return self.outbox_address
 
     async def outbox_entry_exists(self, l2_provider):

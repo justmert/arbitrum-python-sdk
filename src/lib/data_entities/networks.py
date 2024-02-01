@@ -5,7 +5,7 @@ import json
 import asyncio
 from .signer_or_provider import SignerProviderUtils
 import os
-from src.lib.utils.helper import CaseDict
+from src.lib.utils.helper import CaseDict, load_contract
 from web3.middleware import geth_poa_middleware
 
 
@@ -369,14 +369,21 @@ def get_l2_network(signer_or_provider_or_chain_id):
 
 def get_eth_bridge_information(rollup_contract_address, l1_signer_or_provider):
     # Load ABI from JSON file
-    with open("src/abi/RollupAdminLogic.json", "r") as file:
-        contract_data = json.load(file)
-        abi = contract_data["abi"]
+    # with open("src/abi/RollupAdminLogic.json", "r") as file:
+    #     contract_data = json.load(file)
+    #     abi = contract_data["abi"]
 
-    rollup = l1_signer_or_provider.eth.contract(
-        address=rollup_contract_address, abi=abi
+    # rollup = l1_signer_or_provider.eth.contract(
+    #     address=rollup_contract_address, abi=abi
+    # )
+
+    rollup = load_contract(
+        provider = l1_signer_or_provider,
+        contract_name="RollupAdminLogic",
+        address=rollup_contract_address,
+        is_classic=False
+
     )
-
     bridge = rollup.functions.bridge().call()
     inbox = rollup.functions.inbox().call()
     sequencer_inbox = rollup.functions.sequencerInbox().call()

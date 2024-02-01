@@ -42,7 +42,7 @@ class Erc20Bridger(AssetBridger):
 
     @classmethod
     async def from_provider(cls, l2_provider):
-        l2_network = await get_l2_network(l2_provider)
+        l2_network = get_l2_network(l2_provider)
         return cls(l2_network)
 
     async def get_l1_gateway_address(self, erc20_l1_address, l1_provider):

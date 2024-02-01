@@ -38,7 +38,7 @@ class EthBridger(AssetBridger):
 
     @staticmethod
     async def from_provider(l2_provider):
-        return EthBridger(await get_l2_network(l2_provider))
+        return EthBridger(get_l2_network(l2_provider))
 
     async def get_deposit_request(self, params):
         inbox = load_contract(provider=params['l1Signer'].provider, contract_name='Inbox', address=self.l2_network.eth_bridge.inbox, is_classic=False)

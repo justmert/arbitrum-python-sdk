@@ -9,6 +9,8 @@ from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.helper import load_contract
 from web3.contract import Contract
 
+from test import CaseDict
+
 class FetchedEvent:
     def __init__(self, event, topic, name, block_number, block_hash, transaction_hash, address, topics, data):
         self.event = event
@@ -117,4 +119,25 @@ class EventFetcher():
         
         events = topic_generator(contract).get_all_entries()
 
-        return  [{'event': event.args, 'transactionHash': event.transactionHash} for event in events]
+        
+        # return  [{'event': event.args, 'transactionHash': event.transactionHash} for event in events]
+        return _format_events(events)
+
+def _format_events(self, events: List[Any]) -> List[Dict[str, Any]]:
+    fetched_events = []
+    for event in events:
+        fetched_event = CaseDict({
+            'event': event['args'],
+            'topic': event.get('topics', None),
+            'name': event.event,
+            'blockNumber': event.blockNumber,
+            'blockHash': event.blockHash.hex(),
+            'transactionHash': event.transactionHash.hex(),
+            'address': event.address,
+            'topics': [topic.hex() for topic in event['topics']],
+            'data': event['data']
+        })
+        fetched_events.append(fetched_event)
+
+    return fetched_events
+

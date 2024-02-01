@@ -3,19 +3,19 @@ from web3.contract import Contract
 from typing import Any, Dict, Union, Optional
 import json
 from src.lib.data_entities.networks import get_l2_network
+from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.transaction_request import is_l1_to_l2_transaction_request
 from src.lib.utils.lib import get_base_fee
 from src.lib.data_entities.errors import MissingProviderArbSdkError
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.message.l1_to_l2_message_gas_estimator import L1ToL2MessageGasEstimator
 from src.lib.utils.helper import load_contract, sign_and_sent_raw_transaction
-# Assuming that other necessary classes and functions are implemented in Python
 
 
 class L1ToL2MessageCreator:
     def __init__(self, l1_signer):
         self.l1_signer = l1_signer
-        if not l1_signer.provider:
+        if(not SignerProviderUtils.signer_has_provider(l1_signer)):
             raise MissingProviderArbSdkError("l1Signer")
 
     @staticmethod
@@ -45,14 +45,12 @@ class L1ToL2MessageCreator:
         if call_value_refund_address is None:
             call_value_refund_address = params.get("from")
 
-        print('paramssss', params)
         parsed_params = {
             **params,
             "excessFeeRefundAddress": excess_fee_refund_address,
             "callValueRefundAddress": call_value_refund_address,
         }
 
-        print('parsed_params', parsed_params)
         estimates = await L1ToL2MessageCreator.get_ticket_estimate(
             parsed_params, l1_provider, l2_provider, options
         )

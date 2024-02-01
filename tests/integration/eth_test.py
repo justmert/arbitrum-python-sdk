@@ -54,9 +54,10 @@ async def test_transfers_ether_on_l2():
 
     # # Send the transaction to the network
     # tx_hash = l2_signer.provider.eth.send_raw_transaction(tx.rawTransaction)
-    # tx_receipt = l2_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
-    tx_receipt = l2_signer.provider.eth.send_transaction(tx)
-    print('tx_receipt', tx_receipt)
+    tx_hash = l2_signer.provider.eth.send_transaction(tx)
+    print('tx_hash', tx_hash)
+
+    tx_receipt = l2_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
     # Check balances after transaction
     balance_after = l2_signer.provider.eth.get_balance(l2_signer.account.address)
