@@ -14,7 +14,18 @@ from src.lib.utils.lib import is_defined
 
 
 class MessageBatchProofInfo:
-    def __init__(self, proof, path, l2_sender, l1_dest, l2_block, l1_block, timestamp, amount, calldata_for_l1):
+    def __init__(
+        self,
+        proof,
+        path,
+        l2_sender,
+        l1_dest,
+        l2_block,
+        l1_block,
+        timestamp,
+        amount,
+        calldata_for_l1,
+    ):
         self.proof = proof
         self.path = path
         self.l2_sender = l2_sender
@@ -32,47 +43,62 @@ class L2ToL1MessageClassic:
         self.index_in_batch = index_in_batch
 
     @staticmethod
-    def from_batch_number(l1_signer_or_provider, batch_number, index_in_batch, l1_provider=None):
-        if  SignerProviderUtils.is_signer(l1_signer_or_provider):
-            return L2ToL1MessageWriterClassic(l1_signer_or_provider, batch_number, index_in_batch, l1_provider)
+    def from_batch_number(
+        l1_signer_or_provider, batch_number, index_in_batch, l1_provider=None
+    ):
+        if SignerProviderUtils.is_signer(l1_signer_or_provider):
+            return L2ToL1MessageWriterClassic(
+                l1_signer_or_provider, batch_number, index_in_batch, l1_provider
+            )
         else:
-            return L2ToL1MessageReaderClassic(l1_signer_or_provider, batch_number, index_in_batch)
+            return L2ToL1MessageReaderClassic(
+                l1_signer_or_provider, batch_number, index_in_batch
+            )
 
     @staticmethod
-    async def get_l2_to_l1_events(l2_provider, filter, batch_number=None, destination=None, unique_id=None, index_in_batch=None):        
+    async def get_l2_to_l1_events(
+        l2_provider,
+        filter,
+        batch_number=None,
+        destination=None,
+        unique_id=None,
+        index_in_batch=None,
+    ):
         event_fetcher = EventFetcher(l2_provider)
 
         argument_filters = {}
         if batch_number:
-            argument_filters['batchNumber'] = batch_number
+            argument_filters["batchNumber"] = batch_number
         if destination:
-            argument_filters['destination'] = destination
+            argument_filters["destination"] = destination
         if unique_id:
-            argument_filters['uniqueId'] = unique_id
+            argument_filters["uniqueId"] = unique_id
 
-
-        events = [{**l.event, 'transactionHash': l.transactionHash} for l in await event_fetcher.get_events(
-            contract_factory="ArbSys",
-
-            topic_generator=lambda t: t.events.L2ToL1Transaction.create_filter(
-                fromBlock=filter["fromBlock"],
-                toBlock=filter["toBlock"],
-                argument_filters=argument_filters,
-            ),
-
-            filter={**filter, "address": ARB_SYS_ADDRESS},
-            is_classic=False,
-        )]
+        events = [
+            {**l.event, "transactionHash": l.transactionHash}
+            for l in await event_fetcher.get_events(
+                contract_factory="ArbSys",
+                topic_generator=lambda t: t.events.L2ToL1Transaction.create_filter(
+                    fromBlock=filter["fromBlock"],
+                    toBlock=filter["toBlock"],
+                    argument_filters=argument_filters,
+                ),
+                filter={**filter, "address": ARB_SYS_ADDRESS},
+                is_classic=False,
+            )
+        ]
 
         if index_in_batch is not None:
-            index_items =  [event for event in events if event.args.indexInBatch == index_in_batch]
+            index_items = [
+                event for event in events if event.args.indexInBatch == index_in_batch
+            ]
             if index_items:
                 raise ArbSdkError("More than one indexed item found in batch.")
             else:
                 return []
         else:
             return events
-        
+
 
 class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
     def __init__(self, l1_provider, batch_number, index_in_batch):
@@ -82,66 +108,95 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
         self.proof = None
 
     async def get_outbox_address(self, l2_provider, batch_number):
-        
-        if (not is_defined(self.outbox_address)):
+        if not is_defined(self.outbox_address):
             l2_network = get_l2_network(l2_provider)
 
-            outboxes = l2_network.eth_bridge.classic_outboxes.items() if is_defined(l2_network.eth_bridge.classic_outboxes) else []
+            outboxes = (
+                l2_network.eth_bridge.classic_outboxes.items()
+                if is_defined(l2_network.eth_bridge.classic_outboxes)
+                else []
+            )
 
             sorted_outboxes = sorted(outboxes, key=lambda x: x[1])
 
-            res = next((item for index, item in enumerate(sorted_outboxes) if index == len(sorted_outboxes) - 1 or sorted_outboxes[index + 1][1] > batch_number), None)
+            res = next(
+                (
+                    item
+                    for index, item in enumerate(sorted_outboxes)
+                    if index == len(sorted_outboxes) - 1
+                    or sorted_outboxes[index + 1][1] > batch_number
+                ),
+                None,
+            )
 
-            if(not res):
-                self.outbox_address = '0x0000000000000000000000000000000000000000'
+            if not res:
+                self.outbox_address = "0x0000000000000000000000000000000000000000"
             else:
                 self.outbox_address = res[0]
-            
+
         return self.outbox_address
 
     async def outbox_entry_exists(self, l2_provider):
         outbox_address = await self.get_outbox_address(l2_provider, self.batch_number)
-        with open('src/abi/Outbox.json') as f:
-            outbox_abi = json.load(f)
 
-        outbox_contract = l2_provider.eth.contract(address=outbox_address, abi=outbox_abi)
+        outbox_contract = load_contract(
+            provider=l2_provider,
+            contract_name="Outbox",
+            address=outbox_address,
+            is_classic=False,
+        )
+
         return outbox_contract.functions.outboxEntryExists(self.batch_number).call()
 
     @staticmethod
     async def try_get_proof_static(l2_provider, batch_number, index_in_batch):
-        with open('src/abi/NodeInterface.json') as f:
+        with open("src/abi/NodeInterface.json") as f:
             node_interface_abi = json.load(f)
 
-        node_interface_contract = l2_provider.eth.contract(address=NODE_INTERFACE_ADDRESS, abi=node_interface_abi)
+        node_interface_contract = l2_provider.eth.contract(
+            address=NODE_INTERFACE_ADDRESS, abi=node_interface_abi
+        )
+
+        load_contract(
+            provider=l2_provider,
+            contract_name="NodeInterface",
+            address=NODE_INTERFACE_ADDRESS,
+            is_classic=False,
+        )
         try:
-            return node_interface_contract.functions.legacyLookupMessageBatchProof(batch_number, index_in_batch).call()
+            return node_interface_contract.functions.legacyLookupMessageBatchProof(
+                batch_number, index_in_batch
+            ).call()
+
         except Exception as e:
             if "batch doesn't exist" in str(e):
                 return None
             else:
                 raise e
 
-
     async def try_get_proof(self, l2_provider):
-        if self.proof is None:
-            self.proof = await L2ToL1MessageReaderClassic.try_get_proof_static(l2_provider, self.batch_number, self.index_in_batch)
+        if not is_defined(self.proof):
+            self.proof = await L2ToL1MessageReaderClassic.try_get_proof_static(
+                l2_provider, self.batch_number, self.index_in_batch
+            )
         return self.proof
-
 
     async def has_executed(self, l2_provider):
         proof_info = await self.try_get_proof(l2_provider)
-        if proof_info is None:
+        if not is_defined(proof_info):
             return False
-        
-        with open('src/abi/Outbox.json') as f:
-            outbox_abi = json.load(f)
 
         outbox_address = await self.get_outbox_address(l2_provider, self.batch_number)
-        outbox_contract = l2_provider.eth.contract(address=Web3.to_checksum_address(outbox_address), abi=outbox_abi)
+
+        outbox_contract = load_contract(
+            provider=self.l1_provider,
+            contract_name="Outbox",
+            address=outbox_address,
+            is_classic=False,
+        )
 
         try:
-            # Call the executeTransaction method statically to check if the message has already been executed
-            outbox_contract.functions.executeTransaction(
+            transaction = outbox_contract.functions.executeTransaction(
                 self.batch_number,
                 proof_info.proof,
                 proof_info.path,
@@ -151,13 +206,15 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
                 proof_info.l1_block,
                 proof_info.timestamp,
                 proof_info.amount,
-                proof_info.calldata_for_l1
-            ).call()
+                proof_info.calldata_for_l1,
+            )
+
+            self.l1_provider.send_transaction(transaction)
             return False
         except Exception as e:
-            if 'ALREADY_SPENT' in str(e):
+            if "ALREADY_SPENT" in str(e):
                 return True
-            if 'NO_OUTBOX_ENTRY' in str(e):
+            if "NO_OUTBOX_ENTRY" in str(e):
                 return False
             raise e
 
@@ -168,47 +225,60 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
                 return L2ToL1MessageStatus.EXECUTED
 
             outbox_entry_exists = await self.outbox_entry_exists(l2_provider)
-            return L2ToL1MessageStatus.CONFIRMED if outbox_entry_exists else L2ToL1MessageStatus.UNCONFIRMED
+            return (
+                L2ToL1MessageStatus.CONFIRMED
+                if outbox_entry_exists
+                else L2ToL1MessageStatus.UNCONFIRMED
+            )
         except Exception:
             return L2ToL1MessageStatus.UNCONFIRMED
 
-    async def wait_until_outbox_entry_created(self, l2_provider, retry_delay=500):
+    async def wait_until_outbox_entry_created(self, l2_provider, retry_delay=1000):
         exists = await self.outbox_entry_exists(l2_provider)
         if exists:
             return
         else:
-            await asyncio.sleep(retry_delay / 1000)  # Convert milliseconds to seconds
+            await asyncio.sleep(retry_delay / 1000)
             await self.wait_until_outbox_entry_created(l2_provider, retry_delay)
 
     async def get_first_executable_block(self, l2_provider):
-        # For classic l2toL1 messages, this method always returns None
-        # as they can be executed in any block now.
         return None
 
 
 class L2ToL1MessageWriterClassic(L2ToL1MessageReaderClassic):
     def __init__(self, l1_signer, batch_number, index_in_batch, l1_provider=None):
-        super().__init__(l1_provider if l1_provider else l1_signer.provider, batch_number, index_in_batch)
+        super().__init__(
+            l1_provider if l1_provider else l1_signer.provider,
+            batch_number,
+            index_in_batch,
+        )
         self.l1_signer = l1_signer
 
     async def execute(self, l2_provider, overrides=None):
         status = await self.status(l2_provider)
         if status != L2ToL1MessageStatus.CONFIRMED:
-            raise Exception(f"Cannot execute message. Status is: {status} but must be {L2ToL1MessageStatus.CONFIRMED}.")
+            raise Exception(
+                f"Cannot execute message. Status is: {status} but must be {L2ToL1MessageStatus.CONFIRMED}."
+            )
 
         proof_info = await self.try_get_proof(l2_provider)
-        if proof_info is None:
-            raise Exception(f"Unexpected missing proof: {self.batch_number} {self.index_in_batch}")
-
-
-        with open('src/abi/Outbox.json') as f:
-            outbox_abi = json.load(f)
+        if not is_defined(proof_info):
+            raise Exception(
+                f"Unexpected missing proof: {self.batch_number} {self.index_in_batch}"
+            )
 
         outbox_address = await self.get_outbox_address(l2_provider, self.batch_number)
-        outbox_contract = l2_provider.eth.contract(address=Web3.to_checksum_address(outbox_address), abi=outbox_abi)
 
-        # Execute the transaction
-        # Note: The actual execution logic will depend on your setup and might need adjustments.
+        outbox_contract = load_contract(
+            provider=self.l1_provider,
+            contract_name="Outbox",
+            address=outbox_address,
+            is_classic=False,
+        )
+
+        if overrides is None:
+            overrides = {}
+
         transaction = outbox_contract.functions.executeTransaction(
             self.batch_number,
             proof_info.proof,
@@ -220,9 +290,6 @@ class L2ToL1MessageWriterClassic(L2ToL1MessageReaderClassic):
             proof_info.timestamp,
             proof_info.amount,
             proof_info.calldata_for_l1,
-            overrides if overrides else {}
-        )
-        # Assuming `l1_signer` has the necessary methods to send a transaction.
-        # This part may need to be adjusted based on how your Signer class is implemented.
-        return await self.l1_signer.send_transaction(transaction)
+        ).build_transaction({**overrides})
 
+        return self.l1_signer.send_transaction(transaction)
