@@ -294,8 +294,8 @@ async def test_withdraw_ether_transaction_succeeds():
     assert await withdraw_message.status(l2_signer.provider) == L2ToL1MessageStatus.CONFIRMED, "Message status should be confirmed"
 
     # Execute the withdrawal
-    exec_tx = await withdraw_message.execute(l2_signer.provider)
-    exec_rec = await exec_tx.wait()
+    exec_rec = await withdraw_message.execute(l2_signer.provider)
+    # exec_rec = await exec_tx.wait()
 
     # Validate gas used
     assert exec_rec.gasUsed < l1_gas_estimate, "Gas used greater than estimate"

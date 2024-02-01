@@ -3,7 +3,7 @@ import asyncio
 from web3 import Web3
 from web3.providers.rpc import HTTPProvider
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS
-from src.lib.utils.helper import format_contract_output, load_contract
+from src.lib.utils.helper import format_contract_output, load_contract, sign_and_sent_raw_transaction
 from src.lib.utils.lib import get_block_ranges_for_l1_block
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.networks import get_l2_network
@@ -428,6 +428,69 @@ class L2ToL1MessageWriterNitro(L2ToL1MessageReaderNitro):
 
         # Execute the transaction
         # Note: Implement the logic to send a transaction with the signer
+        """      "inputs": [
+        {
+          "internalType": "bytes32[]",
+          "name": "proof",
+          "type": "bytes32[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "l2Sender",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "l2Block",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "l1Block",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "l2Timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+
+        """
+        print(
+            "proof", proof,
+            "self.event['position']", self.event["position"],
+            "self.event['caller']", self.event["caller"],
+            "self.event['destination']", self.event["destination"],
+            "self.event['arbBlockNum']", self.event["arbBlockNum"],
+            "self.event['ethBlockNum']", self.event["ethBlockNum"],
+            "self.event['timestamp']", self.event["timestamp"],
+            "self.event['callvalue']", self.event["callvalue"],
+            "self.event['data']", self.event["data"],
+            "overrides", overrides
+        )
+        if overrides is None:
+            overrides = {}
         transaction = outbox_contract.functions.executeTransaction(
             proof,
             self.event["position"],
@@ -438,9 +501,20 @@ class L2ToL1MessageWriterNitro(L2ToL1MessageReaderNitro):
             self.event["timestamp"],
             self.event["callvalue"],
             self.event["data"],
-            overrides if overrides else {},
-        )
+            # overrides if overrides else {},
+        ).build_transaction({
+            'from': self.l1_signer.account.address,
+            'gasPrice': self.l1_provider.eth.gas_price,
+            'nonce': self.l1_provider.eth.get_transaction_count(self.l1_signer.account.address),
+            'chainId': self.l1_provider.eth.chain_id,
+            **overrides
+        })
 
+        if transaction.get('gas', None) is None:
+            transaction['gas'] = self.l1_provider.eth.estimate_gas(transaction)
+
+        tx_receipt = sign_and_sent_raw_transaction(self.l1_signer, transaction)
+        print('tx_receipt', tx_receipt)
         # Assuming `l1_signer` has methods to send a transaction
         # This part may need to be adjusted based on how your Signer class is implemented
-        return await self.l1_signer.send_transaction(transaction)
+        return tx_receipt
