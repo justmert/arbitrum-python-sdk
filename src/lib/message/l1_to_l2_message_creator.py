@@ -15,7 +15,7 @@ from src.lib.utils.helper import load_contract, sign_and_sent_raw_transaction
 class L1ToL2MessageCreator:
     def __init__(self, l1_signer):
         self.l1_signer = l1_signer
-        if(not SignerProviderUtils.signer_has_provider(l1_signer)):
+        if not SignerProviderUtils.signer_has_provider(l1_signer):
             raise MissingProviderArbSdkError("l1Signer")
 
     @staticmethod
@@ -33,15 +33,11 @@ class L1ToL2MessageCreator:
     async def get_ticket_creation_request(
         params, l1_provider, l2_provider, options=None
     ):
-        excess_fee_refund_address = params.get(
-            "excessFeeRefundAddress", None
-        )
+        excess_fee_refund_address = params.get("excessFeeRefundAddress", None)
         if excess_fee_refund_address is None:
             excess_fee_refund_address = params.get("from")
 
-        call_value_refund_address = params.get(
-            "callValueRefundAddress", None
-        )
+        call_value_refund_address = params.get("callValueRefundAddress", None)
         if call_value_refund_address is None:
             call_value_refund_address = params.get("from")
 
@@ -57,7 +53,10 @@ class L1ToL2MessageCreator:
 
         l2_network = get_l2_network(l2_provider)
         inbox_contract = load_contract(
-            contract_name="Inbox", address=l2_network.eth_bridge.inbox, provider=l1_provider, is_classic=False
+            contract_name="Inbox",
+            address=l2_network.eth_bridge.inbox,
+            provider=l1_provider,
+            is_classic=False,
         )
 
         function_data = inbox_contract.encodeABI(
@@ -73,26 +72,6 @@ class L1ToL2MessageCreator:
                 params["data"],
             ],
         )
-        # print('function_data', function_data)
-        # function_data2 = inbox_contract.functions.createRetryableTicket(
-        #     params["to"],
-        #     params["l2CallValue"],
-        #     estimates["maxSubmissionCost"],
-        #     excess_fee_refund_address,
-        #     call_value_refund_address,
-        #     estimates["gasLimit"],
-        #     estimates["maxFeePerGas"],
-        #     params["data"],
-
-        # ).build_transaction({
-        #     'from': params["from"],
-        #     # 'nonce': l1_provider.eth.get_transaction_count(params["from"]),
-        #     'value': estimates["deposit"],
-        #     # 'gas': estimates["gasLimit"],
-        #     # 'gasPrice': l1_provider.eth.gas_price,
-        #     # 'chainId': l1_provider.eth.chain_id,
-        # })['data']
-        # print('function_data2', function_data2)
 
         tx_request = {
             "to": l2_network.eth_bridge.inbox,
@@ -101,16 +80,24 @@ class L1ToL2MessageCreator:
             "from": params["from"],
         }
 
-        retryable_data = {**params, **estimates}
+        retryable_data = {
+            "data": params["data"],
+            "from": params["from"],
+            "to": params["to"],
+            "excessFeeRefundAddress": excess_fee_refund_address,
+            "callValueRefundAddress": call_value_refund_address,
+            "l2CallValue": params["l2CallValue"],
+            "maxSubmissionCost": estimates["maxSubmissionCost"],
+            "maxFeePerGas": estimates["maxFeePerGas"],
+            "gasLimit": estimates["gasLimit"],
+            "deposit": estimates["deposit"],
+        }
 
         async def is_valid():
             re_estimates = await L1ToL2MessageCreator.get_ticket_estimate(
                 parsed_params, l1_provider, l2_provider, options
             )
-            return all(
-                estimates[key] >= re_estimates[key]
-                for key in ["maxFeePerGas", "maxSubmissionCost"]
-            )
+            return L1ToL2MessageGasEstimator.is_valid(estimates, re_estimates)
 
         return {
             "txRequest": tx_request,
@@ -119,24 +106,18 @@ class L1ToL2MessageCreator:
         }
 
     async def create_retryable_ticket(self, params, l2_provider, options=None):
-        if "overrides" in params:
-            overrides = params["overrides"]
-            params.pop("overrides", None)
-        else:
-            overrides = {}
+        l1_provider = SignerProviderUtils.get_provider_or_throw(self.l1_signer)
 
-        l1_provider = self.l1_signer.provider
-        print('buuuneee', is_l1_to_l2_transaction_request(params))
         if is_l1_to_l2_transaction_request(params):
             create_request = params
         else:
-            print('HEYYY PARAMSS', params)
             create_request = await L1ToL2MessageCreator.get_ticket_creation_request(
                 params, l1_provider, l2_provider, options
             )
 
-        print('BURAYI_INCELE', {**create_request["txRequest"], **overrides})
-        tx = sign_and_sent_raw_transaction(self.l1_signer, {**create_request["txRequest"], **overrides})
+        tx_hash = self.l1_signer.eth.send_transaction(
+            {**create_request["txRequest"], **params.get("overrides", {})}
+        )
 
-        # The monkeyPatchWait function needs to be implemented
-        return L1TransactionReceipt.monkey_patch_wait(tx)
+        tx_receipt = self.l1_signer.eth.wait_for_transaction_receipt(tx_hash)
+        return L1TransactionReceipt.monkey_patch_wait(tx_receipt)
