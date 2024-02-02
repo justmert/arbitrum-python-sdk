@@ -30,10 +30,6 @@ async def get_transaction_receipt(provider, tx_hash, confirmations=None, timeout
     # Check if confirmations or timeout is provided
     if confirmations or timeout:
         try:
-            print('buraya girdi')
-            print(confirmations)
-            print(timeout)
-            print('tx_hash', tx_hash)
             receipt = provider.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout / 1000) 
             # Additional check for confirmations if needed
             if confirmations:
