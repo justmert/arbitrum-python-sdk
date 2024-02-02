@@ -5,6 +5,8 @@ import json
 from eth_utils import to_hex
 import copy
 
+from test import CaseDict
+
 
 def parse_typed_logs(provider, contract_name: str, logs, event_name: str, is_classic: bool = False):
     contract_abi = load_abi(contract_name, is_classic=is_classic)
@@ -36,7 +38,7 @@ def parse_typed_logs(provider, contract_name: str, logs, event_name: str, is_cla
                 )
                 log_receipt = LogReceipt(log)
                 decoded_log = contract.events[event_name]().process_log(log_receipt)
-                parsed_logs.append(decoded_log["args"])
+                parsed_logs.append(CaseDict(decoded_log["args"]))
             except Exception as e:
                 print(f"Failed to decode log: {e}")
                 raise e
