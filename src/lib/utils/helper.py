@@ -55,28 +55,37 @@ def format_contract_output(contract: Contract, function_name: str, output):
     return format_output(func_abi.get('outputs', []), output)
 
 
-def get_address(address):
-    # Validate if input is a string
-    if not isinstance(address, str):
-        raise ValueError("Invalid address: not a string")
+# def get_address(address):
+#     # Validate if input is a string
+#     if not isinstance(address, str):
+#         raise ValueError("Invalid address: not a string")
 
-    # Check if it's a valid Ethereum address or ICAP
-    if re.match(r'^(0x)?[0-9a-fA-F]{40}$', address):
-        # Add '0x' prefix if missing
-        if not address.startswith('0x'):
-            address = '0x' + address
+#     # Check if it's a valid Ethereum address or ICAP
+#     if re.match(r'^(0x)?[0-9a-fA-F]{40}$', address):
+#         # Add '0x' prefix if missing
+#         if not address.startswith('0x'):
+#             address = '0x' + address
 
-        # Checksum the address
-        try:
-            return Web3.to_checksum_address(address)
-        except ValueError:
-            raise ValueError("Bad address checksum")
-    elif re.match(r'^XE[0-9]{2}[0-9A-Za-z]{30,31}$', address):
-        # Handle ICAP addresses (simplified, as full ICAP support is complex)
-        raise NotImplementedError("ICAP addresses not fully supported")
-    else:
-        raise ValueError
+#         # Checksum the address
+#         try:
+#             return Web3.to_checksum_address(address)
+#         except ValueError:
+#             raise ValueError("Bad address checksum")
+#     elif re.match(r'^XE[0-9]{2}[0-9A-Za-z]{30,31}$', address):
+#         # Handle ICAP addresses (simplified, as full ICAP support is complex)
+#         raise NotImplementedError("ICAP addresses not fully supported")
+#     else:
+#         raise ValueError
         
+def get_address(address: str) -> str:
+    if Web3.is_address(address):
+        # Normalize and return the checksummed address
+        return Web3.to_checksum_address(address)
+    else:
+        # The address is invalid; raise an error
+        raise ValueError(f"Invalid Ethereum address: {address}")
+
+
 def parse_raw_tx_pyevm(raw_tx: str) -> SignedTransactionAPI:
     """Convert a raw transaction to a py-evm signed transaction object.
 

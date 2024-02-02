@@ -3,7 +3,7 @@ from .errors import ArbSdkError
 from web3 import Web3
 import json
 import asyncio
-from .signer_or_provider import SignerProviderUtils
+from .signer_or_provider import SignerOrProvider, SignerProviderUtils
 import os
 from src.lib.utils.helper import CaseDict, load_contract
 from web3.middleware import geth_poa_middleware
@@ -11,13 +11,15 @@ from web3.middleware import geth_poa_middleware
 
 class Network(CaseDict):
     def __init__(self, chainID, name, explorerUrl, isCustom, gif=None):
-        super().__init__({
-            'chainID': chainID,
-            'name': name,
-            'explorerUrl': explorerUrl,
-            'isCustom': isCustom,
-            'gif': gif
-        })
+        super().__init__(
+            {
+                "chainID": chainID,
+                "name": name,
+                "explorerUrl": explorerUrl,
+                "isCustom": isCustom,
+                "gif": gif,
+            }
+        )
 
 
 class L1Network(Network):
@@ -71,39 +73,43 @@ class TokenBridge(CaseDict):
         l2ProxyAdmin,
         l1MultiCall,
         l2Multicall,
-        l2MultiCall = None
+        l2MultiCall=None,
     ):
-        super().__init__({
-            'l1GatewayRouter': l1GatewayRouter,
-            'l2GatewayRouter': l2GatewayRouter,
-            'l1ERC20Gateway': l1ERC20Gateway,
-            'l2ERC20Gateway': l2ERC20Gateway,
-            'l1CustomGateway': l1CustomGateway,
-            'l2CustomGateway': l2CustomGateway,
-            'l1WethGateway': l1WethGateway,
-            'l2WethGateway': l2WethGateway,
-            'l2Weth': l2Weth,
-            'l1Weth': l1Weth,
-            'l1ProxyAdmin': l1ProxyAdmin,
-            'l2ProxyAdmin': l2ProxyAdmin,
-            'l1MultiCall': l1MultiCall,
-            'l2Multicall': l2Multicall,
-            'l2MultiCall': l2MultiCall if l2MultiCall is not None else l2Multicall
-        })
+        super().__init__(
+            {
+                "l1GatewayRouter": l1GatewayRouter,
+                "l2GatewayRouter": l2GatewayRouter,
+                "l1ERC20Gateway": l1ERC20Gateway,
+                "l2ERC20Gateway": l2ERC20Gateway,
+                "l1CustomGateway": l1CustomGateway,
+                "l2CustomGateway": l2CustomGateway,
+                "l1WethGateway": l1WethGateway,
+                "l2WethGateway": l2WethGateway,
+                "l2Weth": l2Weth,
+                "l1Weth": l1Weth,
+                "l1ProxyAdmin": l1ProxyAdmin,
+                "l2ProxyAdmin": l2ProxyAdmin,
+                "l1MultiCall": l1MultiCall,
+                "l2Multicall": l2Multicall,
+                "l2MultiCall": l2MultiCall if l2MultiCall is not None else l2Multicall,
+            }
+        )
 
 
 class EthBridge(CaseDict):
     def __init__(
         self, bridge, inbox, sequencerInbox, outbox, rollup, classicOutboxes=None
     ):
-        super().__init__({
-            'bridge': bridge,
-            'inbox': inbox,
-            'sequencerInbox': sequencerInbox,
-            'outbox': outbox,
-            'rollup': rollup,
-            'classicOutboxes': classicOutboxes if classicOutboxes else {}
-        })
+        super().__init__(
+            {
+                "bridge": bridge,
+                "inbox": inbox,
+                "sequencerInbox": sequencerInbox,
+                "outbox": outbox,
+                "rollup": rollup,
+                "classicOutboxes": classicOutboxes if classicOutboxes else {},
+            }
+        )
 
 
 mainnet_token_bridge = TokenBridge(
@@ -345,12 +351,16 @@ l2_networks = {
 def get_network(signer_or_provider_or_chain_id, layer):
     if isinstance(signer_or_provider_or_chain_id, int):
         chain_id = signer_or_provider_or_chain_id
-    
+
     elif isinstance(signer_or_provider_or_chain_id, Web3):
         chain_id = signer_or_provider_or_chain_id.eth.chain_id
-    
+
+    elif isinstance(signer_or_provider_or_chain_id, SignerOrProvider):
+        chain_id = signer_or_provider_or_chain_id.provider.eth.chain_id
     else:
-        raise ArbSdkError(f"Please provide a Web3 instance or chain ID. You have provided {type(signer_or_provider_or_chain_id)}")
+        raise ArbSdkError(
+            f"Please provide a Web3 instance or chain ID. You have provided {type(signer_or_provider_or_chain_id)}"
+        )
 
     networks = l1_networks if layer == 1 else l2_networks
     if chain_id in networks:
@@ -368,21 +378,11 @@ def get_l2_network(signer_or_provider_or_chain_id):
 
 
 def get_eth_bridge_information(rollup_contract_address, l1_signer_or_provider):
-    # Load ABI from JSON file
-    # with open("src/abi/RollupAdminLogic.json", "r") as file:
-    #     contract_data = json.load(file)
-    #     abi = contract_data["abi"]
-
-    # rollup = l1_signer_or_provider.eth.contract(
-    #     address=rollup_contract_address, abi=abi
-    # )
-
     rollup = load_contract(
-        provider = l1_signer_or_provider,
+        provider=l1_signer_or_provider,
         contract_name="RollupAdminLogic",
         address=rollup_contract_address,
-        is_classic=False
-
+        is_classic=False,
     )
     bridge = rollup.functions.bridge().call()
     inbox = rollup.functions.inbox().call()

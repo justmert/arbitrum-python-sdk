@@ -8,7 +8,9 @@ import copy
 from test import CaseDict
 
 
-def parse_typed_logs(provider, contract_name: str, logs, event_name: str, is_classic: bool = False):
+def parse_typed_logs(
+    provider, contract_name: str, logs, event_name: str, is_classic: bool = False
+):
     contract_abi = load_abi(contract_name, is_classic=is_classic)
     contract = provider.eth.contract(abi=contract_abi)
 

@@ -664,3 +664,12 @@ print(x)
 print(y)
 
 assert x == y
+
+
+
+# Example address
+address = "0x1234567890abcdef1234567890abcdef12345678"
+
+# Check if the address is valid
+is_valid_address = Web3.is_address(address)
+

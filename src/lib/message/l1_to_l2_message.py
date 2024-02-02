@@ -502,7 +502,6 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             if overrides is None:
                 overrides = {}
 
-            # Send the redeem transaction
             redeem_hash = arb_retryable_tx.functions.redeem(
                 self.retryable_creation_id
             ).transact(overrides)
@@ -557,7 +556,6 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
                 is_classic=False,
             )
 
-            # Send the keepalive transaction
             keepalive_tx = await arb_retryable_tx.functions.keepalive(
                 self.retryable_creation_id
             ).transact(overrides)
