@@ -123,18 +123,18 @@ class InboxTools:
             block_range = await self.get_force_includable_block_range(capped_search_range_blocks)
 
             argument_filters = {}
-            # Fetch the events
+
             events = await event_fetcher.get_events(
                 contract_factory=bridge,
-
-                topic_generator=lambda t: t.events.MessageDelivered.create_filter(
-                    fromBlock=block_range['startBlock'],
-                    toBlock=block_range['endBlock'],
-                    argument_filters=argument_filters,
-                ),
-
-                filter={"address": bridge.address},
+                event_name="MessageDelivered",
+                argument_filters=argument_filters,
+                filter={
+                    "fromBlock": block_range['startBlock'],
+                    "toBlock": block_range['endBlock'],
+                    "address": bridge.address,
+                }
             )
+
 
 
             if events:

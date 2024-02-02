@@ -94,21 +94,24 @@ class Erc20Bridger(AssetBridger):
         # data = i_erc20_interface.encodeABI(
         #     fn_name="approve",
         #     args=[
-        #         gateway_address, 
+        #         gateway_address,
         #         params.get("amount", MAX_APPROVAL)
         #     ],
         # )
-
 
         return {"to": params["erc20L1Address"], "data": data, "value": 0}
 
     async def approve_token(self, params):
         await self.check_l1_network(params["l1Signer"])
         approve_request = (
-            await self.get_approve_token_request({
-                **params,
-                "l1Provider": SignerProviderUtils.get_provider_or_throw(params['l1Signer']),
-            })
+            await self.get_approve_token_request(
+                {
+                    **params,
+                    "l1Provider": SignerProviderUtils.get_provider_or_throw(
+                        params["l1Signer"]
+                    ),
+                }
+            )
             if SignerProviderUtils.get_provider_or_throw(params["l1Signer"])
             else params["txRequest"]
         )
@@ -121,7 +124,7 @@ class Erc20Bridger(AssetBridger):
         }
 
         tx_receipt = sign_and_sent_raw_transaction(
-            signer=params["l1Signer"], tx = transaction
+            signer=params["l1Signer"], tx=transaction
         )
         # # Estimate gas and set the transaction parameters
         # transaction["gas"] = l1_provider.eth.estimate_gas(transaction)
@@ -156,20 +159,19 @@ class Erc20Bridger(AssetBridger):
         event_fetcher = EventFetcher(l2_provider)
 
         argument_filters = {}
-        # Fetch the events
+
         events = await event_fetcher.get_events(
             contract_factory="L2ArbitrumGateway",
-
-            topic_generator=lambda t: t.events.WithdrawalInitiated.create_filter(
-                fromBlock=filter["fromBlock"],
-                toBlock=filter["toBlock"],
-                argument_filters=argument_filters,
-            ),
-
-            filter={**filter, "address": gateway_address},
+            event_name="WithdrawalInitiated",
+            argument_filters=argument_filters,
+            filter={
+                "fromBlock": filter["fromBlock"],
+                "toBlock": filter["toBlock"],
+                "address": gateway_address,
+                **filter,
+            },
             is_classic=True,
         )
-
 
         return (
             [
@@ -355,16 +357,15 @@ class Erc20Bridger(AssetBridger):
             {**withdrawal_request["txRequest"], **params.get("overrides", {})}
         )
 
-        
         return L2TransactionReceipt.monkey_patch_wait(tx)
 
     async def deposit(self, params):
-        print('hi0')
+        print("hi0")
         if not SignerProviderUtils.signer_has_provider(params["l1Signer"]):
             raise MissingProviderArbSdkError("l1Signer")
 
         await self.check_l1_network(params["l1Signer"])
-        print('hi1')
+        print("hi1")
         l1_provider = SignerProviderUtils.get_provider_or_throw(params["l1Signer"])
 
         print("deposit_params", params)
@@ -373,12 +374,14 @@ class Erc20Bridger(AssetBridger):
             token_deposit = params
         else:
             # Prepare the deposit request
-            token_deposit = await self.get_deposit_request({
-                **params,
-                "l1Provider": l1_provider,
-                "from": params["l1Signer"].account.address,
-            })
-        print('hi2')
+            token_deposit = await self.get_deposit_request(
+                {
+                    **params,
+                    "l1Provider": l1_provider,
+                    "from": params["l1Signer"].account.address,
+                }
+            )
+        print("hi2")
 
         # convert from and to addresses to checksum addresses
         # Combine with overrides
@@ -399,7 +402,7 @@ class Erc20Bridger(AssetBridger):
         # elif isinstance(transaction['to'], str):
         #     transaction['to'] = Web3.to_checksum_address(transaction['to'])
         tx_receipt = sign_and_sent_raw_transaction(
-            signer = params["l1Signer"], tx = transaction
+            signer=params["l1Signer"], tx=transaction
         )
         # print('hi3')
 
@@ -430,7 +433,7 @@ class Erc20Bridger(AssetBridger):
         #     tx_hash
         # )
         # print("---------------------TX_RECEIPT", tx_receipt)
-    
+
         # TO-DO
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
@@ -444,7 +447,7 @@ class Erc20Bridger(AssetBridger):
 
     async def get_deposit_request(self, params):
         # Check networks
-        
+
         # Implement checkL1Network and checkL2Network
         await self.check_l1_network(params["l1Provider"])
         await self.check_l2_network(params["l2Provider"])
@@ -526,18 +529,24 @@ class Erc20Bridger(AssetBridger):
         )
         print("estimates", estimates)
         print("o1o1o1o1o1o1oo1o1o1o1oo1o1o")
-        return CaseDict({
-            "txRequest": CaseDict({
-                "to": self.l2_network.tokenBridge.l1GatewayRouter,
-                "data": estimates["data"],
-                "value": estimates["value"],
-                "from": params["from"],
-            }),
-            "retryableData": CaseDict({**estimates["retryable"], **estimates["estimates"]}),
-            "isValid": lambda: L1ToL2MessageGasEstimator.is_valid(
-                estimates["estimates"], re_estimates["estimates"]
-            ),
-        })
+        return CaseDict(
+            {
+                "txRequest": CaseDict(
+                    {
+                        "to": self.l2_network.tokenBridge.l1GatewayRouter,
+                        "data": estimates["data"],
+                        "value": estimates["value"],
+                        "from": params["from"],
+                    }
+                ),
+                "retryableData": CaseDict(
+                    {**estimates["retryable"], **estimates["estimates"]}
+                ),
+                "isValid": lambda: L1ToL2MessageGasEstimator.is_valid(
+                    estimates["estimates"], re_estimates["estimates"]
+                ),
+            }
+        )
 
 
 class AdminErc20Bridger(Erc20Bridger):
@@ -550,7 +559,7 @@ class AdminErc20Bridger(Erc20Bridger):
     ) -> Contract:
         if not SignerProviderUtils.signer_has_provider(l1_signer):
             raise MissingProviderArbSdkError("l1Signer")
-        
+
         await self.check_l1_network(l1_signer)
         await self.check_l2_network(l2_provider)
 
@@ -704,15 +713,15 @@ class AdminErc20Bridger(Erc20Bridger):
             l1_signer.provider,
         )
 
-        print('gas estimate', set_gateway_estimates["estimates"]["gasLimit"])
+        print("gas estimate", set_gateway_estimates["estimates"]["gasLimit"])
         transaction = {
             "to": l1_token.address,
             "data": set_gateway_estimates["data"],
             "value": set_gateway_estimates["value"],
             "from": l1_signer.account.address,
-        } 
+        }
         register_tx_receipt = sign_and_sent_raw_transaction(l1_signer, transaction)
-        
+
         return L1TransactionReceipt.monkey_patch_contract_call_wait(register_tx_receipt)
 
     async def get_l1_gateway_set_events(
@@ -729,20 +738,19 @@ class AdminErc20Bridger(Erc20Bridger):
         event_fetcher = EventFetcher(l1_provider)
 
         argument_filters = {}
-        # Fetch the events
+
         events = await event_fetcher.get_events(
             contract_factory="L1GatewayRouter",
-
-            topic_generator=lambda t: t.events.GatewaySet.create_filter(
-                fromBlock=filter["fromBlock"],
-                toBlock=filter["toBlock"],
-                argument_filters=argument_filters,
-            ),
-
-            filter={**filter, "address": l1_gateway_router_address},
+            event_name="GatewaySet",
+            argument_filters=argument_filters,
+            filter={
+                "fromBlock": filter["fromBlock"],
+                "toBlock": filter["toBlock"],
+                "address": l1_gateway_router_address,
+                **filter,
+            },
             is_classic=True,
         )
-
 
         return [a["event"] for a in events]
 
@@ -758,21 +766,22 @@ class AdminErc20Bridger(Erc20Bridger):
             or self.l2_network.token_bridge.l2_gateway_router
         )
         event_fetcher = EventFetcher(l2_provider)
-        
+
         argument_filters = {}
-        # Fetch the events
+
         events = await event_fetcher.get_events(
-            contract_factory_name="L2GatewayRouter",
-
-            topic_generator=lambda t: t.events.GatewaySet.create_filter(
-                fromBlock=filter["fromBlock"],
-                toBlock=filter["toBlock"],
-                argument_filters=argument_filters,
-            ),
-
-            filter={**filter, "address": l2_gateway_router_address},
+            contract_factory="L2GatewayRouter",
+            event_name="GatewaySet",
+            argument_filters=argument_filters,
+            filter={
+                "fromBlock": filter["fromBlock"],
+                "toBlock": filter["toBlock"],
+                "address": l2_gateway_router_address,
+                **filter
+            },
             is_classic=True,
         )
+
 
         return [a["event"] for a in events]
 

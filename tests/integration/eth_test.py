@@ -33,33 +33,17 @@ async def test_transfers_ether_on_l2():
     # Check balance before transaction
     balance_before = l2_signer.provider.eth.get_balance(l2_signer.account.address)
 
-    tx = {
-
+    tx_hash = l2_signer.provider.eth.send_transaction(
+        {
         'to': random_address,
         'value': amount_to_send,
-        # 'gas': 21000,  # Standard gas limit for Ether transfer
         'maxFeePerGas': 15000000000,
         'maxPriorityFeePerGas': 0,
-        # 'gasPrice': l2_signer.provider.eth.gas_price,
-        'nonce': l2_signer.provider.eth.get_transaction_count(l2_signer.account.address),
-        'chainId': l2_signer.provider.eth.chain_id
-    }
-    
-    # estimate gas  
-    # gas_estimate = l2_signer.provider.eth.estimate_gas(tx)
-    # tx['gas'] = gas_estimate
-
-    # # Send transaction
-    # tx = l2_signer.account.sign_transaction(tx)
-
-    # # Send the transaction to the network
-    # tx_hash = l2_signer.provider.eth.send_raw_transaction(tx.rawTransaction)
-    tx_hash = l2_signer.provider.eth.send_transaction(tx)
-    print('tx_hash', tx_hash)
+        }
+    )
 
     tx_receipt = l2_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
-    # Check balances after transaction
     balance_after = l2_signer.provider.eth.get_balance(l2_signer.account.address)
     random_balance_after = l2_signer.provider.eth.get_balance(random_address)
     print('hii')

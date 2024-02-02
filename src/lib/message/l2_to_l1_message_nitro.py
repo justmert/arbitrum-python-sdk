@@ -75,20 +75,18 @@ class L2ToL1MessageNitro:
             argument_filters["hash"] = hash
 
 
-        # Fetch the events
         events = await event_fetcher.get_events(
-            contract_factory="ArbSys",
-
-            topic_generator=lambda t: t.events.L2ToL1Tx.create_filter(
-                fromBlock=filter["fromBlock"],
-                toBlock=filter["toBlock"],
+                contract_factory="ArbSys",
+                event_name="L2ToL1Tx",
                 argument_filters=argument_filters,
-            ),
-
-            filter={**filter, "address": ARB_SYS_ADDRESS},
-            is_classic=False,
-        )
-
+                filter={
+                    "fromBlock": filter["fromBlock"],
+                    "toBlock": filter["toBlock"],
+                    "address": ARB_SYS_ADDRESS,
+                    **filter,
+                },
+                is_classic=False,
+            )
         return events
 
     # async def get_l2_to_l1_events(l2_provider, filter, position=None, destination=None, hash_=None):
@@ -234,18 +232,18 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
         event_fetcher = EventFetcher(rollup.w3)
 
         argument_filters = {'nodeNum': node_num}
-        # Fetch the events
+
         logs = await event_fetcher.get_events(
-            contract_factory=rollup,
-
-            topic_generator=lambda t: t.events.NodeCreated.create_filter(
-                fromBlock=created_from_block,
-                toBlock=created_to_block,
+                contract_factory=rollup,
+                event_name="NodeCreated",
                 argument_filters=argument_filters,
-            ),
-
-            filter={"address": rollup.address},
-        )
+                filter={
+                    "fromBlock": created_from_block,
+                    "toBlock": created_to_block,
+                    "address": rollup.address,
+                }
+            )
+        
         if len(logs) > 1:
             raise Exception(
                 f"Unexpected number of NodeCreated events. Expected 0 or 1, got {len(logs)}."
@@ -352,24 +350,24 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
         event_fetcher = EventFetcher(self.l1_provider)
 
         argument_filters = {}
-        # Fetch the events
-        logs = await event_fetcher.get_events(
-            contract_factory=rollup_contract,
 
-            topic_generator=lambda t: t.events.NodeCreated.create_filter(
-                fromBlock=max(
+
+        logs = await event_fetcher.get_events(
+                contract_factory=rollup_contract,
+                event_name="NodeCreated",
+                argument_filters=argument_filters,
+                filter={
+                    "fromBlock": max(
                     latest_block
                     - l2_network.confirm_period_blocks
                     - ASSERTION_CONFIRMED_PADDING,
                     0,
                 ),
-                toBlock="latest",
-                argument_filters=argument_filters,
-            ),
-
-            filter={"address": rollup_contract.address},
-        )
-
+                    "toBlock": "latest",
+                    "address": rollup_contract.address,
+                }
+            )
+        
 
         logs.sort(key=lambda x: x["event"]["nodeNum"])
 

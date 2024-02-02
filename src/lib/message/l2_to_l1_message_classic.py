@@ -78,12 +78,14 @@ class L2ToL1MessageClassic:
             {**l.event, "transactionHash": l.transactionHash}
             for l in await event_fetcher.get_events(
                 contract_factory="ArbSys",
-                topic_generator=lambda t: t.events.L2ToL1Transaction.create_filter(
-                    fromBlock=filter["fromBlock"],
-                    toBlock=filter["toBlock"],
-                    argument_filters=argument_filters,
-                ),
-                filter={**filter, "address": ARB_SYS_ADDRESS},
+                event_name="L2ToL1Transaction",
+                argument_filters=argument_filters,
+                filter={
+                    "fromBlock": filter["fromBlock"],
+                    "toBlock": filter["toBlock"],
+                    "address": ARB_SYS_ADDRESS,
+                    **filter,
+                },
                 is_classic=False,
             )
         ]

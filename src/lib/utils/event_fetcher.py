@@ -11,8 +11,20 @@ from web3.contract import Contract
 
 from test import CaseDict
 
+
 class FetchedEvent:
-    def __init__(self, event, topic, name, block_number, block_hash, transaction_hash, address, topics, data):
+    def __init__(
+        self,
+        event,
+        topic,
+        name,
+        block_number,
+        block_hash,
+        transaction_hash,
+        address,
+        topics,
+        data,
+    ):
         self.event = event
         self.topic = topic
         self.name = name
@@ -23,25 +35,24 @@ class FetchedEvent:
         self.topics = topics
         self.data = data
 
-class EventFetcher():
 
+class EventFetcher:
     def __init__(self, provider):
         if isinstance(provider, str):
             self.provider = Web3(Web3.HTTPProvider(provider))
 
         elif isinstance(provider, Web3):
             self.provider = provider
-            
+
         elif isinstance(provider, SignerOrProvider):
             self.provider = provider.provider
 
         else:
             raise Exception("Invalid provider type")
 
-
     # def get_events(self, contract, topic_generator, str,
     #                filter_params):
-        
+
     #     contract = self.provider.eth.contract(address=filter_params.get('address', '0x0000000000000000000000000000000000000000'), abi=contract.abi)
 
     #     event_filter = topic_generator(contract)
@@ -68,7 +79,6 @@ class EventFetcher():
     #         fetched_events.append(fetched_event)
 
     #     return fetched_events
-
 
     # def get_events(self, abi: List[Dict[str, Any]], address: str, event_name: str, from_block: int, to_block: int) -> List[Dict[str, Any]]:
     #     contract = self.w3.eth.contract(address=address, abi=abi)
@@ -103,41 +113,69 @@ class EventFetcher():
 
     #     return fetched_events
 
-    async def get_events(self, contract_factory, topic_generator, filter, is_classic=False):
-        # Assuming contract_factory is a factory method or class to create a contract instance
-        # and topic_generator is a function that takes a contract and returns a filter object
-        contract_address = filter.get('address', Web3.to_checksum_address('0x0000000000000000000000000000000000000000'))
-        # contract = contract_factory(contract_address, self.provider)
+    async def get_events(
+        self,
+        contract_factory,
+        event_name,
+        argument_filters=None,
+        filter=None,
+        is_classic=False,
+    ):
+        if filter is None:
+            filter = {}
+
+        if argument_filters is None:
+            argument_filters = {}
 
         if isinstance(contract_factory, str):
-            contract = load_contract(provider=self.provider, contract_name=contract_factory, address=contract_address, is_classic=is_classic)
-        
+            contract_address = filter.get(
+                "address",
+                Web3.to_checksum_address("0x0000000000000000000000000000000000000000"),
+            )
+
+            contract = load_contract(
+                provider=self.provider,
+                contract_name=contract_factory,
+                address=contract_address,
+                is_classic=is_classic,
+            )
+
         elif isinstance(contract_factory, Contract):
             contract = contract_factory
         else:
             raise ArbSdkError("Invalid contract factory type")
-        
-        events = topic_generator(contract).get_all_entries()
 
         
-        # return  [{'event': event.args, 'transactionHash': event.transactionHash} for event in events]
+        events = (
+            getattr(contract.events, event_name)
+            .create_filter(
+                toBlock=filter["toBlock"],
+                fromBlock=filter["fromBlock"],
+                address=filter["address"],
+                argument_filters=argument_filters,
+            )
+            .get_all_entries()
+        )
+
         return _format_events(events)
+
 
 def _format_events(self, events: List[Any]) -> List[Dict[str, Any]]:
     fetched_events = []
     for event in events:
-        fetched_event = CaseDict({
-            'event': event['args'],
-            'topic': event.get('topics', None),
-            'name': event.event,
-            'blockNumber': event.blockNumber,
-            'blockHash': event.blockHash.hex(),
-            'transactionHash': event.transactionHash.hex(),
-            'address': event.address,
-            'topics': [topic.hex() for topic in event['topics']],
-            'data': event['data']
-        })
+        fetched_event = CaseDict(
+            {
+                "event": event["args"],
+                "topic": event.get("topics", None),
+                "name": event.event,
+                "blockNumber": event.blockNumber,
+                "blockHash": event.blockHash.hex(),
+                "transactionHash": event.transactionHash.hex(),
+                "address": event.address,
+                "topics": [topic.hex() for topic in event["topics"]],
+                "data": event["data"],
+            }
+        )
         fetched_events.append(fetched_event)
 
     return fetched_events
-
