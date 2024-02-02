@@ -61,10 +61,12 @@ class L2TransactionReceipt:
 
     def get_l2_to_l1_events(self, provider):
         classic_logs = parse_typed_logs(
-            provider, "ArbSys", self.logs, "L2ToL1Transaction"
+            provider, "ArbSys", self.logs, "L2ToL1Transaction", is_classic=False
         )
 
-        nitro_logs = parse_typed_logs(provider, "ArbSys", self.logs, "L2ToL1Tx")
+        nitro_logs = parse_typed_logs(
+            provider, "ArbSys", self.logs, "L2ToL1Tx", is_classic=False
+        )
 
         return [*classic_logs, *nitro_logs]
 
