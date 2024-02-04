@@ -29,6 +29,5 @@ class ArbTransactionReceipt:
         self.l1BlockNumber = l1BlockNumber
         self.gasUsedForL1 = gasUsedForL1
 
-        # Set additional properties from kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)

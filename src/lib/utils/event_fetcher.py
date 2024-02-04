@@ -12,7 +12,7 @@ from web3.contract import Contract
 from test import CaseDict
 
 
-class FetchedEvent:
+class FetchedEvent(CaseDict):
     def __init__(
         self,
         event,
@@ -35,13 +35,24 @@ class FetchedEvent:
         self.topics = topics
         self.data = data
 
+        super().__init__(
+            {
+                "event": event,
+                "topic": topic,
+                "name": name,
+                "blockNumber": block_number,
+                "blockHash": block_hash,
+                "transactionHash": transaction_hash,
+                "address": address,
+                "topics": topics,
+                "data": data,
+            }
+        )
+
 
 class EventFetcher:
     def __init__(self, provider):
-        if isinstance(provider, str):
-            self.provider = Web3(Web3.HTTPProvider(provider))
-
-        elif isinstance(provider, Web3):
+        if isinstance(provider, Web3):
             self.provider = provider
 
         elif isinstance(provider, SignerOrProvider):
@@ -49,69 +60,6 @@ class EventFetcher:
 
         else:
             raise Exception("Invalid provider type")
-
-    # def get_events(self, contract, topic_generator, str,
-    #                filter_params):
-
-    #     contract = self.provider.eth.contract(address=filter_params.get('address', '0x0000000000000000000000000000000000000000'), abi=contract.abi)
-
-    #     event_filter = topic_generator(contract)
-    #     full_filter = dict(**event_filter, **filter_params)
-    #     logs = self.provider.eth.get_logs(full_filter)
-
-    #     fetched_events = []
-    #     for log in logs:
-    #         if log.get('removed', False):
-    #             continue
-
-    #         p_log = contract.events[event_filter.event_name]().processLog(log)
-    #         fetched_event = FetchedEvent(
-    #             event=p_log['args'],
-    #             topic=p_log['topics'][0] if p_log['topics'] else None,
-    #             name=p_log['event'],
-    #             block_number=log['blockNumber'],
-    #             block_hash=log['blockHash'],
-    #             transaction_hash=log['transactionHash'],
-    #             address=log['address'],
-    #             topics=log['topics'],
-    #             data=log['data']
-    #         )
-    #         fetched_events.append(fetched_event)
-
-    #     return fetched_events
-
-    # def get_events(self, abi: List[Dict[str, Any]], address: str, event_name: str, from_block: int, to_block: int) -> List[Dict[str, Any]]:
-    #     contract = self.w3.eth.contract(address=address, abi=abi)
-
-    #     try:
-    #         event_filter = contract.events[event_name].create_filter(
-    #             fromBlock=from_block, toBlock=to_block
-    #         )
-    #     except BadFunctionCallOutput:
-    #         # Handle cases where the event is not found in the ABI or other issues
-    #         return []
-
-    #     events = event_filter.get_all_entries()
-
-    #     return self._format_events(events)
-
-    # def _format_events(self, events: List[Any]) -> List[Dict[str, Any]]:
-    #     fetched_events = []
-    #     for event in events:
-    #         fetched_event = {
-    #             'event': event['args'],
-    #             'topic': event['topics'][0] if event['topics'] else None,
-    #             'name': event.event,
-    #             'blockNumber': event.blockNumber,
-    #             'blockHash': event.blockHash.hex(),
-    #             'transactionHash': event.transactionHash.hex(),
-    #             'address': event.address,
-    #             'topics': [topic.hex() for topic in event['topics']],
-    #             'data': event['data']
-    #         }
-    #         fetched_events.append(fetched_event)
-
-    #     return fetched_events
 
     async def get_events(
         self,
@@ -145,7 +93,6 @@ class EventFetcher:
         else:
             raise ArbSdkError("Invalid contract factory type")
 
-        
         events = (
             getattr(contract.events, event_name)
             .create_filter(
@@ -163,18 +110,16 @@ class EventFetcher:
 def _format_events(self, events: List[Any]) -> List[Dict[str, Any]]:
     fetched_events = []
     for event in events:
-        fetched_event = CaseDict(
-            {
-                "event": event["args"],
-                "topic": event.get("topics", None),
-                "name": event.event,
-                "blockNumber": event.blockNumber,
-                "blockHash": event.blockHash.hex(),
-                "transactionHash": event.transactionHash.hex(),
-                "address": event.address,
-                "topics": [topic.hex() for topic in event["topics"]],
-                "data": event["data"],
-            }
+        fetched_event = FetchedEvent(
+            event=event["args"],
+            topic=event.get("topics", None),
+            name=event.event,
+            block_number=event.blockNumber,
+            block_hash=event.blockHash.hex(),
+            transaction_hash=event.transactionHash.hex(),
+            address=event.address,
+            topics=[topic.hex() for topic in event["topics"]],
+            data=event["data"],
         )
         fetched_events.append(fetched_event)
 

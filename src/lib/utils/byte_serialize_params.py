@@ -2,16 +2,60 @@ from web3 import Web3
 from web3.auto import w3
 from eth_typing import HexStr
 from typing import Union, List, Callable
-from eth_utils import to_checksum_address, is_address, big_endian_to_int, int_to_big_endian
+from eth_utils import (
+    to_checksum_address,
+    big_endian_to_int,
+    int_to_big_endian,
+)
 from src.lib.data_entities.errors import ArbSdkError
+from src.lib.data_entities.constants import ARB_ADDRESS_TABLE_ADDRESS
+from src.lib.utils.helper import load_contract
+
+address_to_index_memo = {}
+
+
+async def get_address_index(address: str, provider: Web3) -> int:
+    if address in address_to_index_memo:
+        return address_to_index_memo[address]
+
+    arb_address_table = load_contract(
+        provider=provider,
+        contract_name="ArbAddressTable",
+        address=ARB_ADDRESS_TABLE_ADDRESS,
+        is_classic=False,
+    )
+
+    is_registered = await arb_address_table.functions.addressExists(address).call()
+
+    if is_registered:
+        index = await arb_address_table.functions.lookup(address).call()
+        address_to_index_memo[address] = index
+        return index
+    else:
+        return -1
+
+
+async def arg_serializer_constructor(provider):
+    async def serialize_params_with_index(
+        params: List[Union[str, int, bool, List[Union[str, int, bool]]]],
+    ) -> bytes:
+        async def address_to_index(address: str) -> int:
+            return await get_address_index(address, provider)
+
+        return await serialize_params(params, address_to_index)
+
+    return serialize_params_with_index
+
 
 def is_address_type(input_value: Union[int, str, bool]):
-    return isinstance(input_value, str) and is_address(input_value)
+    return isinstance(input_value, str) and Web3.is_address(input_value)
+
 
 def to_uint(val: Union[int, str, bool], bytes_size: int) -> bytes:
     if isinstance(val, bool):
         val = 1 if val else 0
-    return int_to_big_endian(int(val)).rjust(bytes_size, b'\0')
+    return int_to_big_endian(int(val)).rjust(bytes_size, b"\0")
+
 
 def format_primitive(value: Union[int, str, bool]) -> HexStr:
     if is_address_type(value):
@@ -19,10 +63,13 @@ def format_primitive(value: Union[int, str, bool]) -> HexStr:
     elif isinstance(value, bool) or isinstance(value, int) or isinstance(value, str):
         return Web3.to_hex(to_uint(value, 32))
     else:
-        raise ArbSdkError('Unsupported type')
+        raise ArbSdkError("Unsupported type")
 
-async def serialize_params(params: List[Union[int, str, bool, List[Union[int, str, bool]]]],
-                           address_to_index: Callable[[str], int] = lambda x: -1) -> bytes:
+
+async def serialize_params(
+    params: List[Union[int, str, bool, List[Union[int, str, bool]]]],
+    address_to_index: Callable[[str], int] = lambda x: -1,
+) -> bytes:
     formatted_params = []
 
     for param in params:
@@ -48,4 +95,4 @@ async def serialize_params(params: List[Union[int, str, bool, List[Union[int, st
             else:
                 formatted_params.append(format_primitive(param))
 
-    return b''.join(formatted_params)
+    return b"".join(formatted_params)

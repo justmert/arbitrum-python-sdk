@@ -1,131 +1,161 @@
 import json
 from web3 import Web3, HTTPProvider
-from src.lib.data_entities.networks import l1_networks, l2_networks
+from src.lib.data_entities.networks import is_l1_network, l1_networks, l2_networks
 from src.lib.data_entities.errors import ArbSdkError
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from src.lib.utils.helper import load_contract
 
 
 class MultiCaller:
     def __init__(self, provider, address):
         if isinstance(provider, Web3):
             self.provider = provider
-        
-        elif isinstance(provider, str):
-            self.provider = Web3(HTTPProvider(provider))
+
+        elif isinstance(provider, SignerOrProvider):
+            self.provider = provider.provider
 
         else:
-            raise ArbSdkError("MultiCaller provider must be an instance of Web3.")
-        
-        print(self.provider)
+            raise ArbSdkError("Invalid provider type")
+
         self.address = address
 
     @staticmethod
     async def from_provider(provider: Web3):
         chain_id = provider.eth.chain_id
 
-        # Determine whether the network is L1 or L2 and find the network data
-        l2_network = l2_networks.get(chain_id)
-        l1_network = l1_networks.get(chain_id) if not l2_network else None
-        if not l2_network and not l1_network:
-            raise ArbSdkError(f"Unexpected network id: {chain_id}. Ensure that chain {chain_id} has been added as a network.")
+        l2_network = l2_networks.get(chain_id, None)
+        l1_network = l1_networks.get(chain_id, None)
 
-        # Find the multicall address based on the network
-        if l1_network:
-            partner_chain_id = l1_network.partner_chain_ids[0]
-            first_l2 = l2_networks.get(partner_chain_id)
+        network = l2_network or l1_network
+
+        if not network:
+            raise ArbSdkError(
+                f"Unexpected network id: {chain_id}. Ensure that chain {chain_id} has been added as a network."
+            )
+
+        if is_l1_network(network):
+            first_l2 = l2_networks[network.partner_chain_ids[0]]
             if not first_l2:
-                raise ArbSdkError(f"No partner chain found for L1 network: {chain_id}. Partner chain IDs: {l1_network.partner_chain_ids}")
+                raise ArbSdkError(
+                    f"No partner chain found for L1 network: {network.chain_id}. Partner chain IDs: {l1_network.partner_chain_ids}"
+                )
+
             multi_call_addr = first_l2.token_bridge.l1_multi_call
         else:
-            multi_call_addr = l2_network.token_bridge.l2_multi_call
+            multi_call_addr = network.token_bridge.l2_multi_call
 
         return MultiCaller(provider, multi_call_addr)
 
     def get_block_number_input(self):
-        with open('src/abi/classic/Multicall2.json', 'r') as file:
-            contract_data = json.load(file)
-            abi = contract_data['abi']
-            contract = self.provider.eth.contract(address=self.address, abi=abi)
-
+        iface = load_contract(
+            provider=self.provider,
+            contract_name="Multicall2",
+            address=self.address,
+            is_classic=True,
+        )
         return {
-            "target_addr": self.address,
-            "encoder": lambda: contract.encodeABI(fn_name='getBlockNumber'),
-            "decoder": lambda return_data: contract.decode_function_input('getBlockNumber', return_data)[1]
+            "targetAddr": self.address,
+            "encoder": lambda: iface.encodeABI(fn_name="getBlockNumber"),
+            "decoder": lambda return_data: iface.decode_function_input(
+                "getBlockNumber", return_data
+            )[1],
         }
 
     def get_current_block_timestamp_input(self):
-        with open('src/abi/classic/Multicall2.json', 'r') as file:
-            contract_data = json.load(file)
-            abi = contract_data['abi']
-            contract = self.provider.eth.contract(address=self.address, abi=abi)
+        iface = load_contract(
+            provider=self.provider,
+            contract_name="Multicall2",
+            address=self.address,
+            is_classic=True,
+        )
 
         return {
-            "target_addr": self.address,
-            "encoder": lambda: contract.encodeABI(fn_name='getCurrentBlockTimestamp'),
-            "decoder": lambda return_data: contract.decode_function_input('getCurrentBlockTimestamp', return_data)[1]
+            "targetAddr": self.address,
+            "encoder": lambda: iface.encodeABI(fn_name="getCurrentBlockTimestamp"),
+            "decoder": lambda return_data: iface.decode_function_input(
+                "getCurrentBlockTimestamp", return_data
+            )[1],
         }
 
     async def multi_call(self, params, require_success=False):
-        with open('src/abi/classic/Multicall2.json', 'r') as file:
-            contract_data = json.load(file)
-            abi = contract_data['abi']
-            contract = self.provider.eth.contract(address=self.address, abi=abi)
+        multi_call_contract = load_contract(
+            provider=self.provider,
+            contract_name="Multicall2",
+            address=self.address,
+            is_classic=True,
+        )
 
-        args = [{'target': p['target_addr'], 'callData': p['encoder']()} for p in params]
-        outputs = contract.functions.tryAggregate(require_success, args).call()
+        args = [{"target": p["targetAddr"], "callData": p["encoder"]()} for p in params]
+
+        outputs = multi_call_contract.functions.tryAggregate(
+            require_success, args
+        ).call()
         print(outputs)
-        return [p['decoder'](output['returnData']) if output['success'] else None for output, p in zip(outputs, params)]
+        return [
+            p["decoder"](output["returnData"]) if output["success"] else None
+            for output, p in zip(outputs, params)
+        ]
 
-    async def get_token_data(self, erc20_addresses, options=None):
-        if options is None:
-            options = {'name': True}
+    async def get_token_data(self, erc20_addresses, defaulted_options=None):
+        if defaulted_options is None:
+            defaulted_options = {"name": True}
 
-        # Load ERC20 contract ABI
-        with open('src/abi/classic/ERC20.json', 'r') as file:
-            erc20_abi = json.load(file)['abi']
-        
-        erc20_contract = self.provider.eth.contract(abi=erc20_abi)
-
+        erc20_iface = load_contract(
+            provider=self.provider, contract_name="ERC20", is_classic=True
+        )
         inputs = []
         for address in erc20_addresses:
-            if options.get('balanceOf'):
-                account = options['balanceOf']['account']
-                inputs.append(self._create_call_input(address, erc20_contract, 'balanceOf', [account]))
+            if defaulted_options.get("balanceOf"):
+                account = defaulted_options["balanceOf"]["account"]
+                inputs.append(
+                    self._create_call_input(
+                        address, erc20_iface, "balanceOf", [account]
+                    )
+                )
 
-            if options.get('allowance'):
-                owner = options['allowance']['owner']
-                spender = options['allowance']['spender']
-                inputs.append(self._create_call_input(address, erc20_contract, 'allowance', [owner, spender]))
+            if defaulted_options.get("allowance"):
+                owner = defaulted_options["allowance"]["owner"]
+                spender = defaulted_options["allowance"]["spender"]
+                inputs.append(
+                    self._create_call_input(
+                        address, erc20_iface, "allowance", [owner, spender]
+                    )
+                )
 
-            if options.get('symbol'):
-                inputs.append(self._create_call_input(address, erc20_contract, 'symbol', []))
+            if defaulted_options.get("symbol"):
+                inputs.append(
+                    self._create_call_input(address, erc20_iface, "symbol", [])
+                )
 
-            if options.get('decimals'):
-                inputs.append(self._create_call_input(address, erc20_contract, 'decimals', []))
+            if defaulted_options.get("decimals"):
+                inputs.append(
+                    self._create_call_input(address, erc20_iface, "decimals", [])
+                )
 
-            if options.get('name'):
-                inputs.append(self._create_call_input(address, erc20_contract, 'name', []))
+            if defaulted_options.get("name"):
+                inputs.append(self._create_call_input(address, erc20_iface, "name", []))
 
         # Execute multicall
         results = await self.multi_call(inputs)
         print(results)
         # Parse results into structured format
         token_data = []
-        for i in range(0, len(results), len(options)):
+        for i in range(0, len(results), len(defaulted_options)):
             token_info = {}
-            if options.get('balanceOf'):
-                token_info['balance'] = results[i]
+            if defaulted_options.get("balanceOf"):
+                token_info["balance"] = results[i]
                 i += 1
-            if options.get('allowance'):
-                token_info['allowance'] = results[i]
+            if defaulted_options.get("allowance"):
+                token_info["allowance"] = results[i]
                 i += 1
-            if options.get('symbol'):
-                token_info['symbol'] = results[i]
+            if defaulted_options.get("symbol"):
+                token_info["symbol"] = results[i]
                 i += 1
-            if options.get('decimals'):
-                token_info['decimals'] = results[i]
+            if defaulted_options.get("decimals"):
+                token_info["decimals"] = results[i]
                 i += 1
-            if options.get('name'):
-                token_info['name'] = results[i]
+            if defaulted_options.get("name"):
+                token_info["name"] = results[i]
                 i += 1
             token_data.append(token_info)
 
@@ -133,7 +163,9 @@ class MultiCaller:
 
     def _create_call_input(self, address, contract, method, args):
         return {
-            "target_addr": address,
+            "targetAddr": address,
             "encoder": lambda: contract.encodeABI(fn_name=method, args=args),
-            "decoder": lambda return_data: contract.decode_function_input(method, return_data)[1]
+            "decoder": lambda return_data: contract.decode_function_input(
+                method, return_data
+            )[1],
         }

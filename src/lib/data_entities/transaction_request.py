@@ -4,8 +4,6 @@ from typing import Callable, Dict, Union
 
 from src.lib.utils.lib import is_defined
 
-
-# Define the L1ToL2MessageParams and L1ToL2MessageGasParams based on your actual implementation
 class L1ToL2MessageParams:
     pass
 
