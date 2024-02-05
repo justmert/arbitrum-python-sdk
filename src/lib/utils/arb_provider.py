@@ -35,7 +35,7 @@ class ArbFormatter:
         return ArbBlockWithTransactions(**formatted_block)
 
 
-class ArbitrumProvider():
+class ArbitrumProvider:
     def __init__(self, provider, network=None):
         self.provider = provider
         self.formatter = ArbFormatter()
