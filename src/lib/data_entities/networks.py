@@ -1,12 +1,8 @@
 from .constants import SEVEN_DAYS_IN_SECONDS
 from .errors import ArbSdkError
 from web3 import Web3
-import json
-import asyncio
-from .signer_or_provider import SignerOrProvider, SignerProviderUtils
-import os
+from .signer_or_provider import SignerOrProvider
 from src.lib.utils.helper import CaseDict, load_contract
-from web3.middleware import geth_poa_middleware
 
 
 class Network(CaseDict):
@@ -97,9 +93,7 @@ class TokenBridge(CaseDict):
 
 
 class EthBridge(CaseDict):
-    def __init__(
-        self, bridge, inbox, sequencerInbox, outbox, rollup, classicOutboxes=None
-    ):
+    def __init__(self, bridge, inbox, sequencerInbox, outbox, rollup, classicOutboxes=None):
         super().__init__(
             {
                 "bridge": bridge,
@@ -401,22 +395,16 @@ def get_eth_bridge_information(rollup_contract_address, l1_signer_or_provider):
 def add_custom_network(custom_l1_network, custom_l2_network):
     if custom_l1_network:
         if int(custom_l1_network["chainID"]) in l1_networks:
-            raise ArbSdkError(
-                f"Network {custom_l1_network['chainID']} already included"
-            )
+            raise ArbSdkError(f"Network {custom_l1_network['chainID']} already included")
         elif not custom_l1_network["isCustom"]:
-            raise ArbSdkError(
-                f"Custom network {custom_l1_network['chainID']} must have isCustom flag set to true"
-            )
+            raise ArbSdkError(f"Custom network {custom_l1_network['chainID']} must have isCustom flag set to true")
         else:
             l1_networks[custom_l1_network["chainID"]] = custom_l1_network
 
     if custom_l2_network["chainID"] in l2_networks:
         raise ArbSdkError(f"Network {custom_l2_network['chainID']} already included")
     elif not custom_l2_network["isCustom"]:
-        raise ArbSdkError(
-            f"Custom network {custom_l2_network['chainID']} must have isCustom flag set to true"
-        )
+        raise ArbSdkError(f"Custom network {custom_l2_network['chainID']} must have isCustom flag set to true")
 
     l2_networks[custom_l2_network["chainID"]] = custom_l2_network
 

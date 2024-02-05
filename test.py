@@ -248,15 +248,9 @@ from eth_utils import to_checksum_address
 import rlp
 
 
-def hex_to_bytes(value: str) -> bytes:
+def hex_to_bytes(value):
     # Remove '0x' prefix if present and convert to bytes
     return bytes.fromhex(value[2:] if value.startswith("0x") else value)
-
-
-# # Define your own zero padding function
-# def zero_pad(value: bytes, length: int) -> bytes:
-#     return value.rjust(length, b'\0')
-
 
 def zero_pad(value, length):
     # Pad the value to the required length
@@ -272,7 +266,7 @@ def format_number(value):
     return bytes.fromhex(hex_str)
 
 
-def concat(*args) -> bytes:
+def concat(*args):
     # Concatenate all byte arguments
     return b"".join(args)
 
@@ -538,7 +532,7 @@ from eth.vm.forks.arrow_glacier.transactions import (
 )
 from typing import Any, Dict, cast
 
-def parse_raw_tx_pyevm(raw_tx: str) -> SignedTransactionAPI:
+def parse_raw_tx_pyevm(raw_tx):
     """Convert a raw transaction to a py-evm signed transaction object.
 
     Inspired by:
@@ -548,7 +542,7 @@ def parse_raw_tx_pyevm(raw_tx: str) -> SignedTransactionAPI:
     return TransactionBuilder().decode(to_bytes(hexstr=raw_tx))
 
 
-def parse_raw_tx(raw_tx: str) -> TxData:
+def parse_raw_tx(raw_tx):
     """Convert a raw transaction to a web3.py TxData dict.
 
     Inspired by:

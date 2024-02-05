@@ -1,12 +1,6 @@
 from src.lib import inbox
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from .test_helpers import (
-    fund_l1,
-    fund_l2,
-    withdraw_token,
-    mine_until_stop,
-    skip_if_mainnet
-)
+from .test_helpers import fund_l1, fund_l2, withdraw_token, mine_until_stop, skip_if_mainnet
 from src.lib.message.l2_to_l1_message import L2ToL1Message
 from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
@@ -16,6 +10,7 @@ import pytest
 from eth_account import Account
 from web3 import Web3
 import asyncio
+
 
 @pytest.mark.asyncio
 async def test_transfers_ether_on_l2():
@@ -28,17 +23,17 @@ async def test_transfers_ether_on_l2():
 
     # Create a random address
     random_address = Account.create().address
-    amount_to_send = Web3.to_wei(0.000005, 'ether')
+    amount_to_send = Web3.to_wei(0.000005, "ether")
 
     # Check balance before transaction
     balance_before = l2_signer.provider.eth.get_balance(l2_signer.account.address)
 
     tx_hash = l2_signer.provider.eth.send_transaction(
         {
-        'to': random_address,
-        'value': amount_to_send,
-        'maxFeePerGas': 15000000000,
-        'maxPriorityFeePerGas': 0,
+            "to": random_address,
+            "value": amount_to_send,
+            "maxFeePerGas": 15000000000,
+            "maxPriorityFeePerGas": 0,
         }
     )
 
@@ -46,9 +41,11 @@ async def test_transfers_ether_on_l2():
 
     balance_after = l2_signer.provider.eth.get_balance(l2_signer.account.address)
     random_balance_after = l2_signer.provider.eth.get_balance(random_address)
-    print('hii')
+    print("hii")
     # Assertions
-    assert Web3.from_wei(random_balance_after, 'ether') == Web3.from_wei(amount_to_send, 'ether'), "Random address balance after should match the sent amount"
+    assert Web3.from_wei(random_balance_after, "ether") == Web3.from_wei(
+        amount_to_send, "ether"
+    ), "Random address balance after should match the sent amount"
     expected_balance_after = balance_before - tx_receipt.gasUsed * tx_receipt.effectiveGasPrice - amount_to_send
     assert balance_after == expected_balance_after, "L2 signer balance after should be correctly reduced"
 
@@ -87,12 +84,12 @@ async def test_transfers_ether_on_l2():
 #     final_inbox_balance = l1_signer.provider.eth.get_balance(inbox_address)
 
 #     # Also fails in TS implementation - https://github.com/OffchainLabs/arbitrum-sdk/pull/407
-#     # assert final_inbox_balance == initial_inbox_balance + eth_to_deposit, "Balance failed to update after ETH deposit"  
+#     # assert final_inbox_balance == initial_inbox_balance + eth_to_deposit, "Balance failed to update after ETH deposit"
 #     wait_result = await rec.wait_for_l2(l2_signer.provider)
 
 #     # Retrieve L1 to L2 message and verify
 #     l1_to_l2_messages = await rec.get_eth_deposits(l2_signer.provider)
-    
+
 #     assert len(l1_to_l2_messages) == 1, "Failed to find 1 L1 to L2 message"
 #     l1_to_l2_message = l1_to_l2_messages[0]
 
@@ -102,7 +99,7 @@ async def test_transfers_ether_on_l2():
 #     print('l1_to_l2_message.value', l1_to_l2_message.value)
 #     print('eth_to_deposit', eth_to_deposit)
 #     assert l1_to_l2_message.value == eth_to_deposit, "Message inputs value error"
-    
+
 #     print(wait_result['message'])
 #     print('l2TxHash: ', wait_result['message'].l2_deposit_tx_receipt)
 #     print('l2 transaction found!')
@@ -114,7 +111,6 @@ async def test_transfers_ether_on_l2():
 #     # Check final L2 balance
 #     final_test_wallet_l2_eth_balance = l2_signer.provider.eth.get_balance(l2_signer.account.address)
 #     assert final_test_wallet_l2_eth_balance == initial_test_wallet_l2_eth_balance +  eth_to_deposit, "Final balance incorrect"
-
 
 
 # @pytest.mark.asyncio
@@ -150,7 +146,7 @@ async def test_transfers_ether_on_l2():
 
 #     # Check final balance of the inbox contract
 #     final_inbox_balance = l1_signer.provider.eth.get_balance(inbox_address)
-    
+
 #     # Also fails in TS implementation - https://github.com/OffchainLabs/arbitrum-sdk/pull/407
 #     # assert final_inbox_balance == initial_inbox_balance + eth_to_deposit, "Balance failed to update after ETH deposit"
 
@@ -257,10 +253,9 @@ async def test_transfers_ether_on_l2():
 
 #     miner1_account = Account.from_key(miner1_private_key)
 #     miner2_account = Account.from_key(miner2_private_key)
-    
+
 #     miner1 = SignerOrProvider(miner1_account, l1_signer.provider)
 #     miner2 = SignerOrProvider(miner2_account, l2_signer.provider)
-
 
 
 #     fund_l1(miner1, Web3.to_wei(1, 'ether'))

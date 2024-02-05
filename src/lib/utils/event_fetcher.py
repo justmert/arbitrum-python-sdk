@@ -1,8 +1,4 @@
 from web3 import Web3
-from web3.types import LogReceipt
-from web3.exceptions import BadFunctionCallOutput
-from typing import Any, Dict, List, Optional
-import json
 from src.lib.data_entities.errors import ArbSdkError
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
@@ -107,7 +103,7 @@ class EventFetcher:
         return _format_events(events)
 
 
-def _format_events(self, events: List[Any]) -> List[Dict[str, Any]]:
+def _format_events(self, events):
     fetched_events = []
     for event in events:
         fetched_event = FetchedEvent(

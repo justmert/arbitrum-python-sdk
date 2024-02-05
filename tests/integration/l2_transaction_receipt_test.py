@@ -10,6 +10,7 @@ from .test_helpers import fund_l1, fund_l2, mine_until_stop, wait
 from src.scripts.test_setup import test_setup
 from web3.exceptions import ContractLogicError
 import asyncio
+
 # Import or define utility functions like fund_l1, fund_l2, etc.
 
 # Constants
@@ -46,7 +47,7 @@ async def test_find_l1_batch_info():
     fund_l2(miner2, Web3.to_wei(0.1, "ether"))
 
     # Start mining (assuming mine_until_stop is an async function to mine blocks)
-    state = {"mining": True} 
+    state = {"mining": True}
     miner1_task = asyncio.create_task(mine_until_stop(miner1, state))
     miner2_task = asyncio.create_task(mine_until_stop(miner2, state))
     # mine_until_stop(miner1, state)
@@ -58,9 +59,7 @@ async def test_find_l1_batch_info():
 
     # Send an L2 transaction and get the receipt
     random_address = Account.create().address
-    rec = sign_and_sent_raw_transaction(
-        l2_signer, {"to": random_address, "value": AMOUNT_TO_SEND}
-    )
+    rec = sign_and_sent_raw_transaction(l2_signer, {"to": random_address, "value": AMOUNT_TO_SEND})
     print("sent rec!")
 
     # tx = await l2_signer.send_transaction({

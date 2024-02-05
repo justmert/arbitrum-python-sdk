@@ -1,7 +1,3 @@
-from web3 import Web3
-from web3.contract import Contract
-from typing import Any, Dict, Union, Optional
-import json
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.transaction_request import is_l1_to_l2_transaction_request
@@ -9,7 +5,7 @@ from src.lib.utils.lib import get_base_fee
 from src.lib.data_entities.errors import MissingProviderArbSdkError
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.message.l1_to_l2_message_gas_estimator import L1ToL2MessageGasEstimator
-from src.lib.utils.helper import load_contract, sign_and_sent_raw_transaction
+from src.lib.utils.helper import load_contract
 
 
 class L1ToL2MessageCreator:
@@ -19,20 +15,14 @@ class L1ToL2MessageCreator:
             raise MissingProviderArbSdkError("l1Signer")
 
     @staticmethod
-    async def get_ticket_estimate(
-        params, l1_provider, l2_provider, retryable_gas_overrides=None
-    ):
+    async def get_ticket_estimate(params, l1_provider, l2_provider, retryable_gas_overrides=None):
         base_fee = await get_base_fee(l1_provider)
 
         gas_estimator = L1ToL2MessageGasEstimator(l2_provider)
-        return await gas_estimator.estimate_all(
-            params, base_fee, l1_provider, retryable_gas_overrides
-        )
+        return await gas_estimator.estimate_all(params, base_fee, l1_provider, retryable_gas_overrides)
 
     @staticmethod
-    async def get_ticket_creation_request(
-        params, l1_provider, l2_provider, options=None
-    ):
+    async def get_ticket_creation_request(params, l1_provider, l2_provider, options=None):
         excess_fee_refund_address = params.get("excessFeeRefundAddress", None)
         if excess_fee_refund_address is None:
             excess_fee_refund_address = params.get("from")
@@ -47,9 +37,7 @@ class L1ToL2MessageCreator:
             "callValueRefundAddress": call_value_refund_address,
         }
 
-        estimates = await L1ToL2MessageCreator.get_ticket_estimate(
-            parsed_params, l1_provider, l2_provider, options
-        )
+        estimates = await L1ToL2MessageCreator.get_ticket_estimate(parsed_params, l1_provider, l2_provider, options)
 
         l2_network = get_l2_network(l2_provider)
         inbox_contract = load_contract(
@@ -115,9 +103,7 @@ class L1ToL2MessageCreator:
                 params, l1_provider, l2_provider, options
             )
 
-        tx_hash = self.l1_signer.eth.send_transaction(
-            {**create_request["txRequest"], **params.get("overrides", {})}
-        )
+        tx_hash = self.l1_signer.eth.send_transaction({**create_request["txRequest"], **params.get("overrides", {})})
 
         tx_receipt = self.l1_signer.eth.wait_for_transaction_receipt(tx_hash)
         return L1TransactionReceipt.monkey_patch_wait(tx_receipt)

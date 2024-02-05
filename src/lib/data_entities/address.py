@@ -1,5 +1,4 @@
 from web3 import Web3
-from eth_utils import is_address
 from .constants import ADDRESS_ALIAS_OFFSET
 from .errors import ArbSdkError
 

@@ -7,12 +7,14 @@ from hexbytes import HexBytes
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.utils.event_fetcher import EventFetcher
 
+
 @pytest.fixture
 def arb_provider():
     # Replace the URL with the appropriate RPC endpoint
-    rpc_url = 'https://arb1.arbitrum.io/rpc'
+    rpc_url = "https://arb1.arbitrum.io/rpc"
     web3 = Web3(HTTPProvider(rpc_url))
     return web3
+
 
 @pytest.mark.asyncio
 async def test_does_call_for_nitro_events(arb_provider):
@@ -23,7 +25,9 @@ async def test_does_call_for_nitro_events(arb_provider):
         "contractAddress": None,
         "transactionIndex": 323,
         "gasUsed": 0,
-        "logsBloom": HexBytes("0x040001000000000000000000000000000000000000000200000000004000000000000000800004000020000000080000020000021a0000000000000000000800400000000400800000000008000008800000000000400000008000040000002000200000000000000000000000000000002001000000440000000014880000000000000000000001000000400000000000000000000000000800020000000000100000020000200000000000000000000040000000000000000000000000000000000002000000000000000000080000000000000000004000001002080000002000200400000000000000000080000000000000000000000400000200004000"),
+        "logsBloom": HexBytes(
+            "0x040001000000000000000000000000000000000000000200000000004000000000000000800004000020000000080000020000021a0000000000000000000800400000000400800000000008000008800000000000400000008000040000002000200000000000000000000000000000002001000000440000000014880000000000000000000001000000400000000000000000000000000800020000000000100000020000200000000000000000000040000000000000000000000000000000000002000000000000000000080000000000000000004000001002080000002000200400000000000000000080000000000000000000000400000200004000"
+        ),
         "blockHash": "0xe5b6457bc2ec1bb39a88cee7f294ea3ad41b76d1069fd2e69c5959b4ffd6dd56",
         "transactionHash": "0x00000a61331187be51ab9ae792d74f601a5a21fb112f5b9ac5bccb23d4d5aaba",
         "logs": [
@@ -143,55 +147,40 @@ async def test_does_call_for_nitro_events(arb_provider):
         "status": 1,
     }
 
-    event_fetcher = EventFetcher(arb_provider, abi_directory='src/lib/abi')
+    event_fetcher = EventFetcher(arb_provider, abi_directory="src/lib/abi")
     l1_txn_receipt = L1TransactionReceipt(receipt, event_fetcher)
 
     tx_receipt = None
     with pytest.raises(Exception):
         tx_receipt = await l1_txn_receipt.get_l1_to_l2_messages_classic(arb_provider)
 
-    assert (
-        tx_receipt is None
-    ), "Classic method was successful using a nitro transaction."
+    assert tx_receipt is None, "Classic method was successful using a nitro transaction."
 
     is_classic = await l1_txn_receipt.is_classic(arb_provider)
     msg = (await l1_txn_receipt.get_l1_to_l2_messages(arb_provider))[0]
     assert msg
     assert not is_classic, "incorrect tx type returned by isClassic call"
     assert msg.chain_id == 42161, "incorrect chain id"
-    assert (
-        msg.sender == "0xeA3123E9d9911199a6711321d1277285e6d4F3EC"
-    ), "incorrect sender"
+    assert msg.sender == "0xeA3123E9d9911199a6711321d1277285e6d4F3EC", "incorrect sender"
     assert msg.message_number == 0x504C, "incorrect message number"
     assert msg.l1_base_fee == 0x05E0FC4C58, "incorrect l1 base fee"
     assert (
-        msg.message_data['destAddress'] == "0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B"
+        msg.message_data["destAddress"] == "0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B"
     ), "incorrect dest address on message_data"
+    assert msg.message_data["l2CallValue"] == 0x0853A0D2313C0000, "incorrect l2 call value on message_data"
+    assert msg.message_data["l1Value"] == 0x0854E8AB1802CA80, "incorrect l1 value on message_data"
+    assert msg.message_data["maxSubmissionFee"] == 0x01270F6740D880, "incorrect max submission fee on message_data"
     assert (
-        msg.message_data['l2CallValue'] == 0x0853A0D2313C0000
-    ), "incorrect l2 call value on message_data"
-    assert (
-        msg.message_data['l1Value'] == 0x0854E8AB1802CA80
-    ), "incorrect l1 value on message_data"
-    assert (
-        msg.message_data['maxSubmissionFee'] == 0x01270F6740D880
-    ), "incorrect max submission fee on message_data"
-    assert (
-        msg.message_data['excessFeeRefundAddress']
-        == "0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754"
+        msg.message_data["excessFeeRefundAddress"] == "0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754"
     ), "incorrect excess fee refund address"
     assert (
-        msg.message_data['callValueRefundAddress']
-        == "0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754"
+        msg.message_data["callValueRefundAddress"] == "0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754"
     ), "incorrect call value refund address"
-    assert msg.message_data['gasLimit'] == 0x01D566, "incorrect gas limit on message_data"
-    assert (
-        msg.message_data['maxFeePerGas'] == 0x11E1A300
-    ), "incorrect max fee per gas on message_data"
-    assert msg.message_data['data'] == (
+    assert msg.message_data["gasLimit"] == 0x01D566, "incorrect gas limit on message_data"
+    assert msg.message_data["maxFeePerGas"] == 0x11E1A300, "incorrect max fee per gas on message_data"
+    assert msg.message_data["data"] == (
         "0x2e567b36000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000a2e06c19ee14255889f0ec0ca37f6d0778d06754000000000000000000000000a2e06c19ee14255889f0ec0ca37f6d0778d067540000000000000000000000000000000000000000000000000853a0d2313c000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     ), "incorrect data on message_data"
     assert (
-        msg.retryable_creation_id
-        == "0x8ba13904639c7444d8578cc582a230b8501c9f0f7903f5069d276fdd3a7dea44"
+        msg.retryable_creation_id == "0x8ba13904639c7444d8578cc582a230b8501c9f0f7903f5069d276fdd3a7dea44"
     ), "incorrect retryable creation id"

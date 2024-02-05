@@ -16,6 +16,4 @@ class MissingProviderArbSdkError(ArbSdkError):
     """
 
     def __init__(self, signer_name):
-        super().__init__(
-            f"{signer_name} does not have a connected provider and one is required."
-        )
+        super().__init__(f"{signer_name} does not have a connected provider and one is required.")

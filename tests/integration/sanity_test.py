@@ -8,7 +8,7 @@ import os
 import random
 
 
-def expect_ignore_case(expected: str, actual: str):
+def expect_ignore_case(expected, actual):
     assert expected.lower() == actual.lower()
 
 
@@ -41,14 +41,10 @@ async def test_standard_gateways_public_storage_vars_properly_set():
     assert l1_beacon_proxy_hash == l2_beacon_proxy_hash
 
     l1_gateway_counterparty = l1_gateway.functions.counterpartGateway().call()
-    expect_ignore_case(
-        l1_gateway_counterparty, l2_network["token_bridge"]["l2ERC20Gateway"]
-    )
+    expect_ignore_case(l1_gateway_counterparty, l2_network["token_bridge"]["l2ERC20Gateway"])
 
     l2_gateway_counterparty = l2_gateway.functions.counterpartGateway().call()
-    expect_ignore_case(
-        l2_gateway_counterparty, l2_network["token_bridge"]["l1ERC20Gateway"]
-    )
+    expect_ignore_case(l2_gateway_counterparty, l2_network["token_bridge"]["l1ERC20Gateway"])
 
     l1_router = l1_gateway.functions.router().call()
     expect_ignore_case(l1_router, l2_network["token_bridge"]["l1GatewayRouter"])
@@ -77,19 +73,11 @@ async def test_custom_gateways_public_storage_vars_properly_set():
         is_classic=True,
     )
 
-    l1_gateway_counterparty = (
-        l1_custom_gateway.functions.counterpartGateway().call()
-    )
-    expect_ignore_case(
-        l1_gateway_counterparty, l2_network["token_bridge"]["l2CustomGateway"]
-    )
+    l1_gateway_counterparty = l1_custom_gateway.functions.counterpartGateway().call()
+    expect_ignore_case(l1_gateway_counterparty, l2_network["token_bridge"]["l2CustomGateway"])
 
-    l2_gateway_counterparty = (
-        l2_custom_gateway.functions.counterpartGateway().call()
-    )
-    expect_ignore_case(
-        l2_gateway_counterparty, l2_network["token_bridge"]["l1CustomGateway"]
-    )
+    l2_gateway_counterparty = l2_custom_gateway.functions.counterpartGateway().call()
+    expect_ignore_case(l2_gateway_counterparty, l2_network["token_bridge"]["l1CustomGateway"])
 
     l1_router = l1_custom_gateway.functions.router().call()
     expect_ignore_case(l1_router, l2_network["token_bridge"]["l1GatewayRouter"])
@@ -130,19 +118,11 @@ async def test_weth_gateways_gateways_public_storage_vars_properly_set():
     expect_ignore_case(l2_weth, l2_network["token_bridge"]["l2Weth"])
 
     # Check counterpart gateways
-    l1_gateway_counterparty = (
-        l1_weth_gateway.functions.counterpartGateway().call()
-    )
-    expect_ignore_case(
-        l1_gateway_counterparty, l2_network["token_bridge"]["l2WethGateway"]
-    )
+    l1_gateway_counterparty = l1_weth_gateway.functions.counterpartGateway().call()
+    expect_ignore_case(l1_gateway_counterparty, l2_network["token_bridge"]["l2WethGateway"])
 
-    l2_gateway_counterparty = (
-        l2_weth_gateway.functions.counterpartGateway().call()
-    )
-    expect_ignore_case(
-        l2_gateway_counterparty, l2_network["token_bridge"]["l1WethGateway"]
-    )
+    l2_gateway_counterparty = l2_weth_gateway.functions.counterpartGateway().call()
+    expect_ignore_case(l2_gateway_counterparty, l2_network["token_bridge"]["l1WethGateway"])
 
     # Check routers
     l1_router = l1_weth_gateway.functions.router().call()
@@ -168,9 +148,7 @@ async def test_ae_weth_public_vars_properly_set():
 
     # Check L2 Gateway on AeWETH
     l2_gateway_on_ae_weth = ae_weth.functions.l2Gateway().call()
-    expect_ignore_case(
-        l2_gateway_on_ae_weth, l2_network["token_bridge"]["l2WethGateway"]
-    )
+    expect_ignore_case(l2_gateway_on_ae_weth, l2_network["token_bridge"]["l2WethGateway"])
 
     # Check L1 Address on AeWETH
     l1_address_on_ae_weth = ae_weth.functions.l1Address().call()
@@ -185,9 +163,7 @@ async def test_l1_gateway_router_points_to_right_weth_gateways():
     l2_network = setup_state["l2_network"]
 
     # Get the gateway address for L1 WETH from the L1 ERC20 Bridger
-    gateway = await admin_erc20_bridger.get_l1_gateway_address(
-        l2_network["token_bridge"]["l1Weth"], l1_signer.provider
-    )
+    gateway = await admin_erc20_bridger.get_l1_gateway_address(l2_network["token_bridge"]["l1Weth"], l1_signer.provider)
 
     # Assert that the gateway address matches the L1 Weth Gateway address in the network configuration
     assert gateway == l2_network["token_bridge"]["l1WethGateway"]
@@ -204,17 +180,13 @@ async def test_l1_and_l2_implementations_of_calculate_l2_erc20_address_match():
 
     address = os.urandom(20)
 
-    erc20_l2_address_as_per_l1 = await erc20_bridger.get_l2_erc20_address(
-        address, l1_signer.provider
-    )
+    erc20_l2_address_as_per_l1 = await erc20_bridger.get_l2_erc20_address(address, l1_signer.provider)
     l2_gateway_router = load_contract(
         contract_name="L2GatewayRouter",
         address=l2_network["token_bridge"]["l2GatewayRouter"],
         provider=l2_signer.provider,
         is_classic=True,
     )
-    erc20_l2_address_as_per_l2 = (
-        l2_gateway_router.functions.calculateL2TokenAddress(address).call()
-    )
+    erc20_l2_address_as_per_l2 = l2_gateway_router.functions.calculateL2TokenAddress(address).call()
 
     assert erc20_l2_address_as_per_l2 == erc20_l2_address_as_per_l1

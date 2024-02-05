@@ -1,26 +1,21 @@
-from typing import Union, Optional, Type
+from typing import Optional
 from web3.providers import BaseProvider
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 import src.lib.message.l2_to_l1_message_classic as classic
 import src.lib.message.l2_to_l1_message_nitro as nitro
 from src.lib.utils.lib import is_defined
-from src.lib.data_entities.message import L2ToL1MessageStatus
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.errors import ArbSdkError
 import asyncio
-from typing import Optional, List, Dict, Union
-from web3 import Web3
 
 
 class L2ToL1Message:
     @staticmethod
-    def is_classic(event) -> bool:
+    def is_classic(event):
         return is_defined(getattr(event, "index_in_batch"))
 
     @staticmethod
-    def from_event(
-        l1_signer_or_provider, event, l1_provider: Optional[BaseProvider] = None
-    ) -> Union["L2ToL1MessageReader", "L2ToL1MessageWriter"]:
+    def from_event(l1_signer_or_provider, event, l1_provider: Optional[BaseProvider] = None):
         if SignerProviderUtils.is_signer(l1_signer_or_provider):
             return L2ToL1MessageWriter(l1_signer_or_provider, event, l1_provider)
         else:
@@ -58,21 +53,13 @@ class L2ToL1Message:
             return max(block_tag, nitro_gen_block)
 
         classic_filter = {
-            "fromBlock": in_classic_range(
-                filter["fromBlock"], l2_network.nitro_genesis_block
-            ),
-            "toBlock": in_classic_range(
-                filter["toBlock"], l2_network.nitro_genesis_block
-            ),
+            "fromBlock": in_classic_range(filter["fromBlock"], l2_network.nitro_genesis_block),
+            "toBlock": in_classic_range(filter["toBlock"], l2_network.nitro_genesis_block),
         }
 
         nitro_filter = {
-            "fromBlock": in_nitro_range(
-                filter["fromBlock"], l2_network.nitro_genesis_block
-            ),
-            "toBlock": in_nitro_range(
-                filter["toBlock"], l2_network.nitro_genesis_block
-            ),
+            "fromBlock": in_nitro_range(filter["fromBlock"], l2_network.nitro_genesis_block),
+            "toBlock": in_nitro_range(filter["toBlock"], l2_network.nitro_genesis_block),
         }
 
         log_queries = []
@@ -90,9 +77,7 @@ class L2ToL1Message:
 
         if nitro_filter["fromBlock"] != nitro_filter["toBlock"]:
             log_queries.append(
-                nitro.L2ToL1MessageNitro.get_l2_to_l1_events(
-                    l2_provider, nitro_filter, position, destination, hash
-                )
+                nitro.L2ToL1MessageNitro.get_l2_to_l1_events(l2_provider, nitro_filter, position, destination, hash)
             )
 
         results = await asyncio.gather(*log_queries)
@@ -100,7 +85,7 @@ class L2ToL1Message:
 
 
 class L2ToL1MessageReader(L2ToL1Message):
-    def __init__(self, l1_provider: BaseProvider, event):
+    def __init__(self, l1_provider, event):
         super().__init__()
         if self.is_classic(event):
             self.classic_reader = classic.L2ToL1MessageReaderClassic(
@@ -111,31 +96,25 @@ class L2ToL1MessageReader(L2ToL1Message):
             self.nitro_reader = nitro.L2ToL1MessageReaderNitro(l1_provider, event)
             self.classic_reader = None
 
-    async def get_outbox_proof(self, l2_provider: BaseProvider):
+    async def get_outbox_proof(self, l2_provider):
         if self.nitro_reader:
             return await self.nitro_reader.get_outbox_proof(l2_provider)
         else:
             return await self.classic_reader.try_get_proof(l2_provider)
 
-    async def status(self, l2_provider: BaseProvider) -> L2ToL1MessageStatus:
+    async def status(self, l2_provider):
         if self.nitro_reader:
             return await self.nitro_reader.status(l2_provider)
         else:
             return await self.classic_reader.status(l2_provider)
 
-    async def wait_until_ready_to_execute(
-        self, l2_provider: BaseProvider, retry_delay=500
-    ):
+    async def wait_until_ready_to_execute(self, l2_provider, retry_delay=500):
         if self.nitro_reader:
-            await self.nitro_reader.wait_until_ready_to_execute(
-                l2_provider, retry_delay
-            )
+            await self.nitro_reader.wait_until_ready_to_execute(l2_provider, retry_delay)
         else:
-            await self.classic_reader.wait_until_outbox_entry_created(
-                l2_provider, retry_delay
-            )
+            await self.classic_reader.wait_until_outbox_entry_created(l2_provider, retry_delay)
 
-    async def get_first_executable_block(self, l2_provider: BaseProvider):
+    async def get_first_executable_block(self, l2_provider):
         if self.nitro_reader:
             return await self.nitro_reader.get_first_executable_block(l2_provider)
         else:
@@ -143,7 +122,7 @@ class L2ToL1MessageReader(L2ToL1Message):
 
 
 class L2ToL1MessageWriter(L2ToL1MessageReader):
-    def __init__(self, l1_signer, event, l1_provider: Optional[BaseProvider] = None):
+    def __init__(self, l1_signer, event, l1_provider=None):
         super().__init__(l1_provider or l1_signer.provider, event)
         if self.is_classic(event):
             self.classic_writer = classic.L2ToL1MessageWriterClassic(
@@ -151,12 +130,10 @@ class L2ToL1MessageWriter(L2ToL1MessageReader):
             )
             self.nitro_writer = None
         else:
-            self.nitro_writer = nitro.L2ToL1MessageWriterNitro(
-                l1_signer, event, l1_provider
-            )
+            self.nitro_writer = nitro.L2ToL1MessageWriterNitro(l1_signer, event, l1_provider)
             self.classic_writer = None
 
-    async def execute(self, l2_provider: BaseProvider, overrides=None):
+    async def execute(self, l2_provider, overrides=None):
         if self.nitro_writer:
             return await self.nitro_writer.execute(l2_provider, overrides)
         else:

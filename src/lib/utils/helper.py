@@ -1,29 +1,22 @@
 import json
-from web3 import Web3
-from web3.contract import Contract
-from web3 import Account
+from typing import cast
 
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from hexbytes import HexBytes
-from web3 import Web3
-from web3.types import AccessList, Nonce, TxData, Wei
-from eth_utils import encode_hex, to_bytes
-from eth.abc import SignedTransactionAPI
+import rlp
 from eth.vm.forks.arrow_glacier.transactions import (
     ArrowGlacierTransactionBuilder as TransactionBuilder,
 )
-from typing import Any, Dict, cast
-import rlp
-import re
+from eth_utils import encode_hex
+from hexbytes import HexBytes
+from web3 import Web3
+from web3.contract import Contract
+from web3.types import AccessList, Nonce, Wei
+
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
 
 
-def format_contract_output(contract: Contract, function_name: str, output):
+def format_contract_output(contract, function_name, output):
     func_abi = next(
-        (
-            item
-            for item in contract.abi
-            if item.get("name") == function_name and item.get("type") == "function"
-        ),
+        (item for item in contract.abi if item.get("name") == function_name and item.get("type") == "function"),
         None,
     )
     if not func_abi:
@@ -32,11 +25,7 @@ def format_contract_output(contract: Contract, function_name: str, output):
     def format_output(abi_outputs, output_values):
         if not isinstance(abi_outputs, list) or not abi_outputs:
             return output_values
-        if (
-            len(abi_outputs) == 1
-            and abi_outputs[0].get("type").startswith("tuple")
-            and not abi_outputs[0].get("name")
-        ):
+        if len(abi_outputs) == 1 and abi_outputs[0].get("type").startswith("tuple") and not abi_outputs[0].get("name"):
             return format_output(abi_outputs[0].get("components", []), output_values)
 
         formatted_output = {}
@@ -46,13 +35,9 @@ def format_contract_output(contract: Contract, function_name: str, output):
 
             if output_type.startswith("tuple"):
                 if isinstance(output_values, list) or isinstance(output_values, tuple):
-                    formatted_output[output_name] = format_output(
-                        output.get("components", []), output_values[i]
-                    )
+                    formatted_output[output_name] = format_output(output.get("components", []), output_values[i])
                 else:
-                    formatted_output[output_name] = format_output(
-                        output.get("components", []), output_values
-                    )
+                    formatted_output[output_name] = format_output(output.get("components", []), output_values)
             else:
                 formatted_output[output_name] = output_values[i]
 
@@ -61,14 +46,14 @@ def format_contract_output(contract: Contract, function_name: str, output):
     return format_output(func_abi.get("outputs", []), output)
 
 
-def get_address(address: str) -> str:
+def get_address(address):
     if Web3.is_address(address):
         return Web3.to_checksum_address(address)
     else:
         raise ValueError(f"Invalid Ethereum address: {address}")
 
 
-def parse_raw_tx_pyevm(raw_tx: str) -> SignedTransactionAPI:
+def parse_raw_tx_pyevm(raw_tx):
     return TransactionBuilder().decode(raw_tx)
 
 
@@ -80,7 +65,7 @@ def get_contract_address(sender_address, nonce):
     return contract_address
 
 
-def parse_raw_tx(raw_tx: str) -> TxData:
+def parse_raw_tx(raw_tx):
     tx = parse_raw_tx_pyevm(raw_tx)
     return {
         "accessList": cast(AccessList, tx.access_list),
@@ -108,9 +93,7 @@ def parse_raw_tx(raw_tx: str) -> TxData:
     }
 
 
-def load_contract(
-    provider: Web3, contract_name: str, address: str = None, is_classic: bool = False
-) -> Contract:
+def load_contract(provider, contract_name, address=None, is_classic=False):
     if isinstance(provider, SignerOrProvider):
         provider = provider.provider
 
@@ -149,19 +132,15 @@ def load_contract(
 
 
 def deploy_abi_contract(
-    provider: Web3,
-    deployer: Account,
-    contract_name: str,
+    provider,
+    deployer,
+    contract_name,
     is_classic=False,
     constructor_args=[],
-) -> Contract:
-    contract = load_contract(
-        provider=provider, contract_name=contract_name, is_classic=is_classic
-    )
+):
+    contract = load_contract(provider=provider, contract_name=contract_name, is_classic=is_classic)
     chain_id = provider.eth.chain_id
-    gas_estimate = contract.constructor(*constructor_args).estimate_gas(
-        {"from": deployer.address}
-    )
+    gas_estimate = contract.constructor(*constructor_args).estimate_gas({"from": deployer.address})
     construct_txn = contract.constructor(*constructor_args).build_transaction(
         {
             "from": deployer.address,
@@ -176,14 +155,12 @@ def deploy_abi_contract(
     tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
     contract_address = tx_receipt.contractAddress
 
-    deployed_contract = provider.eth.contract(
-        address=contract_address, abi=contract.abi
-    )
+    deployed_contract = provider.eth.contract(address=contract_address, abi=contract.abi)
 
     return deployed_contract
 
 
-def load_abi(contract_name: str, is_classic=False) -> Contract:
+def load_abi(contract_name, is_classic=False):
     if is_classic:
         file_path = f"src/abi/classic/{contract_name}.json"
     else:
@@ -206,13 +183,11 @@ def is_contract_deployed(provider, address):
 def snake_to_camel(name):
     special_cases = {"id": "ID", "ids": "IDs", "erc20": "ERC20"}
     components = name.split("_")
-    camel_case_name = components[0] + "".join(
-        special_cases.get(x, x.title()) for x in components[1:]
-    )
+    camel_case_name = components[0] + "".join(special_cases.get(x, x.title()) for x in components[1:])
     return camel_case_name
 
 
-def sign_and_sent_raw_transaction(signer: SignerOrProvider, tx: dict):
+def sign_and_sent_raw_transaction(signer, tx):
     if "gasPrice" not in tx:
         if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
             pass
@@ -264,9 +239,7 @@ class CaseDict:
         except AttributeError:
             pass
 
-        raise AttributeError(
-            f"'{type(self).__name__}' object has no attribute '{name}'"
-        )
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def get(self, key, default=None):
         return getattr(self, key, default)
@@ -288,11 +261,7 @@ class CaseDict:
         super().__setattr__(camel_case_name, value)
 
     def to_dict(self):
-        return {
-            k: self.convert_to_serializable(v)
-            for k, v in self.__dict__.items()
-            if not k.startswith("_")
-        }
+        return {k: self.convert_to_serializable(v) for k, v in self.__dict__.items() if not k.startswith("_")}
 
     def __str__(self):
         items = [f"{key}: {value}" for key, value in self.to_dict().items()]
@@ -304,9 +273,7 @@ class CaseDict:
         elif isinstance(value, list):
             return [self.convert_to_serializable(item) for item in value]
         elif isinstance(value, dict):
-            return {
-                key: self.convert_to_serializable(val) for key, val in value.items()
-            }
+            return {key: self.convert_to_serializable(val) for key, val in value.items()}
         elif isinstance(value, Contract):
             return value.address
         else:

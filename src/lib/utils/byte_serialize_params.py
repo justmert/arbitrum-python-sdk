@@ -1,10 +1,6 @@
 from web3 import Web3
-from web3.auto import w3
-from eth_typing import HexStr
-from typing import Union, List, Callable
 from eth_utils import (
     to_checksum_address,
-    big_endian_to_int,
     int_to_big_endian,
 )
 from src.lib.data_entities.errors import ArbSdkError
@@ -14,7 +10,7 @@ from src.lib.utils.helper import load_contract
 address_to_index_memo = {}
 
 
-async def get_address_index(address: str, provider: Web3) -> int:
+async def get_address_index(address, provider):
     if address in address_to_index_memo:
         return address_to_index_memo[address]
 
@@ -36,10 +32,8 @@ async def get_address_index(address: str, provider: Web3) -> int:
 
 
 async def arg_serializer_constructor(provider):
-    async def serialize_params_with_index(
-        params: List[Union[str, int, bool, List[Union[str, int, bool]]]],
-    ) -> bytes:
-        async def address_to_index(address: str) -> int:
+    async def serialize_params_with_index(params):
+        async def address_to_index(address):
             return await get_address_index(address, provider)
 
         return await serialize_params(params, address_to_index)
@@ -47,17 +41,17 @@ async def arg_serializer_constructor(provider):
     return serialize_params_with_index
 
 
-def is_address_type(input_value: Union[int, str, bool]):
+def is_address_type(input_value):
     return isinstance(input_value, str) and Web3.is_address(input_value)
 
 
-def to_uint(val: Union[int, str, bool], bytes_size: int) -> bytes:
+def to_uint(val, bytes_size):
     if isinstance(val, bool):
         val = 1 if val else 0
     return int_to_big_endian(int(val)).rjust(bytes_size, b"\0")
 
 
-def format_primitive(value: Union[int, str, bool]) -> HexStr:
+def format_primitive(value):
     if is_address_type(value):
         return to_checksum_address(value)
     elif isinstance(value, bool) or isinstance(value, int) or isinstance(value, str):
@@ -67,9 +61,9 @@ def format_primitive(value: Union[int, str, bool]) -> HexStr:
 
 
 async def serialize_params(
-    params: List[Union[int, str, bool, List[Union[int, str, bool]]]],
-    address_to_index: Callable[[str], int] = lambda x: -1,
-) -> bytes:
+    params,
+    address_to_index=lambda _: -1,
+):
     formatted_params = []
 
     for param in params:

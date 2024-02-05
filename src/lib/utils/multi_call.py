@@ -1,5 +1,4 @@
-import json
-from web3 import Web3, HTTPProvider
+from web3 import Web3
 from src.lib.data_entities.networks import is_l1_network, l1_networks, l2_networks
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
@@ -20,7 +19,7 @@ class MultiCaller:
         self.address = address
 
     @staticmethod
-    async def from_provider(provider: Web3):
+    async def from_provider(provider):
         chain_id = provider.eth.chain_id
 
         l2_network = l2_networks.get(chain_id, None)
@@ -56,9 +55,7 @@ class MultiCaller:
         return {
             "targetAddr": self.address,
             "encoder": lambda: iface.encodeABI(fn_name="getBlockNumber"),
-            "decoder": lambda return_data: iface.decode_function_input(
-                "getBlockNumber", return_data
-            )[1],
+            "decoder": lambda return_data: iface.decode_function_input("getBlockNumber", return_data)[1],
         }
 
     def get_current_block_timestamp_input(self):
@@ -72,9 +69,7 @@ class MultiCaller:
         return {
             "targetAddr": self.address,
             "encoder": lambda: iface.encodeABI(fn_name="getCurrentBlockTimestamp"),
-            "decoder": lambda return_data: iface.decode_function_input(
-                "getCurrentBlockTimestamp", return_data
-            )[1],
+            "decoder": lambda return_data: iface.decode_function_input("getCurrentBlockTimestamp", return_data)[1],
         }
 
     async def multi_call(self, params, require_success=False):
@@ -87,58 +82,36 @@ class MultiCaller:
 
         args = [{"target": p["targetAddr"], "callData": p["encoder"]()} for p in params]
 
-        outputs = multi_call_contract.functions.tryAggregate(
-            require_success, args
-        ).call()
-        print(outputs)
-        return [
-            p["decoder"](output["returnData"]) if output["success"] else None
-            for output, p in zip(outputs, params)
-        ]
+        outputs = multi_call_contract.functions.tryAggregate(require_success, args).call()
+
+        return [p["decoder"](output["returnData"]) if output["success"] else None for output, p in zip(outputs, params)]
 
     async def get_token_data(self, erc20_addresses, defaulted_options=None):
         if defaulted_options is None:
             defaulted_options = {"name": True}
 
-        erc20_iface = load_contract(
-            provider=self.provider, contract_name="ERC20", is_classic=True
-        )
+        erc20_iface = load_contract(provider=self.provider, contract_name="ERC20", is_classic=True)
         inputs = []
         for address in erc20_addresses:
             if defaulted_options.get("balanceOf"):
                 account = defaulted_options["balanceOf"]["account"]
-                inputs.append(
-                    self._create_call_input(
-                        address, erc20_iface, "balanceOf", [account]
-                    )
-                )
+                inputs.append(self._create_call_input(address, erc20_iface, "balanceOf", [account]))
 
             if defaulted_options.get("allowance"):
                 owner = defaulted_options["allowance"]["owner"]
                 spender = defaulted_options["allowance"]["spender"]
-                inputs.append(
-                    self._create_call_input(
-                        address, erc20_iface, "allowance", [owner, spender]
-                    )
-                )
+                inputs.append(self._create_call_input(address, erc20_iface, "allowance", [owner, spender]))
 
             if defaulted_options.get("symbol"):
-                inputs.append(
-                    self._create_call_input(address, erc20_iface, "symbol", [])
-                )
+                inputs.append(self._create_call_input(address, erc20_iface, "symbol", []))
 
             if defaulted_options.get("decimals"):
-                inputs.append(
-                    self._create_call_input(address, erc20_iface, "decimals", [])
-                )
+                inputs.append(self._create_call_input(address, erc20_iface, "decimals", []))
 
             if defaulted_options.get("name"):
                 inputs.append(self._create_call_input(address, erc20_iface, "name", []))
 
-        # Execute multicall
         results = await self.multi_call(inputs)
-        print(results)
-        # Parse results into structured format
         token_data = []
         for i in range(0, len(results), len(defaulted_options)):
             token_info = {}
@@ -165,7 +138,5 @@ class MultiCaller:
         return {
             "targetAddr": address,
             "encoder": lambda: contract.encodeABI(fn_name=method, args=args),
-            "decoder": lambda return_data: contract.decode_function_input(
-                method, return_data
-            )[1],
+            "decoder": lambda return_data: contract.decode_function_input(method, return_data)[1],
         }

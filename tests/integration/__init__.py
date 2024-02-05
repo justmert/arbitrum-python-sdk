@@ -1,5 +1,6 @@
-import os 
+import os
 import dotenv
+
 # Construct the path to the .env file
 current_file_path = os.path.realpath(__file__)
 scripts_directory = os.path.dirname(current_file_path)  # Path of src/scripts

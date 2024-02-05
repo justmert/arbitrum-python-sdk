@@ -1,15 +1,10 @@
 from web3 import Web3
-
-# from decimal import Decimal
-from typing import Dict, Any, Tuple, Optional
-import json
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.utils.lib import get_base_fee, is_defined
 from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.utils.helper import load_contract
-from src.lib.data_entities.retryable_data import RetryableDataTools, RetryableData
+from src.lib.data_entities.retryable_data import RetryableDataTools
 from src.lib.data_entities.networks import get_l2_network
-from collections import namedtuple
 
 from test import CaseDict
 
@@ -31,18 +26,11 @@ class L1ToL2MessageGasEstimator:
         return num + (num * increase // 100)
 
     def apply_submission_price_defaults(self, max_submission_fee_options=None):
-        base = (
-            max_submission_fee_options.get("base")
-            if max_submission_fee_options
-            else None
-        )
+        base = max_submission_fee_options.get("base") if max_submission_fee_options else None
         percent_increase = (
             max_submission_fee_options["percentIncrease"]
-            if max_submission_fee_options
-            and "percentIncrease" in max_submission_fee_options
-            else default_l1_to_l2_message_estimate_options[
-                "maxSubmissionFeePercentIncrease"
-            ]
+            if max_submission_fee_options and "percentIncrease" in max_submission_fee_options
+            else default_l1_to_l2_message_estimate_options["maxSubmissionFeePercentIncrease"]
         )
         return {"base": base, "percentIncrease": percent_increase}
 
@@ -51,9 +39,7 @@ class L1ToL2MessageGasEstimator:
         percent_increase = (
             max_fee_per_gas_options["percentIncrease"]
             if max_fee_per_gas_options and "percentIncrease" in max_fee_per_gas_options
-            else default_l1_to_l2_message_estimate_options[
-                "maxFeePerGasPercentIncrease"
-            ]
+            else default_l1_to_l2_message_estimate_options["maxFeePerGasPercentIncrease"]
         )
         return {"base": base, "percentIncrease": percent_increase}
 
@@ -64,18 +50,14 @@ class L1ToL2MessageGasEstimator:
             if gas_limit_defaults and "percentIncrease" in gas_limit_defaults
             else default_l1_to_l2_message_estimate_options["gasLimitPercentIncrease"]
         )
-        min_gas_limit = (
-            gas_limit_defaults["min"]
-            if gas_limit_defaults and "min" in gas_limit_defaults
-            else 0
-        )
+        min_gas_limit = gas_limit_defaults["min"] if gas_limit_defaults and "min" in gas_limit_defaults else 0
         return {"base": base, "percentIncrease": percent_increase, "min": min_gas_limit}
 
     async def estimate_submission_fee(
         self,
-        l1_provider: Web3,
+        l1_provider,
         l1_base_fee,
-        call_data_size: int,
+        call_data_size,
         options=None,
     ):
         defaulted_options = self.apply_submission_price_defaults(options)
@@ -89,19 +71,13 @@ class L1ToL2MessageGasEstimator:
 
         base = defaulted_options.get("base", None)
         if base is None:
-            base = inbox.functions.calculateRetryableSubmissionFee(
-                call_data_size, l1_base_fee
-            ).call()
+            base = inbox.functions.calculateRetryableSubmissionFee(call_data_size, l1_base_fee).call()
 
         return self.percent_increase(base, defaulted_options["percentIncrease"])
 
-    async def estimate_retryable_ticket_gas_limit(
-        self, retryable_data, sender_deposit=None
-    ):
+    async def estimate_retryable_ticket_gas_limit(self, retryable_data, sender_deposit=None):
         if sender_deposit is None:
-            sender_deposit = (
-                Web3.to_wei(sender_deposit, "ether") + retryable_data["l2CallValue"]
-            )
+            sender_deposit = Web3.to_wei(sender_deposit, "ether") + retryable_data["l2CallValue"]
 
         node_interface = load_contract(
             provider=self.l2_provider,
@@ -138,9 +114,7 @@ class L1ToL2MessageGasEstimator:
             and estimates["maxSubmissionCost"] >= re_estimates["maxSubmissionCost"]
         )
 
-    async def estimate_all(
-        self, retryable_estimate_data, l1_base_fee, l1_provider, options=None
-    ):
+    async def estimate_all(self, retryable_estimate_data, l1_base_fee, l1_provider, options=None):
         if options is None:
             options = {}
 
@@ -148,9 +122,7 @@ class L1ToL2MessageGasEstimator:
 
         gas_limit_defaults = self.apply_gas_limit_defaults(options.get("gasLimit", {}))
 
-        max_fee_per_gas_estimate = await self.estimate_max_fee_per_gas(
-            options.get("maxFeePerGas", {})
-        )
+        max_fee_per_gas_estimate = await self.estimate_max_fee_per_gas(options.get("maxFeePerGas", {}))
 
         max_submission_fee_estimate = await self.estimate_submission_fee(
             l1_provider, l1_base_fee, len(data), options.get("maxSubmissionFee", {})
@@ -162,9 +134,7 @@ class L1ToL2MessageGasEstimator:
                 retryable_estimate_data, options.get("deposit", {}).get("base", None)
             )
 
-        calculated_gas_limit = self.percent_increase(
-            base, gas_limit_defaults["percentIncrease"]
-        )
+        calculated_gas_limit = self.percent_increase(base, gas_limit_defaults["percentIncrease"])
 
         if calculated_gas_limit > gas_limit_defaults.get("min"):
             gas_limit = calculated_gas_limit
@@ -186,15 +156,11 @@ class L1ToL2MessageGasEstimator:
             "deposit": deposit,
         }
 
-    async def populate_function_params(
-        self, data_func, l1_provider, gas_overrides=None
-    ):
+    async def populate_function_params(self, data_func, l1_provider, gas_overrides=None):
         dummy_params = CaseDict(
             {
                 "gasLimit": RetryableDataTools.ErrorTriggeringParams["gasLimit"],
-                "maxFeePerGas": RetryableDataTools.ErrorTriggeringParams[
-                    "maxFeePerGas"
-                ],
+                "maxFeePerGas": RetryableDataTools.ErrorTriggeringParams["maxFeePerGas"],
                 "maxSubmissionCost": 1,
             }
         )

@@ -1,9 +1,7 @@
-from pkg_resources import get_provider
 from src.lib.message.l1_to_l2_message_gas_estimator import L1ToL2MessageGasEstimator
 from src.lib.data_entities.errors import ArbSdkError, MissingProviderArbSdkError
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.signer_or_provider import (
-    SignerOrProvider,
     SignerProviderUtils,
 )
 from src.lib.data_entities.constants import DISABLED_GATEWAY
@@ -11,24 +9,18 @@ from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.asset_briger.asset_bridger import AssetBridger
 from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.data_entities.retryable_data import RetryableDataTools
-from web3.providers import BaseProvider
-from web3.contract import Contract
 from web3 import Web3
 from src.lib.utils.helper import (
     CaseDict,
-    deploy_abi_contract,
     is_contract_deployed,
     load_contract,
-    sign_and_sent_raw_transaction,
 )
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.data_entities.transaction_request import (
     is_l1_to_l2_transaction_request,
     is_l2_to_l1_transaction_request,
 )
-from src.lib.data_entities.networks import L1Network, L2Network, EthBridge, TokenBridge
 from eth_abi import encode
-from web3 import Web3
 from collections import namedtuple
 from web3.exceptions import ContractLogicError
 
@@ -94,9 +86,7 @@ class Erc20Bridger(AssetBridger):
             await self.get_approve_token_request(
                 {
                     **params,
-                    "l1Provider": SignerProviderUtils.get_provider_or_throw(
-                        params["l1Signer"]
-                    ),
+                    "l1Provider": SignerProviderUtils.get_provider_or_throw(params["l1Signer"]),
                 }
             )
             if self.is_approve_params(params)
@@ -110,9 +100,7 @@ class Erc20Bridger(AssetBridger):
 
         tx_hash = params["l1Signer"].provider.eth.send_transaction(transaction)
 
-        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
+        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return tx_receipt
 
@@ -145,18 +133,12 @@ class Erc20Bridger(AssetBridger):
 
         events = [{"txHash": a["transactionHash"], **a["event"]} for a in events]
         return (
-            [
-                event
-                for event in events
-                if event.l1Token.lower() == l1_token_address.lower()
-            ]
+            [event for event in events if event.l1Token.lower() == l1_token_address.lower()]
             if l1_token_address
             else events
         )
 
-    async def looks_like_weth_gateway(
-        self, potential_weth_gateway_address, l1_provider
-    ):
+    async def looks_like_weth_gateway(self, potential_weth_gateway_address, l1_provider):
         try:
             potential_weth_gateway = load_contract(
                 provider=l1_provider,
@@ -181,7 +163,7 @@ class Erc20Bridger(AssetBridger):
             return True
         return False
 
-    def get_l2_token_contract(self, l2_provider, l2_token_addr) -> Contract:
+    def get_l2_token_contract(self, l2_provider, l2_token_addr):
         return load_contract(
             provider=l2_provider,
             contract_name="L2GatewayToken",
@@ -205,9 +187,7 @@ class Erc20Bridger(AssetBridger):
             address=self.l2_network.token_bridge.l1_gateway_router,
             is_classic=True,
         )
-        return l1_gateway_router.functions.calculateL2TokenAddress(
-            erc20_l1_address
-        ).call()
+        return l1_gateway_router.functions.calculateL2TokenAddress(erc20_l1_address).call()
 
     async def get_l1_erc20_address(self, erc20_l2_address, l2_provider):
         await self.check_l2_network(l2_provider)
@@ -229,9 +209,7 @@ class Erc20Bridger(AssetBridger):
             address=self.l2_network.token_bridge.l2_gateway_router,
             is_classic=True,
         )
-        l2_address = l2_gateway_router.functions.calculateL2TokenAddress(
-            l1_address
-        ).call()
+        l2_address = l2_gateway_router.functions.calculateL2TokenAddress(l1_address).call()
 
         if l2_address.lower() != erc20_l2_address.lower():
             raise ArbSdkError(
@@ -247,35 +225,21 @@ class Erc20Bridger(AssetBridger):
             address=self.l2_network.token_bridge.l1_gateway_router,
             is_classic=True,
         )
-        return (
-            l1_gateway_router.functions.l1TokenToGateway(l1_token_address).call()
-        ) == DISABLED_GATEWAY
+        return (l1_gateway_router.functions.l1TokenToGateway(l1_token_address).call()) == DISABLED_GATEWAY
 
     def apply_defaults(self, params):
         return {
             **params,
-            "excessFeeRefundAddress": params.get(
-                "excessFeeRefundAddress", params["from"]
-            ),
-            "callValueRefundAddress": params.get(
-                "callValueRefundAddress", params["from"]
-            ),
+            "excessFeeRefundAddress": params.get("excessFeeRefundAddress", params["from"]),
+            "callValueRefundAddress": params.get("callValueRefundAddress", params["from"]),
             "destinationAddress": params.get("destinationAddress", params["from"]),
         }
 
     async def get_deposit_request(self, params):
-        # Check networks
-
-        # Implement checkL1Network and checkL2Network
         await self.check_l1_network(params["l1Provider"])
         await self.check_l2_network(params["l2Provider"])
 
-        # Apply defaults to the parameters
-        # Implement apply_defaults
         defaulted_params = self.apply_defaults(params)
-        # print('def_aparams', defaulted_params)
-
-        # Extract necessary parameters
         amount = defaulted_params["amount"]
         destination_address = defaulted_params["destinationAddress"]
         erc20_l1_address = defaulted_params["erc20L1Address"]
@@ -286,22 +250,16 @@ class Erc20Bridger(AssetBridger):
         if retryable_gas_overrides is None:
             retryable_gas_overrides = {}
 
-        l1_gateway_address = await self.get_l1_gateway_address(
-            erc20_l1_address, l1_provider
-        )
+        l1_gateway_address = await self.get_l1_gateway_address(erc20_l1_address, l1_provider)
 
         if l1_gateway_address == self.l2_network.tokenBridge.l1CustomGateway:
             if "gasLimit" not in retryable_gas_overrides:
                 retryable_gas_overrides["gasLimit"] = {}
             if "min" not in retryable_gas_overrides["gasLimit"]:
-                retryable_gas_overrides["gasLimit"][
-                    "min"
-                ] = Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+                retryable_gas_overrides["gasLimit"]["min"] = Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
 
         def deposit_func(deposit_params):
-            inner_data = self._solidity_encode(
-                ["uint256", "bytes"], [int(deposit_params["maxSubmissionCost"]), "0x"]
-            )
+            inner_data = self._solidity_encode(["uint256", "bytes"], [int(deposit_params["maxSubmissionCost"]), "0x"])
             i_gateway_router = load_contract(
                 provider=l1_provider,
                 contract_name="L1GatewayRouter",
@@ -329,17 +287,13 @@ class Erc20Bridger(AssetBridger):
             }
 
         gas_estimator = L1ToL2MessageGasEstimator(l2_provider)
-        estimates = await gas_estimator.populate_function_params(
-            deposit_func, l1_provider, retryable_gas_overrides
-        )
+        estimates = await gas_estimator.populate_function_params(deposit_func, l1_provider, retryable_gas_overrides)
 
         async def is_valid():
             re_estimates = await gas_estimator.populate_function_params(
                 deposit_func, l1_provider, retryable_gas_overrides
             )
-            return L1ToL2MessageGasEstimator.isValid(
-                estimates["estimates"], re_estimates["estimates"]
-            )
+            return L1ToL2MessageGasEstimator.isValid(estimates["estimates"], re_estimates["estimates"])
 
         return CaseDict(
             {
@@ -351,9 +305,7 @@ class Erc20Bridger(AssetBridger):
                         "from": params["from"],
                     }
                 ),
-                "retryableData": CaseDict(
-                    {**estimates["retryable"], **estimates["estimates"]}
-                ),
+                "retryableData": CaseDict({**estimates["retryable"], **estimates["estimates"]}),
                 "isValid": is_valid,
             }
         )
@@ -361,11 +313,7 @@ class Erc20Bridger(AssetBridger):
     async def deposit(self, params):
         await self.check_l1_network(params["l1Signer"])
 
-        if (
-            "overrides" in params
-            and params["overrides"] is not None
-            and "value" in params["overrides"]
-        ):
+        if "overrides" in params and params["overrides"] is not None and "value" in params["overrides"]:
             raise ArbSdkError("L1 call value should be set through l1CallValue param")
 
         l1_provider = SignerProviderUtils.get_provider_or_throw(params["l1Signer"])
@@ -388,9 +336,7 @@ class Erc20Bridger(AssetBridger):
 
         tx_hash = params["l1Signer"].provider.eth.send_transaction(transaction)
 
-        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
+        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
@@ -415,13 +361,9 @@ class Erc20Bridger(AssetBridger):
         )
 
         async def estimate_l1_gas_limit(l1_provider):
-            l1_gateway_address = await self.get_l1_gateway_address(
-                params["erc20l1_address"], params["l1_provider"]
-            )
+            l1_gateway_address = await self.get_l1_gateway_address(params["erc20l1_address"], params["l1_provider"])
 
-            is_weth = await self.is_weth_gateway(
-                l1_gateway_address, params["l1_provider"]
-            )
+            is_weth = await self.is_weth_gateway(l1_gateway_address, params["l1_provider"])
 
             gas_estimate = Web3.toInt(180000) if is_weth else Web3.toInt(160000)
 
@@ -445,18 +387,14 @@ class Erc20Bridger(AssetBridger):
         withdrawal_request = (
             params
             if is_l2_to_l1_transaction_request(params)
-            else await self.get_withdrawal_request(
-                {**params, "from": params["l2Signer"].account.address}
-            )
+            else await self.get_withdrawal_request({**params, "from": params["l2Signer"].account.address})
         )
 
         tx_hash = await params["l2Signer"].provider.eth.send_transaction(
             {**withdrawal_request["txRequest"], **params.get("overrides", {})}
         )
 
-        tx_receipt = await params["l2Signer"].provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
+        tx_receipt = await params["l2Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L2TransactionReceipt.monkey_patch_wait(tx_receipt)
 
@@ -472,9 +410,9 @@ class AdminErc20Bridger(Erc20Bridger):
         self,
         l1_token_address,
         l2_token_address,
-        l1_signer: SignerOrProvider,
+        l1_signer,
         l2_provider,
-    ) -> Contract:
+    ):
         if not SignerProviderUtils.signer_has_provider(l1_signer):
             raise MissingProviderArbSdkError("l1Signer")
 
@@ -513,23 +451,14 @@ class AdminErc20Bridger(Erc20Bridger):
 
         GasParams = namedtuple("GasParams", ["maxSubmissionCost", "gasLimit"])
 
-        def encode_func_data(set_token_gas, set_gateway_gas, max_fee_per_gas: int):
-            if (
-                max_fee_per_gas
-                == RetryableDataTools.ErrorTriggeringParams["maxFeePerGas"]
-            ):
+        def encode_func_data(set_token_gas, set_gateway_gas, max_fee_per_gas):
+            if max_fee_per_gas == RetryableDataTools.ErrorTriggeringParams["maxFeePerGas"]:
                 double_fee_per_gas = max_fee_per_gas * 2
             else:
                 double_fee_per_gas = max_fee_per_gas
 
-            set_token_deposit = (
-                set_token_gas.gasLimit * double_fee_per_gas
-                + set_token_gas.maxSubmissionCost
-            )
-            set_gateway_deposit = (
-                set_gateway_gas.gasLimit * double_fee_per_gas
-                + set_gateway_gas.maxSubmissionCost
-            )
+            set_token_deposit = set_token_gas.gasLimit * double_fee_per_gas + set_token_gas.maxSubmissionCost
+            set_gateway_deposit = set_gateway_gas.gasLimit * double_fee_per_gas + set_gateway_gas.maxSubmissionCost
 
             encoded_data = l1_token.encodeABI(
                 fn_name="registerTokenOnL2",
@@ -584,15 +513,11 @@ class AdminErc20Bridger(Erc20Bridger):
 
         tx_hash = l1_signer.provider.eth.send_transaction(transaction)
 
-        register_tx_receipt = l1_signer.provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
+        register_tx_receipt = l1_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L1TransactionReceipt.monkey_patch_contract_call_wait(register_tx_receipt)
 
-    async def get_l1_gateway_set_events(
-        self, l1_provider, filter, custom_network_l1_gateway_router=None
-    ) -> list:
+    async def get_l1_gateway_set_events(self, l1_provider, filter, custom_network_l1_gateway_router=None):
         await self.check_l1_network(l1_provider)
 
         l1_gateway_router_address = self.l2_network.token_bridge.l1_gateway_router
@@ -616,20 +541,13 @@ class AdminErc20Bridger(Erc20Bridger):
 
         return [a["event"] for a in events]
 
-    async def get_l2_gateway_set_events(
-        self, l2_provider, filter, custom_network_l2_gateway_router=None
-    ) -> list:
+    async def get_l2_gateway_set_events(self, l2_provider, filter, custom_network_l2_gateway_router=None):
         if self.l2_network.is_custom and not custom_network_l2_gateway_router:
-            raise ArbSdkError(
-                "Must supply customNetworkL2GatewayRouter for custom network "
-            )
+            raise ArbSdkError("Must supply customNetworkL2GatewayRouter for custom network ")
 
         await self.check_l2_network(l2_provider)
 
-        l2_gateway_router_address = (
-            custom_network_l2_gateway_router
-            or self.l2_network.token_bridge.l2_gateway_router
-        )
+        l2_gateway_router_address = custom_network_l2_gateway_router or self.l2_network.token_bridge.l2_gateway_router
         event_fetcher = EventFetcher(l2_provider)
 
         argument_filters = {}
@@ -651,8 +569,8 @@ class AdminErc20Bridger(Erc20Bridger):
 
     async def set_gateways(
         self,
-        l1_signer: SignerOrProvider,
-        l2_provider: Web3,
+        l1_signer,
+        l2_provider,
         token_gateways,
         options=None,
     ):
@@ -684,15 +602,12 @@ class AdminErc20Bridger(Erc20Bridger):
                     ],
                 ),
                 "to": l1_gateway_router.address,
-                "value": params["gasLimit"] * params["maxFeePerGas"]
-                + params["maxSubmissionCost"],
+                "value": params["gasLimit"] * params["maxFeePerGas"] + params["maxSubmissionCost"],
                 "from": from_address,
             }
 
         g_estimator = L1ToL2MessageGasEstimator(l2_provider)
-        estimates = await g_estimator.populate_function_params(
-            set_gateways_func, l1_signer.provider, options
-        )
+        estimates = await g_estimator.populate_function_params(set_gateways_func, l1_signer.provider, options)
         transaction = {
             "to": estimates["to"],
             "data": estimates["data"],

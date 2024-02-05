@@ -1,8 +1,4 @@
 from web3 import Web3
-from decimal import Decimal
-from typing import Dict, Optional, Union
-import json
-import re
 from eth_abi import abi
 
 from test import CaseDict
@@ -28,16 +24,16 @@ class RetryableData:
 
     def __init__(
         self,
-        from_address: str,
-        to: str,
-        l2_call_value: Decimal,
-        deposit: Decimal,
-        max_submission_cost: Decimal,
-        excess_fee_refund_address: str,
-        call_value_refund_address: str,
-        gas_limit: Decimal,
-        max_fee_per_gas: Decimal,
-        data: str,
+        from_address,
+        to,
+        l2_call_value,
+        deposit,
+        max_submission_cost,
+        excess_fee_refund_address,
+        call_value_refund_address,
+        gas_limit,
+        max_fee_per_gas,
+        data,
     ):
         self.from_address = from_address
         self.to = to
@@ -59,16 +55,14 @@ class RetryableDataTools:
 
     @staticmethod
     def try_parse_error(
-        error_data_hex: Union[Exception, Dict[str, str], str],
-    ) -> Optional[RetryableData]:
+        error_data_hex,
+    ):
         try:
             if error_data_hex.startswith("0x"):
                 error_data_hex = error_data_hex[2:]
             error_data_hex = error_data_hex[8:]
 
-            decoded_data = abi.decode(
-                RetryableData.abi_types, bytes.fromhex(error_data_hex)
-            )
+            decoded_data = abi.decode(RetryableData.abi_types, bytes.fromhex(error_data_hex))
 
             if len(decoded_data) != len(RetryableData.abi_types):
                 print("Error decoding retryable data")
@@ -81,12 +75,8 @@ class RetryableDataTools:
                         "l2CallValue": decoded_data[2],
                         "deposit": decoded_data[3],
                         "maxSubmissionCost": decoded_data[4],
-                        "excessFeeRefundAddress": Web3.to_checksum_address(
-                            decoded_data[5]
-                        ),
-                        "callValueRefundAddress": Web3.to_checksum_address(
-                            decoded_data[6]
-                        ),
+                        "excessFeeRefundAddress": Web3.to_checksum_address(decoded_data[5]),
+                        "callValueRefundAddress": Web3.to_checksum_address(decoded_data[6]),
                         "gasLimit": decoded_data[7],
                         "maxFeePerGas": decoded_data[8],
                         "data": decoded_data[9],

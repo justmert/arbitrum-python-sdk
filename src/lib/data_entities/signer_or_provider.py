@@ -1,15 +1,10 @@
 from eth_account import Account
 from web3 import Web3
-from web3.providers import BaseProvider
 from eth_account.signers.local import LocalAccount
 from .errors import ArbSdkError, MissingProviderArbSdkError
-from web3.providers import BaseProvider
-from typing import Union
-# from src.lib.utils.lib import is_defined
-
 
 class SignerOrProvider:
-    def __init__(self, account: Account, provider: Web3):
+    def __init__(self, account, provider):
         self.account = account
         self.provider = provider
 

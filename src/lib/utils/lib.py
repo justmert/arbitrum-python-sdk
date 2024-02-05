@@ -1,20 +1,18 @@
 import asyncio
-from web3 import Web3
 from web3.exceptions import TimeExhausted
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import l2_networks
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS
 from src.lib.utils.helper import load_contract
 from .arb_provider import ArbitrumProvider
-import json
 from web3.exceptions import TransactionNotFound
 
 
-def get_contract_instance(provider: Web3, contract_address: str, contract_abi: dict):
+def get_contract_instance(provider, contract_address, contract_abi):
     return provider.eth.contract(address=contract_address, abi=contract_abi)
 
 
-async def get_base_fee(provider: Web3):
+async def get_base_fee(provider):
     latest_block = provider.eth.get_block("latest")
     base_fee = latest_block["baseFeePerGas"]
     if not base_fee:
@@ -24,16 +22,14 @@ async def get_base_fee(provider: Web3):
     return base_fee
 
 
-async def wait(ms: int):
+async def wait(ms):
     await asyncio.sleep(ms / 1000)
 
 
 async def get_transaction_receipt(provider, tx_hash, confirmations=None, timeout=None):
     if confirmations or timeout:
         try:
-            receipt = provider.eth.wait_for_transaction_receipt(
-                tx_hash, timeout=timeout / 1000
-            )
+            receipt = provider.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout / 1000)
             if confirmations:
                 latest_block = provider.eth.block_number
                 if latest_block - receipt.blockNumber < confirmations:
@@ -105,9 +101,7 @@ async def get_first_block_for_l1_block(
         max_l2_block = current_arb_block
 
     if min_l2_block >= max_l2_block:
-        raise ValueError(
-            f"'minL2Block' ({min_l2_block}) must be lower than 'maxL2Block' ({max_l2_block})."
-        )
+        raise ValueError(f"'minL2Block' ({min_l2_block}) must be lower than 'maxL2Block' ({max_l2_block}).")
 
     if min_l2_block < nitro_genesis_block:
         raise ValueError(
@@ -133,11 +127,7 @@ async def get_first_block_for_l1_block(
             if allow_greater:
                 result_for_greater_block = mid
             end = mid - 1
-    return (
-        result_for_target_block
-        if result_for_target_block is not None
-        else result_for_greater_block
-    )
+    return result_for_target_block if result_for_target_block is not None else result_for_greater_block
 
 
 async def get_block_ranges_for_l1_block(
@@ -146,7 +136,7 @@ async def get_block_ranges_for_l1_block(
     allow_greater=False,
     min_l2_block=None,
     max_l2_block="latest",
-):  # -> list[None] | list:
+):
     arb_provider = ArbitrumProvider(provider)
 
     current_l2_block = arb_provider.provider.eth.block_number

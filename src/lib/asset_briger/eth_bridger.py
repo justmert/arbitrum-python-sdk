@@ -1,11 +1,7 @@
-from web3 import Web3
-from web3.contract import Contract
-import json
 from src.lib.asset_briger.asset_bridger import AssetBridger
 from src.lib.data_entities.errors import MissingProviderArbSdkError
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.transaction_request import (
-    L2ToL1TransactionRequest,
     is_l1_to_l2_transaction_request,
     is_l2_to_l1_transaction_request,
 )
@@ -14,12 +10,7 @@ from src.lib.data_entities.networks import get_l2_network
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS
-from typing import Union, Optional, Dict, Any
-from src.lib.utils.helper import load_contract, sign_and_sent_raw_transaction
-
-EthDepositParams = Dict[str, Any]
-L1ToL2TransactionRequest = Dict[str, Any]
-L1EthDepositTransaction = Dict[str, Any]
+from src.lib.utils.helper import load_contract
 
 
 class EthBridger(AssetBridger):
@@ -51,7 +42,7 @@ class EthBridger(AssetBridger):
             "isValid": lambda: True,
         }
 
-    async def deposit(self, params) -> L1EthDepositTransaction:
+    async def deposit(self, params):
         if is_l1_to_l2_transaction_request(params):
             eth_deposit = params
         else:
@@ -65,9 +56,7 @@ class EthBridger(AssetBridger):
         tx = {**eth_deposit["txRequest"], **params.get("overrides", {})}
 
         tx_hash = params["l1Signer"].provider.eth.send_transaction(tx)
-        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
+        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L1TransactionReceipt.monkey_patch_eth_deposit_wait(tx_receipt)
 
@@ -102,14 +91,11 @@ class EthBridger(AssetBridger):
         tx = {**retryable_ticket_request["txRequest"], **params.get("overrides", {})}
 
         tx_hash = params["l1Signer"].provider.eth.send_transaction(tx)
-        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
+        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
     async def get_withdrawal_request(self, params):
-        print("params", params)
         arb_sys = load_contract(
             provider=params["l2Signer"].provider,
             contract_name="ArbSys",
@@ -147,8 +133,6 @@ class EthBridger(AssetBridger):
 
         tx_hash = params["l2Signer"].provider.eth.send_transaction(tx)
 
-        tx_receipt = params["l2Signer"].provider.eth.wait_for_transaction_receipt(
-            tx_hash
-        )
+        tx_receipt = params["l2Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L2TransactionReceipt.monkey_patch_wait(tx_receipt)

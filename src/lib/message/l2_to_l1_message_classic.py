@@ -1,7 +1,3 @@
-import json
-from web3 import Web3
-from web3.providers.rpc import HTTPProvider
-from web3.contract import Contract
 import asyncio
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import get_l2_network
@@ -43,17 +39,11 @@ class L2ToL1MessageClassic:
         self.index_in_batch = index_in_batch
 
     @staticmethod
-    def from_batch_number(
-        l1_signer_or_provider, batch_number, index_in_batch, l1_provider=None
-    ):
+    def from_batch_number(l1_signer_or_provider, batch_number, index_in_batch, l1_provider=None):
         if SignerProviderUtils.is_signer(l1_signer_or_provider):
-            return L2ToL1MessageWriterClassic(
-                l1_signer_or_provider, batch_number, index_in_batch, l1_provider
-            )
+            return L2ToL1MessageWriterClassic(l1_signer_or_provider, batch_number, index_in_batch, l1_provider)
         else:
-            return L2ToL1MessageReaderClassic(
-                l1_signer_or_provider, batch_number, index_in_batch
-            )
+            return L2ToL1MessageReaderClassic(l1_signer_or_provider, batch_number, index_in_batch)
 
     @staticmethod
     async def get_l2_to_l1_events(
@@ -91,9 +81,7 @@ class L2ToL1MessageClassic:
         ]
 
         if index_in_batch is not None:
-            index_items = [
-                event for event in events if event.args.indexInBatch == index_in_batch
-            ]
+            index_items = [event for event in events if event.args.indexInBatch == index_in_batch]
             if index_items:
                 raise ArbSdkError("More than one indexed item found in batch.")
             else:
@@ -125,8 +113,7 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
                 (
                     item
                     for index, item in enumerate(sorted_outboxes)
-                    if index == len(sorted_outboxes) - 1
-                    or sorted_outboxes[index + 1][1] > batch_number
+                    if index == len(sorted_outboxes) - 1 or sorted_outboxes[index + 1][1] > batch_number
                 ),
                 None,
             )
@@ -152,23 +139,14 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
 
     @staticmethod
     async def try_get_proof_static(l2_provider, batch_number, index_in_batch):
-        with open("src/abi/NodeInterface.json") as f:
-            node_interface_abi = json.load(f)
-
-        node_interface_contract = l2_provider.eth.contract(
-            address=NODE_INTERFACE_ADDRESS, abi=node_interface_abi
-        )
-
-        load_contract(
+        node_interface_contract = load_contract(
             provider=l2_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
             is_classic=False,
         )
         try:
-            return node_interface_contract.functions.legacyLookupMessageBatchProof(
-                batch_number, index_in_batch
-            ).call()
+            return node_interface_contract.functions.legacyLookupMessageBatchProof(batch_number, index_in_batch).call()
 
         except Exception as e:
             if "batch doesn't exist" in str(e):
@@ -227,11 +205,7 @@ class L2ToL1MessageReaderClassic(L2ToL1MessageClassic):
                 return L2ToL1MessageStatus.EXECUTED
 
             outbox_entry_exists = await self.outbox_entry_exists(l2_provider)
-            return (
-                L2ToL1MessageStatus.CONFIRMED
-                if outbox_entry_exists
-                else L2ToL1MessageStatus.UNCONFIRMED
-            )
+            return L2ToL1MessageStatus.CONFIRMED if outbox_entry_exists else L2ToL1MessageStatus.UNCONFIRMED
         except Exception:
             return L2ToL1MessageStatus.UNCONFIRMED
 
@@ -259,15 +233,11 @@ class L2ToL1MessageWriterClassic(L2ToL1MessageReaderClassic):
     async def execute(self, l2_provider, overrides=None):
         status = await self.status(l2_provider)
         if status != L2ToL1MessageStatus.CONFIRMED:
-            raise Exception(
-                f"Cannot execute message. Status is: {status} but must be {L2ToL1MessageStatus.CONFIRMED}."
-            )
+            raise Exception(f"Cannot execute message. Status is: {status} but must be {L2ToL1MessageStatus.CONFIRMED}.")
 
         proof_info = await self.try_get_proof(l2_provider)
         if not is_defined(proof_info):
-            raise Exception(
-                f"Unexpected missing proof: {self.batch_number} {self.index_in_batch}"
-            )
+            raise Exception(f"Unexpected missing proof: {self.batch_number} {self.index_in_batch}")
 
         outbox_address = await self.get_outbox_address(l2_provider, self.batch_number)
 

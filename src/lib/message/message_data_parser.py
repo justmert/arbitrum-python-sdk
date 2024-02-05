@@ -1,4 +1,3 @@
-from mock import call
 from web3 import Web3
 from eth_abi import decode
 
@@ -11,7 +10,6 @@ class SubmitRetryableMessageDataParser:
         if isinstance(event_data, bytes):
             event_data = event_data.hex()
 
-        # Assuming event_data is a hex string
         if isinstance(event_data, str):
             decoded_data = decode(
                 [
@@ -64,14 +62,16 @@ class SubmitRetryableMessageDataParser:
             data_bytes = event_data[-data_length_chars:]
             data = "0x" + data_bytes.hex()
 
-        return CaseDict({
-            "destAddress": dest_address,
-            "l2CallValue": l2_call_value,
-            "l1Value": l1_value,
-            "maxSubmissionFee": max_submission_fee,
-            "excessFeeRefundAddress": excess_fee_refund_address,
-            "callValueRefundAddress": call_value_refund_address,
-            "gasLimit": gas_limit,
-            "maxFeePerGas": max_fee_per_gas,
-            "data": data,
-        })
+        return CaseDict(
+            {
+                "destAddress": dest_address,
+                "l2CallValue": l2_call_value,
+                "l1Value": l1_value,
+                "maxSubmissionFee": max_submission_fee,
+                "excessFeeRefundAddress": excess_fee_refund_address,
+                "callValueRefundAddress": call_value_refund_address,
+                "gasLimit": gas_limit,
+                "maxFeePerGas": max_fee_per_gas,
+                "data": data,
+            }
+        )

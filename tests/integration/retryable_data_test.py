@@ -71,9 +71,7 @@ async def retryable_data_parsing(func_name):
                 revert_params["gasLimit"],
                 revert_params["maxFeePerGas"],
                 revert_params["data"],
-            ).estimate_gas(
-                {"from": l1_signer.account.address, "value": revert_params["value"]}
-            )
+            ).estimate_gas({"from": l1_signer.account.address, "value": revert_params["value"]})
 
         elif func_name == "callStatic":
             inbox_contract.functions.createRetryableTicket(
@@ -93,23 +91,15 @@ async def retryable_data_parsing(func_name):
         parsed_data = RetryableDataTools.try_parse_error(str(e))
         # Perform assertions based on the parsed data
         assert parsed_data is not None, "Failed to parse error data"
-        assert (
-            parsed_data.call_value_refund_address
-            == revert_params["callValueRefundAddress"]
-        )
+        assert parsed_data.call_value_refund_address == revert_params["callValueRefundAddress"]
         assert parsed_data.data == Web3.to_bytes(hexstr=revert_params["data"])
         assert str(parsed_data.deposit) == str(revert_params["value"])
-        assert (
-            parsed_data.excess_fee_refund_address
-            == revert_params["excessFeeRefundAddress"]
-        )
+        assert parsed_data.excess_fee_refund_address == revert_params["excessFeeRefundAddress"]
         assert parsed_data["from"] == l1_signer.account.address
         assert str(parsed_data.gas_limit) == str(revert_params["gasLimit"])
         assert str(parsed_data.l2_call_value) == str(revert_params["l2CallValue"])
         assert str(parsed_data.max_fee_per_gas) == str(revert_params["maxFeePerGas"])
-        assert str(parsed_data.max_submission_cost) == str(
-            revert_params["maxSubmissionCost"]
-        )
+        assert str(parsed_data.max_submission_cost) == str(revert_params["maxSubmissionCost"])
         assert parsed_data.to == revert_params["to"]
 
 
@@ -143,9 +133,7 @@ async def test_erc20_deposit_comparison():
     # test_token_contract = load_contract(address=test_token, contract_name="TestERC20", provider=l1_signer.provider)
     # test_token_contract.functions.mint().transact({'from': l1_signer.account.address})
 
-    test_token = deploy_test_erc20(
-        setup_state.l1_signer.provider, setup_state.l1_signer.account
-    )
+    test_token = deploy_test_erc20(setup_state.l1_signer.provider, setup_state.l1_signer.account)
     print("deployed_erc20_address", test_token)
 
     mint_receipt = mint_tokens(
@@ -158,9 +146,7 @@ async def test_erc20_deposit_comparison():
     l1_token_address = test_token.address
 
     # Approve token on L1
-    await erc20_bridger.approve_token(
-        CaseDict({"erc20L1Address": l1_token_address, "l1Signer": l1_signer})
-    )
+    await erc20_bridger.approve_token(CaseDict({"erc20L1Address": l1_token_address, "l1Signer": l1_signer}))
 
     # Set up retryable overrides
     retryable_overrides = {
@@ -220,29 +206,15 @@ async def test_erc20_deposit_comparison():
         assert parsed_data is not None, "Failed to parse error"
         print("deposit_params", deposit_params)
         # Perform assertions
-        assert (
-            parsed_data.call_value_refund_address
-            == deposit_params.retryable_data.call_value_refund_address
-        )
+        assert parsed_data.call_value_refund_address == deposit_params.retryable_data.call_value_refund_address
         print("parsed_data.data", parsed_data.data)
         print("deposit_params.retryable_data.data", deposit_params.retryable_data.data)
         assert parsed_data.data == deposit_params.retryable_data.data
         assert str(parsed_data.deposit) == str(deposit_params.tx_request["value"])
-        assert (
-            parsed_data.excess_fee_refund_address
-            == deposit_params.retryable_data.excess_fee_refund_address
-        )
+        assert parsed_data.excess_fee_refund_address == deposit_params.retryable_data.excess_fee_refund_address
         assert parsed_data["from"] == deposit_params.retryable_data["from"]
-        assert str(parsed_data.gas_limit) == str(
-            deposit_params.retryable_data.gas_limit
-        )
-        assert str(parsed_data.l2_call_value) == str(
-            deposit_params.retryable_data.l2_call_value
-        )
-        assert str(parsed_data.max_fee_per_gas) == str(
-            deposit_params.retryable_data.max_fee_per_gas
-        )
-        assert str(parsed_data.max_submission_cost) == str(
-            deposit_params.retryable_data.max_submission_cost
-        )
+        assert str(parsed_data.gas_limit) == str(deposit_params.retryable_data.gas_limit)
+        assert str(parsed_data.l2_call_value) == str(deposit_params.retryable_data.l2_call_value)
+        assert str(parsed_data.max_fee_per_gas) == str(deposit_params.retryable_data.max_fee_per_gas)
+        assert str(parsed_data.max_submission_cost) == str(deposit_params.retryable_data.max_submission_cost)
         assert parsed_data.to == deposit_params.retryable_data.to

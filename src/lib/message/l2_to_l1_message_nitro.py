@@ -1,12 +1,9 @@
-import json
 import asyncio
 from web3 import Web3
-from web3.providers.rpc import HTTPProvider
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS
 from src.lib.utils.helper import (
     format_contract_output,
     load_contract,
-    sign_and_sent_raw_transaction,
 )
 from src.lib.utils.lib import get_block_ranges_for_l1_block
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
@@ -15,7 +12,6 @@ from src.lib.data_entities.message import L2ToL1MessageStatus
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.lib import is_arbitrum_chain
 from src.lib.utils.event_fetcher import EventFetcher
-from web3.contract import Contract
 
 ASSERTION_CREATED_PADDING = 50
 ASSERTION_CONFIRMED_PADDING = 20
@@ -32,9 +28,7 @@ def set_l2_block_range_cache(key, value):
     l2_block_range_cache[key] = value
 
 
-async def get_block_ranges_for_l1_block_with_cache(
-    l1_provider, l2_provider, for_l1_block
-):
+async def get_block_ranges_for_l1_block_with_cache(l1_provider, l2_provider, for_l1_block):
     l2_chain_id = l2_provider.eth.chainId
     key = get_l2_block_range_cache_key(l2_chain_id, for_l1_block)
 
@@ -63,9 +57,7 @@ class L2ToL1MessageNitro:
             return L2ToL1MessageReaderNitro(l1_signer_or_provider, event)
 
     @staticmethod
-    async def get_l2_to_l1_events(
-        l2_provider, filter, position=None, destination=None, hash=None
-    ):
+    async def get_l2_to_l1_events(l2_provider, filter, position=None, destination=None, hash=None):
         event_fetcher = EventFetcher(l2_provider)
 
         argument_filters = {}
@@ -140,21 +132,13 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
 
         if not send_root_confirmed:
             return L2ToL1MessageStatus.UNCONFIRMED
-        return (
-            L2ToL1MessageStatus.EXECUTED
-            if await self.has_executed(l2_provider)
-            else L2ToL1MessageStatus.CONFIRMED
-        )
+        return L2ToL1MessageStatus.EXECUTED if await self.has_executed(l2_provider) else L2ToL1MessageStatus.CONFIRMED
 
     def parse_node_created_assertion(self, event):
         return {
             "afterState": {
-                "blockHash": event["event"]["assertion"]["afterState"]["globalState"][
-                    "bytes32Vals"
-                ][0],
-                "sendRoot": event["event"]["assertion"]["afterState"]["globalState"][
-                    "bytes32Vals"
-                ][1],
+                "blockHash": event["event"]["assertion"]["afterState"]["globalState"]["bytes32Vals"][0],
+                "sendRoot": event["event"]["assertion"]["afterState"]["globalState"]["bytes32Vals"][1],
             },
         }
 
@@ -166,9 +150,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
             return await arbitrum_provider.get_block(0)
 
         parsed_log = self.parse_node_created_assertion(log)
-        l2_block = await arbitrum_provider.get_block(
-            parsed_log["afterState"]["blockHash"]
-        )
+        l2_block = await arbitrum_provider.get_block(parsed_log["afterState"]["blockHash"])
         if not l2_block:
             raise Exception(f"Block not found. {parsed_log['afterState']['blockHash']}")
 
@@ -178,7 +160,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
             )
         return l2_block
 
-    async def get_block_from_node_num(self, rollup: Contract, node_num, l2_provider):
+    async def get_block_from_node_num(self, rollup, node_num, l2_provider):
         node = rollup.functions.getNode(node_num).call()
         node = format_contract_output(rollup, "getNode", node)
 
@@ -217,13 +199,9 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
         )
 
         if len(logs) > 1:
-            raise Exception(
-                f"Unexpected number of NodeCreated events. Expected 0 or 1, got {len(logs)}."
-            )
+            raise Exception(f"Unexpected number of NodeCreated events. Expected 0 or 1, got {len(logs)}.")
 
-        return await self.get_block_from_node_log(
-            l2_provider, logs[0] if logs else None
-        )
+        return await self.get_block_from_node_log(l2_provider, logs[0] if logs else None)
 
     async def get_batch_number(self, l2_provider):
         if self.l1_batch_number is None:
@@ -234,9 +212,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
                     address=NODE_INTERFACE_ADDRESS,
                     is_classic=False,
                 )
-                res = node_interface_contract.functions.findBatchContainingBlock(
-                    self.event["arbBlockNum"]
-                ).call()
+                res = node_interface_contract.functions.findBatchContainingBlock(self.event["arbBlockNum"]).call()
                 self.l1_batch_number = int(res)
 
             except Exception:
@@ -254,16 +230,12 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
                 is_classic=False,
             )
 
-            latest_confirmed_node_num = (
-                rollup_contract.functions.latestConfirmed().call()
-            )
+            latest_confirmed_node_num = rollup_contract.functions.latestConfirmed().call()
             l2_block_confirmed = await self.get_block_from_node_num(
                 rollup_contract, latest_confirmed_node_num, l2_provider
             )
 
-            send_root_size_confirmed = Web3.to_int(
-                hexstr=l2_block_confirmed["sendCount"]
-            )
+            send_root_size_confirmed = Web3.to_int(hexstr=l2_block_confirmed["sendCount"])
             if send_root_size_confirmed > self.event["position"]:
                 self.send_root_size = send_root_size_confirmed
                 self.send_root_hash = l2_block_confirmed["sendRoot"]
@@ -271,9 +243,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
             else:
                 latest_node_num = rollup_contract.functions.latestNodeCreated().call()
                 if latest_node_num > latest_confirmed_node_num:
-                    l2_block = await self.get_block_from_node_num(
-                        rollup_contract, latest_node_num, l2_provider
-                    )
+                    l2_block = await self.get_block_from_node_num(rollup_contract, latest_node_num, l2_provider)
                     send_root_size = Web3.to_int(hexstr=l2_block["sendCount"])
                     if send_root_size > self.event["position"]:
                         self.send_root_size = send_root_size
@@ -321,9 +291,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
             argument_filters=argument_filters,
             filter={
                 "fromBlock": max(
-                    latest_block
-                    - l2_network.confirm_period_blocks
-                    - ASSERTION_CONFIRMED_PADDING,
+                    latest_block - l2_network.confirm_period_blocks - ASSERTION_CONFIRMED_PADDING,
                     0,
                 ),
                 "toBlock": "latest",
@@ -333,9 +301,7 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
 
         logs.sort(key=lambda x: x["event"]["nodeNum"])
 
-        last_l2_block = await self.get_block_from_node_log(
-            l2_provider, logs[-1] if logs else None
-        )
+        last_l2_block = await self.get_block_from_node_log(l2_provider, logs[-1] if logs else None)
         last_send_count = last_l2_block["sendCount"] if last_l2_block else 0
 
         if last_send_count <= self.event["position"]:
@@ -372,9 +338,7 @@ class L2ToL1MessageWriterNitro(L2ToL1MessageReaderNitro):
     async def execute(self, l2_provider, overrides=None):
         status = await self.status(l2_provider)
         if status != L2ToL1MessageStatus.CONFIRMED:
-            raise Exception(
-                f"Cannot execute message. Status is: {status} but must be {L2ToL1MessageStatus.CONFIRMED}."
-            )
+            raise Exception(f"Cannot execute message. Status is: {status} but must be {L2ToL1MessageStatus.CONFIRMED}.")
 
         proof = await self.get_outbox_proof(l2_provider)
         l2_network = get_l2_network(l2_provider)
@@ -401,7 +365,5 @@ class L2ToL1MessageWriterNitro(L2ToL1MessageReaderNitro):
             self.event["data"],
         ).transact(overrides)
 
-        tx_receipt = self.l1_signer.provider.eth.wait_for_transaction_receipt(
-            transaction_hash
-        )
+        tx_receipt = self.l1_signer.provider.eth.wait_for_transaction_receipt(transaction_hash)
         return tx_receipt

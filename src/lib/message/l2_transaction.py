@@ -1,8 +1,3 @@
-from web3 import Web3
-from web3.types import TxReceipt
-
-# from decimal import Decimal
-from typing import List, Optional, Any, Callable
 from src.lib.data_entities.signer_or_provider import (
     SignerProviderUtils,
 )
@@ -25,22 +20,16 @@ class RedeemTransaction:
     async def wait_for_redeem(self):
         l2_receipt = L2TransactionReceipt(self.transaction)
 
-        redeem_scheduled_events = l2_receipt.get_redeem_scheduled_events(
-            self.l2_provider
-        )
+        redeem_scheduled_events = l2_receipt.get_redeem_scheduled_events(self.l2_provider)
 
         if len(redeem_scheduled_events) != 1:
-            raise ArbSdkError(
-                f"Transaction is not a redeem transaction: {self.transaction.transactionHash}"
-            )
+            raise ArbSdkError(f"Transaction is not a redeem transaction: {self.transaction.transactionHash}")
 
-        return self.l2_provider.eth.get_transaction_receipt(
-            redeem_scheduled_events[0]["retryTxHash"]
-        )
+        return self.l2_provider.eth.get_transaction_receipt(redeem_scheduled_events[0]["retryTxHash"])
 
 
 class L2TransactionReceipt:
-    def __init__(self, tx: TxReceipt):
+    def __init__(self, tx):
         self.to = tx.get("to")
         self.from_ = tx.get("from")
         self.contract_address = tx.get("contractAddress")
@@ -60,32 +49,23 @@ class L2TransactionReceipt:
         self.status = tx.get("status")
 
     def get_l2_to_l1_events(self, provider):
-        classic_logs = parse_typed_logs(
-            provider, "ArbSys", self.logs, "L2ToL1Transaction", is_classic=False
-        )
+        classic_logs = parse_typed_logs(provider, "ArbSys", self.logs, "L2ToL1Transaction", is_classic=False)
 
-        nitro_logs = parse_typed_logs(
-            provider, "ArbSys", self.logs, "L2ToL1Tx", is_classic=False
-        )
+        nitro_logs = parse_typed_logs(provider, "ArbSys", self.logs, "L2ToL1Tx", is_classic=False)
 
         return [*classic_logs, *nitro_logs]
 
     def get_redeem_scheduled_events(self, provider):
-        return parse_typed_logs(
-            provider, "ArbRetryableTx", self.logs, "RedeemScheduled"
-        )
+        return parse_typed_logs(provider, "ArbRetryableTx", self.logs, "RedeemScheduled")
 
     async def get_l2_to_l1_messages(self, l1_signer_or_provider):
         provider = SignerProviderUtils.get_provider(l1_signer_or_provider)
         if not provider:
             raise ArbSdkError("Signer not connected to provider.")
 
-        return [
-            L2ToL1Message.from_event(l1_signer_or_provider, log)
-            for log in self.get_l2_to_l1_events(provider)
-        ]
+        return [L2ToL1Message.from_event(l1_signer_or_provider, log) for log in self.get_l2_to_l1_events(provider)]
 
-    def get_batch_confirmations(self, l2_provider: Web3) -> int:
+    def get_batch_confirmations(self, l2_provider):
         node_interface = load_contract(
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
@@ -94,7 +74,7 @@ class L2TransactionReceipt:
         )
         return node_interface.functions.getL1Confirmations(self.block_hash).call()
 
-    async def get_batch_number(self, l2_provider) -> int:
+    async def get_batch_number(self, l2_provider):
         arb_provider = ArbitrumProvider(l2_provider)
         node_interface = load_contract(
             contract_name="NodeInterface",
@@ -109,9 +89,7 @@ class L2TransactionReceipt:
 
         return node_interface.functions.findBatchContainingBlock(rec.blockNumber).call()
 
-    async def is_data_available(
-        self, l2_provider: Web3, confirmations: int = 10
-    ) -> bool:
+    async def is_data_available(self, l2_provider, confirmations=10):
         batch_confirmations = self.get_batch_confirmations(l2_provider)
         return int(batch_confirmations) > confirmations
 

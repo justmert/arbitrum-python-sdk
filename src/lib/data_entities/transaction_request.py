@@ -1,8 +1,5 @@
-from web3 import Web3
-from eth_typing import ChecksumAddress
-from typing import Callable, Dict, Union
-
 from src.lib.utils.lib import is_defined
+
 
 class L1ToL2MessageParams:
     pass
@@ -22,7 +19,7 @@ class L1ToL2TransactionRequest:
 
 
 class L2ToL1TransactionRequest:
-    def __init__(self, tx_request, estimate_l1_gas_limit: Callable):
+    def __init__(self, tx_request, estimate_l1_gas_limit):
         self.tx_request = tx_request
         self.estimate_l1_gas_limit = estimate_l1_gas_limit
 
