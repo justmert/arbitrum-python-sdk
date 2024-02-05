@@ -7,7 +7,7 @@ from test import CaseDict
 
 
 def parse_typed_logs(provider, contract_name, logs, event_name, is_classic=False):
-    contract_abi = load_abi(contract_name, is_classic=is_classic)
+    contract_abi, _ = load_abi(contract_name, is_classic=is_classic)
     contract = provider.eth.contract(abi=contract_abi)
 
     event_abi = next(

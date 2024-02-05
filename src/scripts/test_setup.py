@@ -7,7 +7,11 @@ from web3.middleware import geth_poa_middleware
 from src.lib.data_entities.errors import ArbSdkError
 from web3.contract import Contract
 from src.lib.utils.helper import CaseDict, load_contract
-from src.lib.data_entities.networks import add_custom_network, get_l1_network, get_l2_network
+from src.lib.data_entities.networks import (
+    add_custom_network,
+    get_l1_network,
+    get_l2_network,
+)
 from src.lib.asset_briger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
 from src.lib.asset_briger.eth_bridger import EthBridger
 from src.lib.inbox.inbox import InboxTools
@@ -27,16 +31,16 @@ config = {
 
 def get_deployment_data():
     docker_names = [
-        # 'nitro_sequencer_1',
-        # 'nitro-sequencer-1',
-        # 'nitro-testnode-sequencer-1',
+        "nitro_sequencer_1",
+        "nitro-sequencer-1",
+        "nitro-testnode-sequencer-1",
         "nitro-testnode-sequencer-1",
     ]
     for docker_name in docker_names:
         try:
-            return subprocess.check_output(["docker", "exec", docker_name, "cat", "/config/deployment.json"]).decode(
-                "utf-8"
-            )
+            return subprocess.check_output(
+                ["docker", "exec", docker_name, "cat", "/config/deployment.json"]
+            ).decode("utf-8")
         except Exception:
             pass
     raise Exception("nitro-testnode sequencer not found")
@@ -53,14 +57,20 @@ def get_custom_networks(l1_url, l2_url):
 
     bridge_address = Web3.to_checksum_address(deployment_data["bridge"])
     inbox_address = Web3.to_checksum_address(deployment_data["inbox"])
-    sequencer_inbox_address = Web3.to_checksum_address(deployment_data["sequencer-inbox"])
+    sequencer_inbox_address = Web3.to_checksum_address(
+        deployment_data["sequencer-inbox"]
+    )
     rollup_address = Web3.to_checksum_address(deployment_data["rollup"])
 
-    rollup_contract = load_contract(l1_provider, "RollupAdminLogic", rollup_address, is_classic=False)
+    rollup_contract = load_contract(
+        l1_provider, "RollupAdminLogic", rollup_address, is_classic=False
+    )
 
     confirm_period_blocks = rollup_contract.functions.confirmPeriodBlocks().call()
 
-    bridge_contract = load_contract(l1_provider, "Bridge", bridge_address, is_classic=False)
+    bridge_contract = load_contract(
+        l1_provider, "Bridge", bridge_address, is_classic=False
+    )
 
     outbox_address = bridge_contract.functions.allowedOutboxList(0).call()
 
@@ -109,7 +119,9 @@ async def setup_networks(l1_url, l2_url, l1_deployer, l2_deployer):
     custom_networks = get_custom_networks(l1_url, l2_url)
 
     l1_contracts, l2_contracts = deploy_erc20_and_init(
-        l1_signer=l1_deployer, l2_signer=l2_deployer, inbox_address=custom_networks["l2Network"]["ethBridge"]["inbox"]
+        l1_signer=l1_deployer,
+        l2_signer=l2_deployer,
+        inbox_address=custom_networks["l2Network"]["ethBridge"]["inbox"],
     )
 
     l2_network = custom_networks["l2Network"]
@@ -181,10 +193,17 @@ async def test_setup():
     eth_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
     arb_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-    l1_deployer = SignerOrProvider(get_signer(eth_provider, config["ETH_KEY"]), eth_provider)
-    l2_deployer = SignerOrProvider(get_signer(arb_provider, config["ARB_KEY"]), arb_provider)
+    l1_deployer = SignerOrProvider(
+        get_signer(eth_provider, config["ETH_KEY"]), eth_provider
+    )
+    l2_deployer = SignerOrProvider(
+        get_signer(arb_provider, config["ARB_KEY"]), arb_provider
+    )
 
-    seed = Account.from_key("0x289ff350bbfd21499d32608d5c133869be9b9202cdd792a91ce3920dcabcc28a")
+    # Seed to test and compare from the results from the TS SDK
+    seed = Account.from_key(
+        "0x289ff350bbfd21499d32608d5c133869be9b9202cdd792a91ce3920dcabcc28a"
+    )
 
     l1_signer_address = Web3.to_checksum_address(seed.address)
     l2_signer_address = Web3.to_checksum_address(seed.address)
@@ -192,9 +211,13 @@ async def test_setup():
     signer_private_key = seed.key.hex()
     signer_account = Account.from_key(signer_private_key)
 
-    eth_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
+    eth_provider.middleware_onion.add(
+        construct_sign_and_send_raw_middleware(signer_account)
+    )
 
-    arb_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
+    arb_provider.middleware_onion.add(
+        construct_sign_and_send_raw_middleware(signer_account)
+    )
 
     eth_provider.eth.default_account = l1_signer_address
     arb_provider.eth.default_account = l2_signer_address
@@ -214,13 +237,20 @@ async def test_setup():
                 network_data = json.load(file)
             set_l1_network = L1Network(**network_data["l1Network"])
 
-            network_data["l2Network"]["tokenBridge"] = TokenBridge(**network_data["l2Network"]["tokenBridge"])
-            network_data["l2Network"]["ethBridge"] = EthBridge(**network_data["l2Network"]["ethBridge"])
+            network_data["l2Network"]["tokenBridge"] = TokenBridge(
+                **network_data["l2Network"]["tokenBridge"]
+            )
+            network_data["l2Network"]["ethBridge"] = EthBridge(
+                **network_data["l2Network"]["ethBridge"]
+            )
             set_l2_network = L2Network(**network_data["l2Network"])
             add_custom_network(set_l1_network, set_l2_network)
         else:
             network_data = await setup_networks(
-                l1_deployer=l1_deployer, l2_deployer=l2_deployer, l1_url=config["ETH_URL"], l2_url=config["ARB_URL"]
+                l1_deployer=l1_deployer,
+                l2_deployer=l2_deployer,
+                l1_url=config["ETH_URL"],
+                l2_url=config["ARB_URL"],
             )
             set_l1_network = network_data["l1Network"]
             set_l2_network = network_data["l2Network"]

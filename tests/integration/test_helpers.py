@@ -1,15 +1,16 @@
 from web3 import Web3
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.asset_briger.erc20_bridger import Erc20Bridger
-from src.lib.asset_briger.erc20_bridger import (
-    MAX_APPROVAL,
-    MIN_CUSTOM_DEPOSIT_GAS_LIMIT,
-    MAX_UINT256,
-)
+# from src.lib.asset_briger.erc20_bridger import (
+#     MAX_APPROVAL,
+#     MIN_CUSTOM_DEPOSIT_GAS_LIMIT,
+#     MAX_UINT256,
+# )
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.helper import CaseDict, deploy_abi_contract, load_contract, sign_and_sent_raw_transaction
 from src.scripts.test_setup import config, get_signer, test_setup
-from src.lib.message.l2_to_l1_message import L2ToL1MessageStatus
+# from src.lib.message.l2_to_l1_message import L2ToL1MessageStatus
+from src.lib.data_entities.message import L2ToL1MessageStatus
 from web3 import Account
 import json
 import time
@@ -192,7 +193,7 @@ async def deposit_token(
 
     allowance = l1_token.functions.allowance(l1_signer.account.address, expected_l1_gateway_address).call()
 
-    assert allowance == MAX_APPROVAL, "set token allowance failed"
+    assert allowance == Erc20Bridger.MAX_APPROVAL, "set token allowance failed"
 
     # Check the token balance in the bridge before the deposit
     initial_bridge_token_balance = l1_token.functions.balanceOf(expected_l1_gateway_address).call()

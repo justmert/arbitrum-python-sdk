@@ -77,7 +77,7 @@ class L1ToL2MessageGasEstimator:
 
     async def estimate_retryable_ticket_gas_limit(self, retryable_data, sender_deposit=None):
         if sender_deposit is None:
-            sender_deposit = Web3.to_wei(sender_deposit, "ether") + retryable_data["l2CallValue"]
+            sender_deposit = Web3.to_wei(1, "ether") + retryable_data["l2CallValue"]
 
         node_interface = load_contract(
             provider=self.l2_provider,

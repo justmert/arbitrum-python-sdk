@@ -135,29 +135,22 @@ def deploy_abi_contract(
     provider,
     deployer,
     contract_name,
-    is_classic=False,
     constructor_args=[],
+    is_classic=False,
 ):
-    contract = load_contract(provider=provider, contract_name=contract_name, is_classic=is_classic)
-    chain_id = provider.eth.chain_id
-    gas_estimate = contract.constructor(*constructor_args).estimate_gas({"from": deployer.address})
-    construct_txn = contract.constructor(*constructor_args).build_transaction(
-        {
-            "from": deployer.address,
-            "nonce": provider.eth.get_transaction_count(deployer.address),
-            "gas": gas_estimate,
-            "gasPrice": provider.eth.gas_price,
-            "chainId": chain_id,
-        }
-    )
-    signed_txn = deployer.sign_transaction(construct_txn)
-    tx_hash = provider.eth.send_raw_transaction(signed_txn.rawTransaction)
+    if isinstance(provider, SignerOrProvider):
+        provider = provider.provider
+
+    if(isinstance(deployer, SignerOrProvider)):
+        deployer = deployer.account        
+
+    contract_abi, bytecode = load_abi(contract_name, is_classic=is_classic)
+    contract = provider.eth.contract(abi=contract_abi, bytecode=bytecode)    
+    tx_hash = contract.constructor(*constructor_args).transact({
+        # "from": deployer.address,
+    })
     tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
-    contract_address = tx_receipt.contractAddress
-
-    deployed_contract = provider.eth.contract(address=contract_address, abi=contract.abi)
-
-    return deployed_contract
+    return provider.eth.contract(address=tx_receipt.contractAddress, abi=contract_abi)
 
 
 def load_abi(contract_name, is_classic=False):
@@ -171,8 +164,10 @@ def load_abi(contract_name, is_classic=False):
         if not contract_data.get("abi"):
             raise Exception(f"No ABI found for contract: {contract_name}")
 
-        abi = contract_data["abi"]
-    return abi
+        abi = contract_data.get('abi', None)
+        bytecode = contract_data.get('bytecode', None)
+    
+    return abi, bytecode
 
 
 def is_contract_deployed(provider, address):
