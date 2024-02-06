@@ -55,6 +55,9 @@ class EthBridger(AssetBridger):
 
         tx = {**eth_deposit["txRequest"], **params.get("overrides", {})}
 
+        if 'from' not in tx:
+            tx['from'] = params['l1Signer'].account.address
+
         tx_hash = params["l1Signer"].provider.eth.send_transaction(tx)
         tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
@@ -89,6 +92,9 @@ class EthBridger(AssetBridger):
             )
 
         tx = {**retryable_ticket_request["txRequest"], **params.get("overrides", {})}
+
+        if 'from' not in tx:
+            tx['from'] = params['l1Signer'].account.address
 
         tx_hash = params["l1Signer"].provider.eth.send_transaction(tx)
         tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
@@ -131,6 +137,9 @@ class EthBridger(AssetBridger):
 
         tx = {**request["txRequest"], **params.get("overrides", {})}
 
+        if 'from' not in tx:
+            tx['from'] = params['l2Signer'].account.address
+            
         tx_hash = params["l2Signer"].provider.eth.send_transaction(tx)
 
         tx_receipt = params["l2Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)

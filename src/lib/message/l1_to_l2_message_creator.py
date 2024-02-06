@@ -103,7 +103,12 @@ class L1ToL2MessageCreator:
                 params, l1_provider, l2_provider, options
             )
 
-        tx_hash = self.l1_signer.eth.send_transaction({**create_request["txRequest"], **params.get("overrides", {})})
+        tx = {**create_request["txRequest"], **params.get("overrides", {})}
+        
+        if 'from' not in tx:
+            tx['from'] = self.l1_signer.account.address
+
+        tx_hash = self.l1_signer.eth.send_transaction(tx)
 
         tx_receipt = self.l1_signer.eth.wait_for_transaction_receipt(tx_hash)
         return L1TransactionReceipt.monkey_patch_wait(tx_receipt)

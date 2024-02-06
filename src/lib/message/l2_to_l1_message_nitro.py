@@ -353,6 +353,9 @@ class L2ToL1MessageWriterNitro(L2ToL1MessageReaderNitro):
         if overrides is None:
             overrides = {}
 
+        if "from" not in overrides:
+            overrides["from"] = self.l1_signer.account.address
+            
         transaction_hash = outbox_contract.functions.executeTransaction(
             proof,
             self.event["position"],

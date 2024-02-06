@@ -121,9 +121,11 @@ def deploy_erc20_l2(deployer):
     }
 
 
-def _send_transaction_wrapper(provider, contract_function):
-    tx_hash = contract_function.transact()
-    tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
+def _send_transaction_wrapper(signer, contract_function):
+    tx_hash = contract_function.transact({
+        'from': signer.account.address
+    })
+    tx_receipt = signer.provider.eth.wait_for_transaction_receipt(tx_hash)
     return tx_receipt
 
 
@@ -137,21 +139,21 @@ def deploy_erc20_and_init(l1_signer, l2_signer, inbox_address):
 
     print("Initializing L2 contracts...")
     _send_transaction_wrapper(
-        l2_signer.provider,
+        l2_signer,
         l2_contracts["router"].functions.initialize(
             l1_contracts["router"].address, l2_contracts["standardGateway"].address
         )
     )
 
     _send_transaction_wrapper(
-        l2_signer.provider,
+        l2_signer,
         l2_contracts["beaconProxyFactory"].functions.initialize(
             l2_contracts["beacon"].address
         )
     )
 
     _send_transaction_wrapper(
-        l2_signer.provider,
+        l2_signer,
         l2_contracts["standardGateway"].functions.initialize(
             l1_contracts["standardGateway"].address,
             l2_contracts["router"].address,
@@ -160,14 +162,14 @@ def deploy_erc20_and_init(l1_signer, l2_signer, inbox_address):
     )
 
     _send_transaction_wrapper(
-        l2_signer.provider,
+        l2_signer,
         l2_contracts["customGateway"].functions.initialize(
             l1_contracts["customGateway"].address, l2_contracts["router"].address
         )
     )
 
     _send_transaction_wrapper(
-        l2_signer.provider,
+        l2_signer,
         l2_contracts["weth"].functions.initialize(
             "WETH",
             "WETH",
@@ -178,7 +180,7 @@ def deploy_erc20_and_init(l1_signer, l2_signer, inbox_address):
     )
 
     _send_transaction_wrapper(
-        l2_signer.provider,
+        l2_signer,
         l2_contracts["wethGateway"].functions.initialize(
             l1_contracts["wethGateway"].address,
             l2_contracts["router"].address,
@@ -189,7 +191,7 @@ def deploy_erc20_and_init(l1_signer, l2_signer, inbox_address):
 
     print("Initializing L1 contracts...")
     _send_transaction_wrapper(
-        l1_signer.provider,
+        l1_signer,
         l1_contracts["router"].functions.initialize(
             l1_signer.account.address,
             l1_contracts["standardGateway"].address,
@@ -209,7 +211,7 @@ def deploy_erc20_and_init(l1_signer, l2_signer, inbox_address):
     )
 
     _send_transaction_wrapper(
-        l1_signer.provider,
+        l1_signer,
         l1_contracts["standardGateway"].functions.initialize(
             l2_contracts["standardGateway"].address,
             l1_contracts["router"].address,
@@ -220,7 +222,7 @@ def deploy_erc20_and_init(l1_signer, l2_signer, inbox_address):
     )
 
     _send_transaction_wrapper(
-        l1_signer.provider,
+        l1_signer,
         l1_contracts["customGateway"].functions.initialize(
             l2_contracts["customGateway"].address,
             l1_contracts["router"].address,
@@ -230,7 +232,7 @@ def deploy_erc20_and_init(l1_signer, l2_signer, inbox_address):
     )
 
     _send_transaction_wrapper(
-        l1_signer.provider,
+        l1_signer,
         l1_contracts["wethGateway"].functions.initialize(
             l2_contracts["wethGateway"].address,
             l1_contracts["router"].address,

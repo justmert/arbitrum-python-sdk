@@ -166,6 +166,8 @@ class L1ToL2MessageGasEstimator:
         )
 
         null_data_request = data_func(dummy_params)
+        retryable = None
+        
         try:
             res = l1_provider.eth.call(null_data_request)
             retryable = RetryableDataTools.try_parse_error(res)
@@ -175,6 +177,7 @@ class L1ToL2MessageGasEstimator:
         except Exception as err:
             if hasattr(err, "data"):
                 retryable = RetryableDataTools.try_parse_error(err.data)
+            
             if not is_defined(retryable):
                 raise ArbSdkError(f"No retryable data found in error: {err}")
 

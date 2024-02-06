@@ -179,8 +179,6 @@ def get_signer(provider, key=None):
         raise Exception("Provide at least one of key or provider.")
     if key:
         account = Account.from_key(key)
-
-        provider.eth.default_account = Web3.to_checksum_address(account.address)
         return account
     else:
         return provider.eth.accounts[0]
@@ -219,8 +217,8 @@ async def test_setup():
         construct_sign_and_send_raw_middleware(signer_account)
     )
 
-    eth_provider.eth.default_account = l1_signer_address
-    arb_provider.eth.default_account = l2_signer_address
+    # eth_provider.eth.default_account = l1_signer_address
+    # arb_provider.eth.default_account = l2_signer_address
 
     l1_signer = SignerOrProvider(signer_account, eth_provider)
     l2_signer = SignerOrProvider(signer_account, arb_provider)

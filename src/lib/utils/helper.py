@@ -146,6 +146,7 @@ def deploy_abi_contract(
 
     contract_abi, bytecode = load_abi(contract_name, is_classic=is_classic)
     contract = provider.eth.contract(abi=contract_abi, bytecode=bytecode)    
+    
     tx_hash = contract.constructor(*constructor_args).transact({
         "from": deployer.address
     })

@@ -20,7 +20,13 @@ class GatewayType:
 
 async def mine_until_stop(miner, state):
     while state["mining"]:
-        tx_hash = miner.provider.eth.send_transaction({"to": miner.account.address, "value": 0})
+
+        tx = {"to": miner.account.address, "value": 0}
+
+        if 'from' not in tx:
+            tx['from'] = miner.account.address
+            
+        tx_hash = miner.provider.eth.send_transaction(tx)
 
         _ = miner.provider.eth.wait_for_transaction_receipt(tx_hash)
         await asyncio.sleep(15)

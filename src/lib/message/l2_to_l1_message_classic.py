@@ -251,6 +251,9 @@ class L2ToL1MessageWriterClassic(L2ToL1MessageReaderClassic):
         if overrides is None:
             overrides = {}
 
+        if "from" not in overrides:
+            overrides["from"] = self.l1_signer.account.address
+            
         transaction_hash = outbox_contract.functions.executeTransaction(
             self.batch_number,
             proof_info.proof,

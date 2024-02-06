@@ -33,13 +33,10 @@ async def skip_if_mainnet(request, setup_state):
 
 @pytest.mark.asyncio
 async def test_register_custom_token(setup_state):
-    print('hayir buna')
     l1_token, l2_token = await register_custom_token(
         setup_state.l2_network, setup_state.l1_signer, setup_state.l2_signer, setup_state.admin_erc20_bridger
     )
-    print('bitti')
     setup_state.l1_custom_token = l1_token
-    print("ssssss", setup_state)
 
 @pytest.mark.asyncio
 async def test_deposit(setup_state):
@@ -56,7 +53,6 @@ async def test_deposit(setup_state):
         L1ToL2MessageStatus.REDEEMED,
         GatewayType.CUSTOM,
     )
-    pass
 
 
 @pytest.mark.asyncio

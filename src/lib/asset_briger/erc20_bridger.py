@@ -81,7 +81,6 @@ class Erc20Bridger(AssetBridger):
 
     async def approve_token(self, params):
         await self.check_l1_network(params["l1Signer"])
-        print('approve tokens params', params)
         approve_request = (
             await self.get_approve_token_request(
                 {
@@ -97,7 +96,10 @@ class Erc20Bridger(AssetBridger):
             **approve_request,
             **params.get("overrides", {}),
         }
-        print("tx oncesi params", transaction)
+        
+        if 'from' not in transaction:
+            transaction['from'] = params["l1Signer"].account.address
+
         tx_hash = params["l1Signer"].provider.eth.send_transaction(transaction)
 
         tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
@@ -333,6 +335,9 @@ class Erc20Bridger(AssetBridger):
             **params.get("overrides", {}),
         }
 
+        if "from" not in transaction:
+            transaction["from"] = params["l1Signer"].account.address
+
         tx_hash = params["l1Signer"].provider.eth.send_transaction(transaction)
 
         tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
@@ -375,7 +380,7 @@ class Erc20Bridger(AssetBridger):
                 "value": 0,
                 "from": params["from"],
             },
-            "estimate_l1_gas_limit": estimate_l1_gas_limit,
+            "estimateL1GasLimit": estimate_l1_gas_limit,
         }
 
     async def withdraw(self, params):
@@ -388,9 +393,13 @@ class Erc20Bridger(AssetBridger):
             if is_l2_to_l1_transaction_request(params)
             else await self.get_withdrawal_request({**params, "from": params["l2Signer"].account.address})
         )
+        tx = {**withdrawal_request["txRequest"], **params.get("overrides", {})}
+
+        if "from" not in tx:
+            tx["from"] = params["l2Signer"].account.address
 
         tx_hash = await params["l2Signer"].provider.eth.send_transaction(
-            {**withdrawal_request["txRequest"], **params.get("overrides", {})}
+            tx  
         )
 
         tx_receipt = await params["l2Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
@@ -504,13 +513,16 @@ class AdminErc20Bridger(Erc20Bridger):
             l1_provider,
         )
 
-        transaction = {
+        register_tx = {
             "to": l1_token.address,
             "data": set_gateway_estimates2["data"],
             "value": set_gateway_estimates2["value"],
         }
 
-        tx_hash = l1_signer.provider.eth.send_transaction(transaction)
+        if 'from' not in register_tx:
+            register_tx['from'] = l1_signer.account.address
+
+        tx_hash = l1_signer.provider.eth.send_transaction(register_tx)
 
         register_tx_receipt = l1_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
@@ -612,6 +624,9 @@ class AdminErc20Bridger(Erc20Bridger):
             "data": estimates["data"],
             "value": estimates["estimates"]["deposit"],
         }
+
+        if 'from' not in transaction:
+            transaction['from'] = l1_signer.account.address
 
         tx_hash = l1_signer.provider.eth.send_transaction(transaction)
 
