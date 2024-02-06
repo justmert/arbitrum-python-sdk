@@ -224,6 +224,10 @@ async def test_setup():
 
     l1_signer = SignerOrProvider(signer_account, eth_provider)
     l2_signer = SignerOrProvider(signer_account, arb_provider)
+    print('L1_SIGNER_ADDRESS', l1_signer.account.address)
+    print('L2_SIGNER_ADDRESS', l2_signer.account.address)
+    print('L1_DEPLOYER_ADDRESS', l1_deployer.account.address)
+    print('L2_DEPLOYER_ADDRESS', l1_deployer.account.address)
 
     try:
         set_l1_network = get_l1_network(eth_provider)

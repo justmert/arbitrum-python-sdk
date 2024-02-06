@@ -185,7 +185,7 @@ class L1ToL2MessageReader(L1ToL2Message):
             redeem_events = l2_receipt.get_redeem_scheduled_events(self.l2_provider)
 
             if len(redeem_events) == 1:
-                return self.l2_provider.eth.get_transaction_receipt(self.l2_provider, redeem_events[0]["retryTxHash"])
+                return self.l2_provider.eth.get_transaction_receipt(redeem_events[0]["retryTxHash"])
             elif len(redeem_events) > 1:
                 raise ArbSdkError(
                     f"Unexpected number of redeem events for retryable creation tx. {creation_receipt} {redeem_events}"

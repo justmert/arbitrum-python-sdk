@@ -251,7 +251,7 @@ class L2ToL1MessageWriterClassic(L2ToL1MessageReaderClassic):
         if overrides is None:
             overrides = {}
 
-        transaction = outbox_contract.functions.executeTransaction(
+        transaction_hash = outbox_contract.functions.executeTransaction(
             self.batch_number,
             proof_info.proof,
             proof_info.path,
@@ -262,6 +262,7 @@ class L2ToL1MessageWriterClassic(L2ToL1MessageReaderClassic):
             proof_info.timestamp,
             proof_info.amount,
             proof_info.calldata_for_l1,
-        ).build_transaction({**overrides})
+        ).transact(overrides)
 
-        return self.l1_signer.send_transaction(transaction)
+        tx_receipt = self.l1_signer.provider.eth.wait_for_transaction_receipt(transaction_hash)
+        return tx_receipt

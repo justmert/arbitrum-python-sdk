@@ -53,7 +53,7 @@ class L1TransactionReceipt:
             provider,
             "Inbox",
             self.logs,
-            "InboxMessageDelivered(uint256,bytes)",
+            "InboxMessageDelivered",
             is_classic=False,
         )
 
@@ -63,7 +63,7 @@ class L1TransactionReceipt:
 
         if len(bridge_messages) != len(inbox_messages):
             raise ArbSdkError(
-                f"Unexpected missing events. Inbox message count: {len(inbox_messages)} does not equal bridge message count: {len(bridge_messages)}. {json.dumps(bridge_messages)} {json.dumps(inbox_messages)}"
+                f"Unexpected missing events. Inbox message count: {len(inbox_messages)} does not equal bridge message count: {len(bridge_messages)}. {bridge_messages} {inbox_messages}"
             )
 
         messages = []

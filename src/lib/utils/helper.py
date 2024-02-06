@@ -12,7 +12,7 @@ from web3.contract import Contract
 from web3.types import AccessList, Nonce, Wei
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-
+import json
 
 def format_contract_output(contract, function_name, output):
     func_abi = next(
@@ -147,7 +147,7 @@ def deploy_abi_contract(
     contract_abi, bytecode = load_abi(contract_name, is_classic=is_classic)
     contract = provider.eth.contract(abi=contract_abi, bytecode=bytecode)    
     tx_hash = contract.constructor(*constructor_args).transact({
-        # "from": deployer.address,
+        "from": deployer.address
     })
     tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
     return provider.eth.contract(address=tx_receipt.contractAddress, abi=contract_abi)
@@ -208,7 +208,7 @@ def sign_and_sent_raw_transaction(signer, tx):
     return tx_receipt
 
 
-class CaseDict:
+class CaseDict():
     def __init__(self, x):
         for key, value in x.items():
             setattr(self, key, value)
@@ -273,3 +273,11 @@ class CaseDict:
             return value.address
         else:
             return value
+
+
+class CaseDictEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, CaseDict):
+            return obj.to_dict()
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)

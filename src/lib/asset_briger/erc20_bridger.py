@@ -66,22 +66,22 @@ class Erc20Bridger(AssetBridger):
         i_erc20_interface = load_contract(
             provider=params["l1Provider"],
             contract_name="ERC20",
-            address=params["erc20L1Address"],
             is_classic=True,
         )
 
         data = i_erc20_interface.encodeABI(
             fn_name="approve",
-            args=[gateway_address, params.get("amount", Erc20Bridger.MAX_APPROVAL)],
+            args=[gateway_address, params.get("amount", None) or Erc20Bridger.MAX_APPROVAL],
         )
 
         return {"to": params["erc20L1Address"], "data": data, "value": 0}
 
-    def is_approve_params(params):
+    def is_approve_params(self, params):
         return "erc20L1Address" in params
 
     async def approve_token(self, params):
         await self.check_l1_network(params["l1Signer"])
+        print('approve tokens params', params)
         approve_request = (
             await self.get_approve_token_request(
                 {
@@ -97,11 +97,10 @@ class Erc20Bridger(AssetBridger):
             **approve_request,
             **params.get("overrides", {}),
         }
-
+        print("tx oncesi params", transaction)
         tx_hash = params["l1Signer"].provider.eth.send_transaction(transaction)
 
         tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
-
         return tx_receipt
 
     async def get_l2_withdrawal_events(
@@ -353,7 +352,7 @@ class Erc20Bridger(AssetBridger):
         function_data = router_interface.encodeABI(
             fn_name="outboundTransfer",
             args=[
-                params["erc20l1Address"],
+                params["erc20L1Address"],
                 to_address,
                 params["amount"],
                 "0x",
@@ -361,9 +360,9 @@ class Erc20Bridger(AssetBridger):
         )
 
         async def estimate_l1_gas_limit(l1_provider):
-            l1_gateway_address = await self.get_l1_gateway_address(params["erc20l1_address"], params["l1_provider"])
+            l1_gateway_address = await self.get_l1_gateway_address(params["erc20l1_address"], l1_provider)
 
-            is_weth = await self.is_weth_gateway(l1_gateway_address, params["l1_provider"])
+            is_weth = await self.is_weth_gateway(l1_gateway_address, l1_provider)
 
             gas_estimate = Web3.toInt(180000) if is_weth else Web3.toInt(160000)
 
@@ -476,7 +475,7 @@ class AdminErc20Bridger(Erc20Bridger):
             )
 
             return {
-                "data": encoded_data["data"],
+                "data": encoded_data,
                 "to": l1_token.address,
                 "value": set_token_deposit + set_gateway_deposit,
                 "from": from_address,
