@@ -12,6 +12,7 @@ from web3.contract import Contract
 from web3.types import AccessList, Nonce, Wei
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from src.lib.utils.arb_provider import ArbitrumProvider
 
 
 def format_contract_output(contract, function_name, output):
@@ -96,6 +97,9 @@ def parse_raw_tx(raw_tx):
 def load_contract(contract_name, provider, address=None, is_classic=False):
     if isinstance(provider, SignerOrProvider):
         provider = provider.provider
+    
+    elif isinstance(provider, ArbitrumProvider):
+            provider = provider.provider
 
     else:
         provider = provider

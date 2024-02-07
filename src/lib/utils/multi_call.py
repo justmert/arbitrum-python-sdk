@@ -2,6 +2,7 @@ from web3 import Web3
 from src.lib.data_entities.networks import is_l1_network, l1_networks, l2_networks
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import load_contract
 
 
@@ -12,6 +13,9 @@ class MultiCaller:
 
         elif isinstance(provider, SignerOrProvider):
             self.provider = provider.provider
+
+        elif isinstance(provider, ArbitrumProvider):
+            provider = provider.provider
 
         else:
             raise ArbSdkError("Invalid provider type")

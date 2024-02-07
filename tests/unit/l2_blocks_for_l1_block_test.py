@@ -1,19 +1,21 @@
-import pytest
-from web3 import Web3, HTTPProvider
-from eth_typing import HexStr
-from src.lib.utils.lib import get_block_ranges_for_l1_block, get_first_block_for_l1_block
-from src.lib.utils.arb_provider import ArbitrumProvider
-from src.lib.data_entities.rpc import ArbBlock
 import asyncio
+
+import pytest
+from web3 import HTTPProvider, Web3
+
+from src.lib.utils.arb_provider import ArbitrumProvider
+from src.lib.utils.lib import (
+    get_block_ranges_for_l1_block,
+    get_first_block_for_l1_block,
+)
 
 
 class ValidationException(Exception):
     pass
 
 
-# Configure the ArbitrumProvider with the given RPC provider
 provider = Web3(HTTPProvider("https://arb1.arbitrum.io/rpc"))
-arb_provider = ArbitrumProvider(provider=provider)
+arb_provider = ArbitrumProvider(provider)
 
 
 @pytest.mark.asyncio
@@ -43,28 +45,21 @@ async def validate_l2_blocks(l2_blocks, l2_blocks_count, block_type="number"):
 
     blocks = await asyncio.gather(*tasks)
 
-    # Iterate through blocks in pairs (start_block, adjacent_block)
     for i in range(0, len(blocks), 2):
         current_block, adjacent_block = blocks[i], blocks[i + 1]
 
-        # Ensure both blocks are not None
         if current_block is None or adjacent_block is None:
             continue
 
-        # Convert 'l1BlockNumber' from hexadecimal to integer
         current_block_number = int(current_block["l1BlockNumber"], 16)
         adjacent_block_number = int(adjacent_block["l1BlockNumber"], 16)
 
-        # Determine if current block is the start or end block based on the index
         is_start_block = i == 0
 
-        # Compare current and adjacent blocks
         if is_start_block:
-            # For the start block, current should be greater than the block before it
             if not current_block_number > adjacent_block_number:
                 raise ValidationException("L2 start block is not the first block in range for L1 block.")
         else:
-            # For the end block, current should be less than the block after it
             if not current_block_number < adjacent_block_number:
                 raise ValidationException("L2 end block is not the last block in range for L1 block.")
 
