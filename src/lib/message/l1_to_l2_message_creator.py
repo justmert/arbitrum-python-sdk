@@ -108,7 +108,7 @@ class L1ToL2MessageCreator:
         if "from" not in tx:
             tx["from"] = self.l1_signer.account.address
 
-        tx_hash = self.l1_signer.eth.send_transaction(tx)
+        tx_hash = self.l1_signer.provider.eth.send_transaction(tx)
 
-        tx_receipt = self.l1_signer.eth.wait_for_transaction_receipt(tx_hash)
+        tx_receipt = self.l1_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         return L1TransactionReceipt.monkey_patch_wait(tx_receipt)
