@@ -29,9 +29,6 @@ async def mine_until_stop(miner, state):
             "nonce": miner.provider.eth.get_transaction_count(miner.account.address),
         }
         
-        
-        
-        
         gas_estimate = miner.provider.eth.estimate_gas(tx)
 
         tx["gas"] = gas_estimate
