@@ -12,7 +12,7 @@ from web3.contract import Contract
 from web3.types import AccessList, Nonce, Wei
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-import json
+
 
 def format_contract_output(contract, function_name, output):
     func_abi = next(
@@ -141,15 +141,13 @@ def deploy_abi_contract(
     if isinstance(provider, SignerOrProvider):
         provider = provider.provider
 
-    if(isinstance(deployer, SignerOrProvider)):
-        deployer = deployer.account        
+    if isinstance(deployer, SignerOrProvider):
+        deployer = deployer.account
 
     contract_abi, bytecode = load_abi(contract_name, is_classic=is_classic)
-    contract = provider.eth.contract(abi=contract_abi, bytecode=bytecode)    
-    
-    tx_hash = contract.constructor(*constructor_args).transact({
-        "from": deployer.address
-    })
+    contract = provider.eth.contract(abi=contract_abi, bytecode=bytecode)
+
+    tx_hash = contract.constructor(*constructor_args).transact({"from": deployer.address})
     tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
     return provider.eth.contract(address=tx_receipt.contractAddress, abi=contract_abi)
 
@@ -165,9 +163,9 @@ def load_abi(contract_name, is_classic=False):
         if not contract_data.get("abi"):
             raise Exception(f"No ABI found for contract: {contract_name}")
 
-        abi = contract_data.get('abi', None)
-        bytecode = contract_data.get('bytecode', None)
-    
+        abi = contract_data.get("abi", None)
+        bytecode = contract_data.get("bytecode", None)
+
     return abi, bytecode
 
 
@@ -209,13 +207,13 @@ def sign_and_sent_raw_transaction(signer, tx):
     return tx_receipt
 
 
-class CaseDict():
+class CaseDict:
     def __init__(self, x):
         for key, value in x.items():
-            setattr(self, key, value)
+            self.__setattr__(key, value)
 
     def __setitem__(self, key, value):
-        setattr(self, key, value)
+        self.__setattr__(key, value)
 
     def __getitem__(self, key):
         try:
@@ -253,6 +251,10 @@ class CaseDict():
         return key in self.__dict__
 
     def __setattr__(self, name, value):
+        if isinstance(value, dict):
+            value = CaseDict(value)  # Convert dict to CaseDict
+        elif isinstance(value, list):
+            value = [CaseDict(item) if isinstance(item, dict) else item for item in value]  # Recursive for lists
         camel_case_name = snake_to_camel(name)
         super().__setattr__(camel_case_name, value)
 
@@ -260,7 +262,7 @@ class CaseDict():
         return {k: self.convert_to_serializable(v) for k, v in self.__dict__.items() if not k.startswith("_")}
 
     def __str__(self):
-        items = [f"{key}: {value}" for key, value in self.to_dict().items()]
+        items = [f"{key}: {self.convert_to_serializable(value)}" for key, value in self.to_dict().items()]
         return f"CaseDict({', '.join(items)})"
 
     def convert_to_serializable(self, value):
@@ -268,8 +270,6 @@ class CaseDict():
             return value.to_dict()
         elif isinstance(value, list):
             return [self.convert_to_serializable(item) for item in value]
-        elif isinstance(value, dict):
-            return {key: self.convert_to_serializable(val) for key, val in value.items()}
         elif isinstance(value, Contract):
             return value.address
         else:

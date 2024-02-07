@@ -178,7 +178,7 @@ class L1ToL2MessageGasEstimator:
         except Exception as err:
             if hasattr(err, "data"):
                 retryable = RetryableDataTools.try_parse_error(err.data)
-            
+
             if not is_defined(retryable):
                 raise ArbSdkError(f"No retryable data found in error: {err}")
 

@@ -128,10 +128,12 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
 
     async def status(self, l2_provider):
         send_props = await self.get_send_props(l2_provider)
+
         send_root_confirmed = send_props.get("sendRootConfirmed", None)
 
         if not send_root_confirmed:
             return L2ToL1MessageStatus.UNCONFIRMED
+
         return L2ToL1MessageStatus.EXECUTED if await self.has_executed(l2_provider) else L2ToL1MessageStatus.CONFIRMED
 
     def parse_node_created_assertion(self, event):
@@ -231,20 +233,25 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
             )
 
             latest_confirmed_node_num = rollup_contract.functions.latestConfirmed().call()
+            ("latest_confirmed_node_num", latest_confirmed_node_num)
             l2_block_confirmed = await self.get_block_from_node_num(
                 rollup_contract, latest_confirmed_node_num, l2_provider
             )
-
+            ("l2_block_confirmed", l2_block_confirmed)
             send_root_size_confirmed = Web3.to_int(hexstr=l2_block_confirmed["sendCount"])
+
             if send_root_size_confirmed > self.event["position"]:
                 self.send_root_size = send_root_size_confirmed
                 self.send_root_hash = l2_block_confirmed["sendRoot"]
                 self.send_root_confirmed = True
             else:
                 latest_node_num = rollup_contract.functions.latestNodeCreated().call()
+
                 if latest_node_num > latest_confirmed_node_num:
                     l2_block = await self.get_block_from_node_num(rollup_contract, latest_node_num, l2_provider)
+
                     send_root_size = Web3.to_int(hexstr=l2_block["sendCount"])
+
                     if send_root_size > self.event["position"]:
                         self.send_root_size = send_root_size
                         self.send_root_hash = l2_block["sendRoot"]
@@ -355,7 +362,7 @@ class L2ToL1MessageWriterNitro(L2ToL1MessageReaderNitro):
 
         if "from" not in overrides:
             overrides["from"] = self.l1_signer.account.address
-            
+
         transaction_hash = outbox_contract.functions.executeTransaction(
             proof,
             self.event["position"],

@@ -96,9 +96,9 @@ class Erc20Bridger(AssetBridger):
             **approve_request,
             **params.get("overrides", {}),
         }
-        
-        if 'from' not in transaction:
-            transaction['from'] = params["l1Signer"].account.address
+
+        if "from" not in transaction:
+            transaction["from"] = params["l1Signer"].account.address
 
         tx_hash = params["l1Signer"].provider.eth.send_transaction(transaction)
 
@@ -117,15 +117,17 @@ class Erc20Bridger(AssetBridger):
         await self.check_l2_network(l2_provider)
         event_fetcher = EventFetcher(l2_provider)
 
-        argument_filters = {}
+        argument_filters = {
+            # "l1Token": None,
+            # "_from": from_address or None,
+            # "_to": to_address or None,
+        }
 
         events = await event_fetcher.get_events(
             contract_factory="L2ArbitrumGateway",
             event_name="WithdrawalInitiated",
             argument_filters=argument_filters,
             filter={
-                "fromBlock": filter["fromBlock"],
-                "toBlock": filter["toBlock"],
                 "address": gateway_address,
                 **filter,
             },
@@ -134,7 +136,7 @@ class Erc20Bridger(AssetBridger):
 
         events = [{"txHash": a["transactionHash"], **a["event"]} for a in events]
         return (
-            [event for event in events if event.l1Token.lower() == l1_token_address.lower()]
+            [event for event in events if event["l1Token"].lower() == l1_token_address.lower()]
             if l1_token_address
             else events
         )
@@ -283,7 +285,7 @@ class Erc20Bridger(AssetBridger):
 
             return {
                 "data": function_data,
-                'from': defaulted_params["from"],
+                "from": defaulted_params["from"],
                 "to": self.l2_network.token_bridge.l1_gateway_router,
                 "value": deposit_params["gasLimit"] * deposit_params["maxFeePerGas"]
                 + deposit_params["maxSubmissionCost"],
@@ -349,12 +351,12 @@ class Erc20Bridger(AssetBridger):
     async def get_withdrawal_request(self, params):
         to_address = params["destinationAddress"]
 
-        if 'l2Provider' in params:
+        if "l2Provider" in params:
             provider = params["l2Provider"]
 
-        elif 'l2Signer' in params:
+        elif "l2Signer" in params:
             provider = params["l2Signer"].provider
-            
+
         router_interface = load_contract(
             provider=provider,
             contract_name="L2GatewayRouter",
@@ -404,12 +406,10 @@ class Erc20Bridger(AssetBridger):
 
         if "from" not in tx:
             tx["from"] = params["l2Signer"].account.address
-        
-        tx_hash = params["l2Signer"].provider.eth.send_transaction(
-            tx  
-        )
 
-        tx_receipt =  params["l2Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
+        tx_hash = params["l2Signer"].provider.eth.send_transaction(tx)
+
+        tx_receipt = params["l2Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L2TransactionReceipt.monkey_patch_wait(tx_receipt)
 
@@ -526,8 +526,8 @@ class AdminErc20Bridger(Erc20Bridger):
             "value": set_gateway_estimates2["value"],
         }
 
-        if 'from' not in register_tx:
-            register_tx['from'] = l1_signer.account.address
+        if "from" not in register_tx:
+            register_tx["from"] = l1_signer.account.address
 
         tx_hash = l1_signer.provider.eth.send_transaction(register_tx)
 
@@ -632,8 +632,8 @@ class AdminErc20Bridger(Erc20Bridger):
             "value": estimates["estimates"]["deposit"],
         }
 
-        if 'from' not in transaction:
-            transaction['from'] = l1_signer.account.address
+        if "from" not in transaction:
+            transaction["from"] = l1_signer.account.address
 
         tx_hash = l1_signer.provider.eth.send_transaction(transaction)
 

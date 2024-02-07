@@ -20,15 +20,28 @@ class GatewayType:
 
 async def mine_until_stop(miner, state):
     while state["mining"]:
+        tx = {
+            "from": miner.account.address,
+            "to": miner.account.address,
+            "value": 0,
+            "chainId": miner.provider.eth.chain_id,
+            "gasPrice": miner.provider.eth.gas_price,
+            "nonce": miner.provider.eth.get_transaction_count(miner.account.address),
+        }
+        
+        
+        
+        
+        gas_estimate = miner.provider.eth.estimate_gas(tx)
 
-        tx = {"to": miner.account.address, "value": 0}
+        tx["gas"] = gas_estimate
 
-        if 'from' not in tx:
-            tx['from'] = miner.account.address
-            
-        tx_hash = miner.provider.eth.send_transaction(tx)
+        signed_tx = miner.account.sign_transaction(tx)
 
-        _ = miner.provider.eth.wait_for_transaction_receipt(tx_hash)
+        tx_hash = miner.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        miner.provider.eth.wait_for_transaction_receipt(tx_hash)
+
         await asyncio.sleep(15)
 
 
@@ -39,11 +52,11 @@ async def withdraw_token(params):
             "erc20L1Address": params["l1Token"].address,
             "destinationAddress": params["l2Signer"].account.address,
             "from": params["l2Signer"].account.address,
-            'l2Provider': params["l2Signer"].provider,
+            "l2Provider": params["l2Signer"].provider,
         }
     )
 
-    l1_gas_estimate = await withdrawal_params['estimate_l1_gas_limit'](params["l1Signer"].provider)
+    l1_gas_estimate = await withdrawal_params["estimate_l1_gas_limit"](params["l1Signer"].provider)
 
     withdraw_rec = await params["erc20Bridger"].withdraw(
         {
@@ -158,9 +171,7 @@ async def deposit_token(
     expected_gateway_type,
     retryable_overrides=None,
 ):
-    print(
-    f"Depositing {deposit_amount} of token {l1_token_address}"
-    )
+    
 
     _ = await erc20_bridger.approve_token(
         {
@@ -171,11 +182,11 @@ async def deposit_token(
 
     expected_l1_gateway_address = await erc20_bridger.get_l1_gateway_address(l1_token_address, l1_signer.provider)
 
-    print("expected_l1_gateway_address", expected_l1_gateway_address)
-    print("l1_token_address", l1_token_address)
-    l1_token = erc20_bridger.get_l1_token_contract(l1_signer.provider, l1_token_address)
     
-    print("feeding", l1_signer.account.address)
+    
+    l1_token = erc20_bridger.get_l1_token_contract(l1_signer.provider, l1_token_address)
+
+    
     allowance = l1_token.functions.allowance(l1_signer.account.address, expected_l1_gateway_address).call()
 
     assert allowance == Erc20Bridger.MAX_APPROVAL, "set token allowance failed"
@@ -252,6 +263,7 @@ def fund(signer, amount=None, funding_key=None):
     signed_tx = wallet.sign_transaction(tx)
     tx_hash = signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
     tx_receipt = signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+    
     return tx_receipt
 
 
@@ -268,12 +280,11 @@ def wait(ms=0):
 
 
 # async def skip_if_mainnet(test_context):
-    
+
 #     l1_network_details = await test_setup()
 #     chain_id = l1_network_details['l1Network']['chainID']
 #     if chain_id == 1:
 #         pytest.skip("You're writing to the chain on mainnet lol stop")
-
 
 
 # def mint_tokens(provider, contract_address, minter):

@@ -456,8 +456,8 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             if overrides is None:
                 overrides = {}
 
-            if 'from' not in overrides:
-                overrides['from'] = self.l2_signer.account.address
+            if "from" not in overrides:
+                overrides["from"] = self.l2_signer.account.address
 
             redeem_hash = arb_retryable_tx.functions.redeem(self.retryable_creation_id).transact(overrides)
 
@@ -484,8 +484,8 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             if overrides is None:
                 overrides = {}
 
-            if 'from' not in overrides:
-                overrides['from'] = self.l2_signer.account.address
+            if "from" not in overrides:
+                overrides["from"] = self.l2_signer.account.address
 
             tx_hash = await arb_retryable_tx.functions.cancel(self.retryable_creation_id).transact(overrides)
 
@@ -510,8 +510,8 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             if overrides is None:
                 overrides = {}
 
-            if 'from' not in overrides:
-                overrides['from'] = self.l2_signer.account.address
+            if "from" not in overrides:
+                overrides["from"] = self.l2_signer.account.address
 
             keepalive_tx = await arb_retryable_tx.functions.keepalive(self.retryable_creation_id).transact(overrides)
 

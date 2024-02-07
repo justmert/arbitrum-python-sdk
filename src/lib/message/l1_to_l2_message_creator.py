@@ -104,9 +104,9 @@ class L1ToL2MessageCreator:
             )
 
         tx = {**create_request["txRequest"], **params.get("overrides", {})}
-        
-        if 'from' not in tx:
-            tx['from'] = self.l1_signer.account.address
+
+        if "from" not in tx:
+            tx["from"] = self.l1_signer.account.address
 
         tx_hash = self.l1_signer.eth.send_transaction(tx)
 

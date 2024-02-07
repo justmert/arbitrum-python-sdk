@@ -3,7 +3,6 @@ from web3.providers import BaseProvider
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 import src.lib.message.l2_to_l1_message_classic as classic
 import src.lib.message.l2_to_l1_message_nitro as nitro
-from src.lib.utils.lib import is_defined
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.errors import ArbSdkError
 import asyncio
@@ -12,7 +11,7 @@ import asyncio
 class L2ToL1Message:
     @staticmethod
     def is_classic(event):
-        return is_defined(event.get("indexInBatch", None))
+        return "indexInBatch" in event
 
     @staticmethod
     def from_event(l1_signer_or_provider, event, l1_provider: Optional[BaseProvider] = None):

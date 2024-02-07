@@ -195,9 +195,9 @@ class InboxTools:
         if overrides is None:
             overrides = {}
 
-        if 'from' not in overrides:
-            overrides['from'] = self.l1_signer.account.address
-            
+        if "from" not in overrides:
+            overrides["from"] = self.l1_signer.account.address
+
         tx_hash = sequencer_inbox.functions.forceInclusion(
             event_info.event.message_index + 1,
             event_info.event.kind,

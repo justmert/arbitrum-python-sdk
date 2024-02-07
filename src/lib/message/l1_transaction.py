@@ -6,7 +6,6 @@ from .l1_to_l2_message import (
     L1ToL2MessageStatus,
     EthDepositMessage,
 )
-import json
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.signer_or_provider import (

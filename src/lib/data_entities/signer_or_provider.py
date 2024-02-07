@@ -3,6 +3,7 @@ from web3 import Web3
 from eth_account.signers.local import LocalAccount
 from .errors import ArbSdkError, MissingProviderArbSdkError
 
+
 class SignerOrProvider:
     def __init__(self, account, provider):
         self.account = account

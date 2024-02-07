@@ -1,17 +1,22 @@
 import pytest
-from web3 import Web3, constants
-from src.lib.utils.helper import deploy_abi_contract, is_contract_deployed, load_contract
+from web3 import constants
+
+from src.lib.data_entities.errors import ArbSdkError
+from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
+from src.lib.utils.helper import (
+    deploy_abi_contract,
+    is_contract_deployed,
+    load_contract,
+)
+from src.scripts.test_setup import test_setup
+
 from .test_helpers import (
+    GatewayType,
     deposit_token,
     fund_l1,
     fund_l2,
-    # skip_if_mainnet,
-    GatewayType,
     withdraw_token,
 )
-from src.scripts.test_setup import test_setup
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
 
 DEPOSIT_AMOUNT = 100
 WITHDRAWAL_AMOUNT = 10
@@ -24,7 +29,8 @@ async def setup_state():
     fund_l2(setup_state.l2_signer)
     return setup_state
 
-@pytest.fixture(scope='function', autouse=True)
+
+@pytest.fixture(scope="function", autouse=True)
 async def skip_if_mainnet(request, setup_state):
     chain_id = setup_state.l1_network.chain_id
     if chain_id == 1:
@@ -37,6 +43,7 @@ async def test_register_custom_token(setup_state):
         setup_state.l2_network, setup_state.l1_signer, setup_state.l2_signer, setup_state.admin_erc20_bridger
     )
     setup_state.l1_custom_token = l1_token
+
 
 @pytest.mark.asyncio
 async def test_deposit(setup_state):
@@ -71,6 +78,7 @@ async def test_withdraw_token(setup_state):
             ),
         }
     )
+
 
 @pytest.mark.asyncio
 async def register_custom_token(l2_network, l1_signer, l2_signer, admin_erc20_bridger):
@@ -164,5 +172,3 @@ async def register_custom_token(l2_network, l1_signer, l2_signer, admin_erc20_br
     assert end_l2_erc20_address == l2_custom_token.address
 
     return l1_custom_token, l2_custom_token
-
-
