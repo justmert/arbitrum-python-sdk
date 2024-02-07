@@ -7,6 +7,7 @@ from src.lib.utils.helper import load_contract
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.message.l2_to_l1_message import L2ToL1Message
 from src.lib.data_entities.event import parse_typed_logs
+from test import CaseDict
 
 
 class RedeemTransaction:
@@ -28,25 +29,29 @@ class RedeemTransaction:
         return self.l2_provider.eth.get_transaction_receipt(redeem_scheduled_events[0]["retryTxHash"])
 
 
-class L2TransactionReceipt:
+class L2TransactionReceipt(CaseDict):
     def __init__(self, tx):
-        self.to = tx.get("to")
-        self.from_ = tx.get("from")
-        self.contract_address = tx.get("contractAddress")
-        self.transaction_index = tx.get("transactionIndex")
-        self.root = tx.get("root")
-        self.gas_used = tx.get("gasUsed")
-        self.logs_bloom = tx.get("logsBloom")
-        self.block_hash = tx.get("blockHash")
-        self.transaction_hash = tx.get("transactionHash")
-        self.logs = tx.get("logs")
-        self.block_number = tx.get("blockNumber")
-        self.confirmations = tx.get("confirmations")
-        self.cumulative_gas_used = tx.get("cumulativeGasUsed")
-        self.effective_gas_price = tx.get("effectiveGasPrice")
-        self.byzantium = tx.get("byzantium")
-        self.type = tx.get("type")
-        self.status = tx.get("status")
+        super().__init__(
+            {
+                "to": tx.get("to"),
+                "from": tx.get("from"),
+                "contractAddress": tx.get("contractAddress"),
+                "transactionIndex": tx.get("transactionIndex"),
+                "root": tx.get("root"),
+                "gasUsed": tx.get("gasUsed"),
+                "logsBloom": tx.get("logsBloom"),
+                "blockHash": tx.get("blockHash"),
+                "transactionHash": tx.get("transactionHash"),
+                "logs": tx.get("logs"),
+                "blockNumber": tx.get("blockNumber"),
+                "confirmations": tx.get("confirmations"),
+                "cumulativeGasUsed": tx.get("cumulativeGasUsed"),
+                "effectiveGasPrice": tx.get("effectiveGasPrice"),
+                "byzantium": tx.get("byzantium"),
+                "type": tx.get("type"),
+                "status": tx.get("status"),
+            }
+        )
 
     def get_l2_to_l1_events(self, provider):
         classic_logs = parse_typed_logs(provider, "ArbSys", self.logs, "L2ToL1Transaction", is_classic=False)

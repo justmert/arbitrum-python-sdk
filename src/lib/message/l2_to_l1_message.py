@@ -12,7 +12,7 @@ import asyncio
 class L2ToL1Message:
     @staticmethod
     def is_classic(event):
-        return is_defined(getattr(event, "index_in_batch"))
+        return is_defined(event.get("indexInBatch", None))
 
     @staticmethod
     def from_event(l1_signer_or_provider, event, l1_provider: Optional[BaseProvider] = None):

@@ -1,4 +1,5 @@
 from src.lib.data_entities.event import parse_typed_logs
+from test import CaseDict
 from .l1_to_l2_message import (
     L1ToL2Message,
     L1ToL2MessageReaderClassic,
@@ -16,29 +17,33 @@ from src.lib.message.message_data_parser import SubmitRetryableMessageDataParser
 from src.lib.utils.lib import is_defined
 
 
-class L1TransactionReceipt:
+class L1TransactionReceipt(CaseDict):
     """
     A Python equivalent of the TypeScript L1TransactionReceipt class.
     """
 
     def __init__(self, tx):
-        self.to = tx.get("to")
-        self.from_ = tx.get("from")
-        self.contract_address = tx.get("contractAddress")
-        self.transaction_index = tx.get("transactionIndex")
-        self.root = tx.get("root")
-        self.gas_used = tx.get("gasUsed")
-        self.logs_bloom = tx.get("logsBloom")
-        self.block_hash = tx.get("blockHash")
-        self.transaction_hash = tx.get("transactionHash")
-        self.logs = tx.get("logs")
-        self.block_number = tx.get("blockNumber")
-        self.confirmations = tx.get("confirmations")
-        self.cumulative_gas_used = tx.get("cumulativeGasUsed")
-        self.effective_gas_price = tx.get("effectiveGasPrice")
-        self.byzantium = tx.get("byzantium")
-        self.type = tx.get("type")
-        self.status = tx.get("status")
+        super().__init__(
+            {
+                "to": tx.get("to"),
+                "from": tx.get("from"),
+                "contractAddress": tx.get("contractAddress"),
+                "transactionIndex": tx.get("transactionIndex"),
+                "root": tx.get("root"),
+                "gasUsed": tx.get("gasUsed"),
+                "logsBloom": tx.get("logsBloom"),
+                "blockHash": tx.get("blockHash"),
+                "transactionHash": tx.get("transactionHash"),
+                "logs": tx.get("logs"),
+                "blockNumber": tx.get("blockNumber"),
+                "confirmations": tx.get("confirmations"),
+                "cumulativeGasUsed": tx.get("cumulativeGasUsed"),
+                "effectiveGasPrice": tx.get("effectiveGasPrice"),
+                "byzantium": tx.get("byzantium"),
+                "type": tx.get("type"),
+                "status": tx.get("status"),
+            }
+        )
 
     async def is_classic(self, l2_signer_or_provider):
         provider = SignerProviderUtils.get_provider_or_throw(l2_signer_or_provider)
@@ -182,7 +187,7 @@ class L1ContractCallTransactionReceipt(L1TransactionReceipt):
         confirmations=None,
         timeout=None,
     ):
-        message = await self.get_l1_to_l2_messages(l2_signer_or_provider)[0]
+        message = (await self.get_l1_to_l2_messages(l2_signer_or_provider))[0]
 
         if not message:
             raise ArbSdkError("Unexpected missing L1ToL2 message.")

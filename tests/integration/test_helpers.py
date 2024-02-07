@@ -36,19 +36,20 @@ async def withdraw_token(params):
     withdrawal_params = await params["erc20Bridger"].get_withdrawal_request(
         {
             "amount": params["amount"],
-            "erc20l1Address": params["l1Token"].address,
+            "erc20L1Address": params["l1Token"].address,
             "destinationAddress": params["l2Signer"].account.address,
             "from": params["l2Signer"].account.address,
+            'l2Provider': params["l2Signer"].provider,
         }
     )
 
-    l1_gas_estimate = await withdrawal_params.estimate_l1_gas_limit(params["l1Signer"].provider)
+    l1_gas_estimate = await withdrawal_params['estimate_l1_gas_limit'](params["l1Signer"].provider)
 
     withdraw_rec = await params["erc20Bridger"].withdraw(
         {
-            "destinationAddress": await params["l2Signer"].account.address,
+            "destinationAddress": params["l2Signer"].account.address,
             "amount": params["amount"],
-            "erc20l1_address": params["l1Token"].address,
+            "erc20L1Address": params["l1Token"].address,
             "l2Signer": params["l2Signer"],
         }
     )
@@ -70,7 +71,7 @@ async def withdraw_token(params):
 
     assert test_wallet_l2_balance == params["startBalance"] - params["amount"], "token withdraw balance not deducted"
 
-    wallet_address = await params["l1Signer"].account.address
+    wallet_address = params["l1Signer"].account.address
 
     gateway_address = await params["erc20Bridger"].get_l2_gateway_address(
         params["l1Token"].address, params["l2Signer"].provider
@@ -216,7 +217,7 @@ async def deposit_token(
     assert l1_gateway == gateways["expectedL1Gateway"], "incorrect l1 gateway address"
 
     l2_gateway = await erc20_bridger.get_l2_gateway_address(l1_token_address, l2_signer.provider)
-    assert l2_gateway == gateways["expectedL1Gateway"], "incorrect l2 gateway address"
+    assert l2_gateway == gateways["expectedL2Gateway"], "incorrect l2 gateway address"
 
     l2_erc20_addr = await erc20_bridger.get_l2_erc20_address(l1_token_address, l1_signer.provider)
 

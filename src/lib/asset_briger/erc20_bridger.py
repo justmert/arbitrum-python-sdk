@@ -149,11 +149,12 @@ class Erc20Bridger(AssetBridger):
             )
             potential_weth_gateway.functions.l1Weth().call()
             return True
+
+        except ContractLogicError:
+            return False
+
         except Exception as err:
-            if isinstance(err, ContractLogicError) and "CALL_EXCEPTION" in str(err):
-                return False
-            else:
-                raise err
+            raise err
 
     async def is_weth_gateway(self, gateway_address, l1_provider):
         weth_address = self.l2_network.token_bridge.l1_weth_gateway
@@ -282,7 +283,8 @@ class Erc20Bridger(AssetBridger):
 
             return {
                 "data": function_data,
-                "to": defaulted_params["from"],
+                'from': defaulted_params["from"],
+                "to": self.l2_network.token_bridge.l1_gateway_router,
                 "value": deposit_params["gasLimit"] * deposit_params["maxFeePerGas"]
                 + deposit_params["maxSubmissionCost"],
             }
@@ -345,12 +347,17 @@ class Erc20Bridger(AssetBridger):
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
     async def get_withdrawal_request(self, params):
-        to_address = params["destination_address"]
+        to_address = params["destinationAddress"]
 
+        if 'l2Provider' in params:
+            provider = params["l2Provider"]
+
+        elif 'l2Signer' in params:
+            provider = params["l2Signer"].provider
+            
         router_interface = load_contract(
-            provider=params["l2Provider"],
+            provider=provider,
             contract_name="L2GatewayRouter",
-            address=self.l2_network.token_bridge.l2_gateway_router,
             is_classic=True,
         )
 
@@ -365,11 +372,11 @@ class Erc20Bridger(AssetBridger):
         )
 
         async def estimate_l1_gas_limit(l1_provider):
-            l1_gateway_address = await self.get_l1_gateway_address(params["erc20l1_address"], l1_provider)
+            l1_gateway_address = await self.get_l1_gateway_address(params["erc20L1Address"], l1_provider)
 
             is_weth = await self.is_weth_gateway(l1_gateway_address, l1_provider)
 
-            gas_estimate = Web3.toInt(180000) if is_weth else Web3.toInt(160000)
+            gas_estimate = 180000 if is_weth else 160000
 
             return gas_estimate
 
@@ -380,7 +387,7 @@ class Erc20Bridger(AssetBridger):
                 "value": 0,
                 "from": params["from"],
             },
-            "estimateL1GasLimit": estimate_l1_gas_limit,
+            "estimate_l1_gas_limit": estimate_l1_gas_limit,
         }
 
     async def withdraw(self, params):
@@ -397,12 +404,12 @@ class Erc20Bridger(AssetBridger):
 
         if "from" not in tx:
             tx["from"] = params["l2Signer"].account.address
-
-        tx_hash = await params["l2Signer"].provider.eth.send_transaction(
+        
+        tx_hash = params["l2Signer"].provider.eth.send_transaction(
             tx  
         )
 
-        tx_receipt = await params["l2Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
+        tx_receipt =  params["l2Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return L2TransactionReceipt.monkey_patch_wait(tx_receipt)
 

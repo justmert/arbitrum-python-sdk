@@ -139,7 +139,7 @@ class L1ToL2MessageGasEstimator:
         if calculated_gas_limit > gas_limit_defaults.get("min"):
             gas_limit = calculated_gas_limit
         else:
-            gas_limit_defaults.get("min")
+            gas_limit = gas_limit_defaults.get("min")
 
         deposit = options.get("deposit", {}).get("base", None)
         if deposit is None:
@@ -167,8 +167,9 @@ class L1ToL2MessageGasEstimator:
 
         null_data_request = data_func(dummy_params)
         retryable = None
-        
+
         try:
+            print("null_data_request", null_data_request)
             res = l1_provider.eth.call(null_data_request)
             retryable = RetryableDataTools.try_parse_error(res)
             if not is_defined(retryable):

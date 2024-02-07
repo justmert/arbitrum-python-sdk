@@ -102,6 +102,7 @@ class EthBridger(AssetBridger):
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
     async def get_withdrawal_request(self, params):
+        print('paramseth_bridger', params)
         arb_sys = load_contract(
             provider=params["l2Signer"].provider,
             contract_name="ArbSys",

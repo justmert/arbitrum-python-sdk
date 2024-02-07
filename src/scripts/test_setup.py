@@ -63,13 +63,13 @@ def get_custom_networks(l1_url, l2_url):
     rollup_address = Web3.to_checksum_address(deployment_data["rollup"])
 
     rollup_contract = load_contract(
-        l1_provider, "RollupAdminLogic", rollup_address, is_classic=False
+        provider=l1_provider, contract_name="RollupAdminLogic", address=rollup_address, is_classic=False
     )
 
     confirm_period_blocks = rollup_contract.functions.confirmPeriodBlocks().call()
 
     bridge_contract = load_contract(
-        l1_provider, "Bridge", bridge_address, is_classic=False
+        provider=l1_provider, contract_name="Bridge", address=bridge_address, is_classic=False
     )
 
     outbox_address = bridge_contract.functions.allowedOutboxList(0).call()

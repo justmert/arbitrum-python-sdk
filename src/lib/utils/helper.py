@@ -93,7 +93,7 @@ def parse_raw_tx(raw_tx):
     }
 
 
-def load_contract(provider, contract_name, address=None, is_classic=False):
+def load_contract(contract_name, provider, address=None, is_classic=False):
     if isinstance(provider, SignerOrProvider):
         provider = provider.provider
 

@@ -89,34 +89,48 @@ class EventFetcher:
         else:
             raise ArbSdkError("Invalid contract factory type")
 
-        events = (
-            getattr(contract.events, event_name)
-            .create_filter(
-                toBlock=filter["toBlock"],
-                fromBlock=filter["fromBlock"],
-                address=filter["address"],
-                argument_filters=argument_filters,
+        event = getattr(contract.events, event_name, None)
+        if not event:
+            raise ValueError(f"Event {event_name} not found in contract")
+
+        event_filter = event().create_filter(
+            toBlock=filter["toBlock"],
+            fromBlock=filter["fromBlock"],
+            address=filter["address"],
+            argument_filters=argument_filters
+        )
+        logs = event_filter.get_all_entries()
+        return [self._format_event(contract, log) for log in logs]
+
+
+    def parse_log(self, contract: Contract, log):
+        for event_name in dir(contract.events):
+            event = getattr(contract.events, event_name, None)
+            if event:
+                try:
+                    parsed_log = event().process_receipt({'logs': [log]})
+                    if parsed_log:
+                        return parsed_log[0]  # Returning the first (and should be only) parsed entry
+                except ValueError:
+                    continue
+        return None
+
+
+    def _format_event(self, contract: Contract, log):
+        parsed_log = self.parse_log(contract, log)
+        print('parsed_log', parsed_log)
+        print('log', log)
+        if parsed_log:
+            return FetchedEvent(
+                event=parsed_log.args,
+                topic=parsed_log.topics[0] if parsed_log.topics else None,
+                name=parsed_log.event,
+                block_number=log['blockNumber'],
+                block_hash=log['blockHash'],
+                transaction_hash=log['transactionHash'],
+                address=log['address'],
+                topics=log['topics'],
+                data=log['data'],
             )
-            .get_all_entries()
-        )
-
-        return _format_events(events)
-
-
-def _format_events(self, events):
-    fetched_events = []
-    for event in events:
-        fetched_event = FetchedEvent(
-            event=event["args"],
-            topic=event.get("topics", None),
-            name=event.event,
-            block_number=event.blockNumber,
-            block_hash=event.blockHash.hex(),
-            transaction_hash=event.transactionHash.hex(),
-            address=event.address,
-            topics=[topic.hex() for topic in event["topics"]],
-            data=event["data"],
-        )
-        fetched_events.append(fetched_event)
-
-    return fetched_events
+        else:
+            raise ValueError("Failed to parse log")
