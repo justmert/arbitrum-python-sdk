@@ -185,7 +185,11 @@ class L1ToL2MessageReader(L1ToL2Message):
             redeem_events = l2_receipt.get_redeem_scheduled_events(self.l2_provider)
 
             if len(redeem_events) == 1:
-                return self.l2_provider.eth.get_transaction_receipt(redeem_events[0]["retryTxHash"])
+                try:
+                    return self.l2_provider.eth.get_transaction_receipt(redeem_events[0]["retryTxHash"])
+                
+                except Exception:
+                    pass 
             elif len(redeem_events) > 1:
                 raise ArbSdkError(
                     f"Unexpected number of redeem events for retryable creation tx. {creation_receipt} {redeem_events}"
@@ -220,7 +224,7 @@ class L1ToL2MessageReader(L1ToL2Message):
 
         queried_range = []
         max_block = self.l2_provider.eth.block_number
-
+    
         while from_block.number < max_block:
             to_block_number = min(from_block.number + increment, max_block)
 
@@ -240,21 +244,18 @@ class L1ToL2MessageReader(L1ToL2Message):
                 is_classic=False,
             )
 
-            successful_redeem = list(
-                filter(
-                    lambda r: r is not None and r.status == 1,
-                    [await self.l2_provider.get_transaction_receipt(e.event["retryTxHash"]) for e in redeem_events],
-                )
-            )
+            reedems = [await get_transaction_receipt(self.l2_provider, e.event["retryTxHash"]) for e in redeem_events]
 
-            if len(successful_redeem) > 1:
+            successful_redeems = [r for r in reedems if r is not None and r.status == 1]
+
+            if len(successful_redeems) > 1:
                 raise ArbSdkError(
-                    f"Unexpected number of successful redeems. Expected only one redeem for ticket {self.retryable_creation_id}, but found {len(successful_redeem)}."
+                    f"Unexpected number of successful redeems. Expected only one redeem for ticket {self.retryable_creation_id}, but found {len(successful_redeems)}."
                 )
 
-            if len(successful_redeem) == 1:
+            if len(successful_redeems) == 1:
                 return {
-                    "l2TxReceipt": successful_redeem[0],
+                    "l2TxReceipt": successful_redeems[0],
                     "status": L1ToL2MessageStatus.REDEEMED,
                 }
 
@@ -318,7 +319,7 @@ class L1ToL2MessageReader(L1ToL2Message):
     async def wait_for_status(self, confirmations=None, timeout=None):
         l2_network = get_l2_network(self.chain_id)
 
-        chosen_timeout = timeout if timeout is not None else l2_network["deposit_timeout"]
+        chosen_timeout = timeout if timeout is not None else l2_network["depositTimeout"]
 
         _retryable_creation_receipt = await self.get_retryable_creation_receipt(confirmations, chosen_timeout)
 
@@ -458,6 +459,9 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
 
             if "from" not in overrides:
                 overrides["from"] = self.l2_signer.account.address
+
+            if "gasLimit" in overrides and not overrides["gasLimit"]:
+                del overrides["gasLimit"]
 
             redeem_hash = arb_retryable_tx.functions.redeem(self.retryable_creation_id).transact(overrides)
 

@@ -28,7 +28,7 @@ async def mine_until_stop(miner, state):
             "gasPrice": miner.provider.eth.gas_price,
             "nonce": miner.provider.eth.get_transaction_count(miner.account.address),
         }
-        
+
         gas_estimate = miner.provider.eth.estimate_gas(tx)
 
         tx["gas"] = gas_estimate
@@ -168,8 +168,6 @@ async def deposit_token(
     expected_gateway_type,
     retryable_overrides=None,
 ):
-    
-
     _ = await erc20_bridger.approve_token(
         {
             "erc20L1Address": l1_token_address,
@@ -179,11 +177,8 @@ async def deposit_token(
 
     expected_l1_gateway_address = await erc20_bridger.get_l1_gateway_address(l1_token_address, l1_signer.provider)
 
-    
-    
     l1_token = erc20_bridger.get_l1_token_contract(l1_signer.provider, l1_token_address)
 
-    
     allowance = l1_token.functions.allowance(l1_signer.account.address, expected_l1_gateway_address).call()
 
     assert allowance == Erc20Bridger.MAX_APPROVAL, "set token allowance failed"
@@ -218,7 +213,7 @@ async def deposit_token(
 
     assert wait_res["status"] == expected_status, "Unexpected status"
     if retryable_overrides:
-        return {l1_token, wait_res}
+        return {"l1Token": l1_token, "waitRes": wait_res}
 
     gateways = get_gateways(expected_gateway_type, erc20_bridger.l2_network)
     l1_gateway = await erc20_bridger.get_l1_gateway_address(l1_token_address, l1_signer.provider)
@@ -260,7 +255,7 @@ def fund(signer, amount=None, funding_key=None):
     signed_tx = wallet.sign_transaction(tx)
     tx_hash = signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
     tx_receipt = signer.provider.eth.wait_for_transaction_receipt(tx_hash)
-    
+
     return tx_receipt
 
 
@@ -274,51 +269,3 @@ def fund_l2(l2_signer, amount=None):
 
 def wait(ms=0):
     time.sleep(ms / 1000)
-
-
-# async def skip_if_mainnet(test_context):
-
-#     l1_network_details = await test_setup()
-#     chain_id = l1_network_details['l1Network']['chainID']
-#     if chain_id == 1:
-#         pytest.skip("You're writing to the chain on mainnet lol stop")
-
-
-# def mint_tokens(provider, contract_address, minter):
-#     contract = load_contract(
-#         provider=provider,
-#         contract_name="TestERC20",
-#         address=contract_address,
-#         is_classic=True,
-#     )
-
-#     # Fetch the current chain ID for EIP-155 replay protection
-#     chain_id = provider.eth.chain_id
-
-#     # Build the mint transaction
-#     mint_txn = contract.functions.mint().build_transaction(
-#         {
-#             "from": minter.address,
-#             "nonce": provider.eth.get_transaction_count(minter.address),
-#             # 'gas': gas_estimate, # Set appropriate gas limit
-#             "gasPrice": provider.eth.gas_price,
-#             "chainId": chain_id,  # Include the chain ID
-#         }
-#     )
-
-#     # Estimate gas for the mint transaction
-#     mint_txn["gas"] = provider.eth.estimate_gas(mint_txn)
-
-#     # Sign the transaction
-#     signed_txn = minter.sign_transaction(mint_txn)
-
-#     # Send the transaction
-#     tx_hash = provider.eth.send_raw_transaction(signed_txn.rawTransaction)
-
-#     # Wait for the transaction to be mined
-#     tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
-#     return tx_receipt
-
-
-# def deploy_test_erc20(web3_instance, deployer):
-#     return deploy_abi_contract(web3_instance, deployer, "TestERC20", is_classic=True)
