@@ -389,7 +389,7 @@ class Erc20Bridger(AssetBridger):
                 "value": 0,
                 "from": params["from"],
             },
-            "estimate_l1_gas_limit": estimate_l1_gas_limit,
+            "estimateL1GasLimit": estimate_l1_gas_limit,
         }
 
     async def withdraw(self, params):

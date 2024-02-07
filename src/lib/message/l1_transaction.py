@@ -167,7 +167,7 @@ class L1EthDepositTransactionReceipt(L1TransactionReceipt):
         confirmations=None,
         timeout=None,
     ):
-        message = await self.get_eth_deposits(l2_provider)[0]
+        message = (await self.get_eth_deposits(l2_provider))[0]
         if not message:
             raise ArbSdkError("Unexpected missing Eth Deposit message.")
 

@@ -56,7 +56,7 @@ async def withdraw_token(params):
         }
     )
 
-    l1_gas_estimate = await withdrawal_params["estimate_l1_gas_limit"](params["l1Signer"].provider)
+    l1_gas_estimate = await withdrawal_params["estimateL1GasLimit"](params["l1Signer"].provider)
 
     withdraw_rec = await params["erc20Bridger"].withdraw(
         {
