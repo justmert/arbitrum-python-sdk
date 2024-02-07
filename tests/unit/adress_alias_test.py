@@ -1,7 +1,5 @@
 from web3 import Web3
-import pytest
 
-# Assuming Address class is defined as needed
 from src.lib.data_entities.address import Address
 from src.lib.data_entities.constants import ADDRESS_ALIAS_OFFSET
 

@@ -1,7 +1,6 @@
 from web3 import Web3
 from web3.types import LogReceipt
 from src.lib.utils.helper import load_abi
-from eth_utils import to_hex
 
 from test import CaseDict
 
@@ -24,7 +23,7 @@ def parse_typed_logs(provider, contract_name, logs, event_name, is_classic=False
 
     parsed_logs = []
     for log in logs:
-        log_topic = to_hex(log["topics"][0])
+        log_topic = Web3.to_hex(log["topics"][0])
         if log_topic and log_topic == event_signature:
             try:
                 print(f"Matched! Log's Topic: 0x{log_topic} == Computed Signature: 0x{event_signature}")
@@ -35,5 +34,5 @@ def parse_typed_logs(provider, contract_name, logs, event_name, is_classic=False
                 print(f"Failed to decode log: {e}")
                 raise e
             else:
-                pass
+                print(f"Decoded log: {parsed_logs[-1]}")
     return parsed_logs
