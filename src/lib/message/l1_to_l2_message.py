@@ -1,5 +1,4 @@
 from web3 import Web3
-from eth_utils import keccak
 import rlp
 from eth_utils import to_bytes
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
@@ -35,7 +34,14 @@ def format_number(value):
 
 
 def concat(*args):
-    return b"".join(args)
+    # Check if args has only one item and that item is a list or tuple (but not bytes or bytearray)
+    if len(args) == 1 and isinstance(args[0], (list, tuple)) and not isinstance(args[0], (bytes, bytearray)):
+        iterable = args[0]  # Use the first item as the iterable
+    else:
+        iterable = args  # Use args directly
+    
+    # Concatenate all bytes-like objects in the iterable
+    return b"".join(iterable)
 
 
 class L1ToL2MessageStatus:
@@ -187,9 +193,9 @@ class L1ToL2MessageReader(L1ToL2Message):
             if len(redeem_events) == 1:
                 try:
                     return self.l2_provider.eth.get_transaction_receipt(redeem_events[0]["retryTxHash"])
-                
+
                 except Exception:
-                    pass 
+                    pass
             elif len(redeem_events) > 1:
                 raise ArbSdkError(
                     f"Unexpected number of redeem events for retryable creation tx. {creation_receipt} {redeem_events}"
@@ -224,7 +230,7 @@ class L1ToL2MessageReader(L1ToL2Message):
 
         queried_range = []
         max_block = self.l2_provider.eth.block_number
-    
+
         while from_block.number < max_block:
             to_block_number = min(from_block.number + increment, max_block)
 
@@ -366,32 +372,47 @@ class L1ToL2MessageReaderClassic:
     def __init__(self, l2_provider, chain_id, message_number):
         self.message_number = message_number
         self.l2_provider = l2_provider
-        self.retryable_creation_id = self._calculate_retryable_creation_id(chain_id, message_number)
-        self.auto_redeem_id = self._calculate_auto_redeem_id(self.retryable_creation_id)
-        self.l2_tx_hash = self._calculate_l2_tx_hash(self.retryable_creation_id)
+        self.retryable_creation_id = L1ToL2MessageReaderClassic.calculate_retryable_creation_id(
+            chain_id, message_number
+        )
+        self.auto_redeem_id = L1ToL2MessageReaderClassic.calculate_auto_redeem_id(self.retryable_creation_id)
+        self.l2_tx_hash = L1ToL2MessageReaderClassic.calculate_l2_tx_hash(self.retryable_creation_id)
         self.retryable_creation_receipt = None
 
+    @staticmethod
     def calculate_retryable_creation_id(chain_id, message_number):
         bit_flip = lambda num: num | (1 << 255)
         data = concat(
             zero_pad(int_to_bytes(chain_id), 32),
             zero_pad(int_to_bytes(bit_flip(message_number)), 32),
         )
-        return keccak(data).hex()
+        return Web3.keccak(data).hex()
 
+    @staticmethod
     def calculate_auto_redeem_id(retryable_creation_id):
         data = concat(
             zero_pad(hex_to_bytes(retryable_creation_id), 32),
             zero_pad(int_to_bytes(1), 32),
         )
-        return keccak(data).hex()
+        return Web3.keccak(data).hex()
 
+    @staticmethod
     def calculate_l2_tx_hash(retryable_creation_id):
         data = concat(
             zero_pad(hex_to_bytes(retryable_creation_id), 32),
             zero_pad(int_to_bytes(0), 32),
         )
-        return keccak(data).hex()
+        return Web3.keccak(data).hex()
+
+    @staticmethod
+    def calculate_l2_derived_hash(retryable_creation_id):
+        data = concat(
+            [
+                zero_pad(hex_to_bytes(retryable_creation_id), 32),
+                zero_pad(int_to_bytes(0), 32),
+            ]
+        )
+        return Web3.keccak(data).hex()
 
     async def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
         if not self.retryable_creation_receipt:
@@ -399,16 +420,6 @@ class L1ToL2MessageReaderClassic:
                 self.l2_provider, self.retryable_creation_id, confirmations, timeout
             )
         return self.retryable_creation_receipt
-
-    def calculate_l2_derived_hash(retryable_creation_id):
-        return keccak(
-            concat(
-                [
-                    zero_pad(hex_to_bytes(retryable_creation_id), 32),
-                    zero_pad(int_to_bytes(0), 32),
-                ]
-            )
-        ).hex()
 
     async def status(self):
         creation_receipt = await self.get_retryable_creation_receipt()
@@ -419,9 +430,9 @@ class L1ToL2MessageReaderClassic:
         if creation_receipt.status == 0:
             return L1ToL2MessageStatus.CREATION_FAILED
 
-        l2_derived_hash = self.calculate_l2_derived_hash(self.retryable_creation_id)
+        l2_derived_hash = L1ToL2MessageReaderClassic.calculate_l2_derived_hash(self.retryable_creation_id)
 
-        l2_tx_receipt = self.l2_provider.eth.get_transaction_receipt(l2_derived_hash)
+        l2_tx_receipt = await get_transaction_receipt(self.l2_provider, l2_derived_hash)
 
         if l2_tx_receipt and l2_tx_receipt.status == 1:
             return L1ToL2MessageStatus.REDEEMED
