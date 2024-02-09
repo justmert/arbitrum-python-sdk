@@ -1,11 +1,10 @@
 from web3 import Web3
-from src.lib.data_entities.errors import ArbSdkError
+from web3.contract import Contract
 
+from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
-from src.lib.utils.helper import load_contract
-from web3.contract import Contract
-from test import CaseDict
+from src.lib.utils.helper import CaseDict, load_contract
 
 
 class FetchedEvent(CaseDict):
@@ -53,7 +52,7 @@ class EventFetcher:
 
         elif isinstance(provider, SignerOrProvider):
             self.provider = provider.provider
-        
+
         elif isinstance(provider, ArbitrumProvider):
             provider = provider.provider
 
@@ -96,13 +95,11 @@ class EventFetcher:
         if not event:
             raise ValueError(f"Event {event_name} not found in contract")
 
-        print("filter", filter)
         event_filter = event().create_filter(
             **filter,
             argument_filters=argument_filters,
         )
         logs = event_filter.get_all_entries()
-        print("logs", logs)
         fetched_events = []
         for log in logs:
             fetched_events.append(
@@ -118,5 +115,4 @@ class EventFetcher:
                     data=log.get("data", None),
                 )
             )
-        print("fetched_events", fetched_events)
         return fetched_events

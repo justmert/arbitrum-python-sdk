@@ -1,12 +1,13 @@
 import asyncio
 import time
+
 from web3 import Account, Web3
+
 from src.lib.asset_briger.erc20_bridger import Erc20Bridger
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.message import L2ToL1MessageStatus
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.scripts.test_setup import config, get_signer, test_setup
-import pytest
+from src.scripts.test_setup import config, get_signer
 
 PRE_FUND_AMOUNT = Web3.to_wei(0.1, "ether")
 arb_sys = "0x0000000000000000000000000000000000000064"

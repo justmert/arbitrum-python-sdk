@@ -1,13 +1,12 @@
+from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
+from src.lib.data_entities.errors import ArbSdkError
+from src.lib.data_entities.event import parse_typed_logs
 from src.lib.data_entities.signer_or_provider import (
     SignerProviderUtils,
 )
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
-from src.lib.utils.helper import load_contract
-from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.message.l2_to_l1_message import L2ToL1Message
-from src.lib.data_entities.event import parse_typed_logs
-from test import CaseDict
+from src.lib.utils.arb_provider import ArbitrumProvider
+from src.lib.utils.helper import CaseDict, load_contract
 
 
 class RedeemTransaction:

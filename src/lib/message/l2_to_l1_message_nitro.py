@@ -1,17 +1,18 @@
 import asyncio
+
 from web3 import Web3
+
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS
+from src.lib.data_entities.message import L2ToL1MessageStatus
+from src.lib.data_entities.networks import get_l2_network
+from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+from src.lib.utils.arb_provider import ArbitrumProvider
+from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import (
     format_contract_output,
     load_contract,
 )
-from src.lib.utils.lib import get_block_ranges_for_l1_block
-from src.lib.data_entities.signer_or_provider import SignerProviderUtils
-from src.lib.data_entities.networks import get_l2_network
-from src.lib.data_entities.message import L2ToL1MessageStatus
-from src.lib.utils.arb_provider import ArbitrumProvider
-from src.lib.utils.lib import is_arbitrum_chain
-from src.lib.utils.event_fetcher import EventFetcher
+from src.lib.utils.lib import get_block_ranges_for_l1_block, is_arbitrum_chain
 
 ASSERTION_CREATED_PADDING = 50
 ASSERTION_CONFIRMED_PADDING = 20
@@ -148,7 +149,6 @@ class L2ToL1MessageReaderNitro(L2ToL1MessageNitro):
         arbitrum_provider = ArbitrumProvider(l2_provider)
 
         if not log:
-            print("No NodeCreated events found, defaulting to block 0")
             return await arbitrum_provider.get_block(0)
 
         parsed_log = self.parse_node_created_assertion(log)

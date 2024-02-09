@@ -1,17 +1,18 @@
+import asyncio
+import json
 import os
+
 import dotenv
+from web3 import HTTPProvider, Web3
+from web3.middleware import construct_sign_and_send_raw_middleware, geth_poa_middleware
+
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.scripts import PROJECT_DIRECTORY
-from web3 import Web3, HTTPProvider
-import json
-from web3.middleware import geth_poa_middleware
-import asyncio
-from web3.middleware import construct_sign_and_send_raw_middleware
 
 env_path = os.path.join(PROJECT_DIRECTORY, ".env")
 dotenv.load_dotenv(dotenv_path=env_path)
 
-from src.scripts.test_setup import setup_networks, config, get_signer  # noqa: E402
+from src.scripts.test_setup import config, get_signer, setup_networks  # noqa: E402
 
 
 async def main():

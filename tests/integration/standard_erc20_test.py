@@ -10,8 +10,7 @@ from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.utils.helper import deploy_abi_contract, load_contract
 from src.lib.utils.lib import get_transaction_receipt, is_defined
 from src.scripts.test_setup import test_setup
-
-from .test_helpers import (
+from tests.integration.test_helpers import (
     GatewayType,
     deposit_token,
     fund_l1,
@@ -131,7 +130,6 @@ async def test_deposit_with_only_low_gas_limit_manual_redeem_success(setup_state
     l2_receipt = L2TransactionReceipt(retryable_creation)
     redeems_scheduled = l2_receipt.get_redeem_scheduled_events(provider=setup_state.l2_signer.provider)
     assert len(redeems_scheduled) == 1, "Unexpected redeem length"
-    print("reee", redeems_scheduled[0])
     retry_receipt = await get_transaction_receipt(
         tx_hash=redeems_scheduled[0]["retryTxHash"],
         provider=setup_state.l2_signer.provider,

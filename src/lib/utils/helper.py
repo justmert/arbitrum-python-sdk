@@ -97,9 +97,9 @@ def parse_raw_tx(raw_tx):
 def load_contract(contract_name, provider, address=None, is_classic=False):
     if isinstance(provider, SignerOrProvider):
         provider = provider.provider
-    
+
     elif isinstance(provider, ArbitrumProvider):
-            provider = provider.provider
+        provider = provider.provider
 
     else:
         provider = provider
@@ -256,9 +256,9 @@ class CaseDict:
 
     def __setattr__(self, name, value):
         if isinstance(value, dict):
-            value = CaseDict(value)  # Convert dict to CaseDict
+            value = CaseDict(value)
         elif isinstance(value, list):
-            value = [CaseDict(item) if isinstance(item, dict) else item for item in value]  # Recursive for lists
+            value = [CaseDict(item) if isinstance(item, dict) else item for item in value]
         camel_case_name = snake_to_camel(name)
         super().__setattr__(camel_case_name, value)
 
@@ -284,5 +284,5 @@ class CaseDictEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, CaseDict):
             return obj.to_dict()
-        # Let the base class default method raise the TypeError
+
         return json.JSONEncoder.default(self, obj)

@@ -1,6 +1,7 @@
 from web3 import Web3
-from .constants import ADDRESS_ALIAS_OFFSET
-from .errors import ArbSdkError
+
+from src.lib.data_entities.constants import ADDRESS_ALIAS_OFFSET
+from src.lib.data_entities.errors import ArbSdkError
 
 
 class Address:

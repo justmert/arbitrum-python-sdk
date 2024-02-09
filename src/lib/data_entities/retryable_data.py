@@ -1,7 +1,7 @@
-from web3 import Web3
 from eth_abi import abi
+from web3 import Web3
 
-from test import CaseDict
+from src.lib.utils.helper import CaseDict
 
 
 class RetryableData:
@@ -65,7 +65,6 @@ class RetryableDataTools:
             decoded_data = abi.decode(RetryableData.abi_types, bytes.fromhex(error_data_hex))
 
             if len(decoded_data) != len(RetryableData.abi_types):
-                print("Error decoding retryable data")
                 return None
             else:
                 return CaseDict(

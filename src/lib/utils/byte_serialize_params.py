@@ -1,10 +1,10 @@
-from web3 import Web3
 from eth_utils import (
-    to_checksum_address,
     int_to_big_endian,
 )
-from src.lib.data_entities.errors import ArbSdkError
+from web3 import Web3
+
 from src.lib.data_entities.constants import ARB_ADDRESS_TABLE_ADDRESS
+from src.lib.data_entities.errors import ArbSdkError
 from src.lib.utils.helper import load_contract
 
 address_to_index_memo = {}
@@ -53,7 +53,7 @@ def to_uint(val, bytes_size):
 
 def format_primitive(value):
     if is_address_type(value):
-        return to_checksum_address(value)
+        return Web3.to_checksum_address(value)
     elif isinstance(value, bool) or isinstance(value, int) or isinstance(value, str):
         return Web3.to_hex(to_uint(value, 32))
     else:

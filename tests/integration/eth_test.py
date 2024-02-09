@@ -10,13 +10,11 @@ from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
 from src.lib.message.l2_to_l1_message import L2ToL1Message
 from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.scripts.test_setup import test_setup
-
-from .test_helpers import fund_l1, fund_l2, mine_until_stop
+from tests.integration.test_helpers import fund_l1, fund_l2, mine_until_stop
 
 
 @pytest.mark.asyncio
 async def test_transfers_ether_on_l2():
-    # Setup test environment
     setup_state = await test_setup()
     l2_signer = setup_state.l2_signer
 
@@ -116,7 +114,6 @@ async def test_deposits_ether_to_specific_l2_address():
 
     dest_wallet = Account.create()
 
-    # Perform Ether deposit to a specific L2 address
     eth_to_deposit = Web3.to_wei(0.0002, "ether")
     rec = await eth_bridger.deposit_to(
         {
@@ -149,7 +146,7 @@ async def test_deposits_ether_to_specific_l2_address():
 
     l2_retryable_tx_receipt = L2TransactionReceipt(retryable_tx_receipt)
     ticket_redeem_events = l2_retryable_tx_receipt.get_redeem_scheduled_events(l2_signer.provider)
-    print("ticket_redeem_events", ticket_redeem_events)
+
     assert len(ticket_redeem_events) == 1, "Failed finding the redeem event"
     assert ticket_redeem_events[0]["retryTxHash"] is not None, "Retry transaction hash not found"
 

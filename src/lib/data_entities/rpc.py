@@ -1,9 +1,9 @@
+from typing import List, TypedDict
+
+from eth_typing import HexStr
 from web3.types import (
     BlockData as Web3Block,
 )
-from eth_typing import HexStr
-from typing import TypedDict
-from typing import List
 from web3.types import TxData
 
 

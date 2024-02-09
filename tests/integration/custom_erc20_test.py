@@ -9,8 +9,7 @@ from src.lib.utils.helper import (
     load_contract,
 )
 from src.scripts.test_setup import test_setup
-
-from .test_helpers import (
+from tests.integration.test_helpers import (
     GatewayType,
     deposit_token,
     fund_l1,

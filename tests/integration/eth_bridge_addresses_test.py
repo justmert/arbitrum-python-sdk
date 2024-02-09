@@ -1,9 +1,8 @@
 import os
-from web3 import Web3
-from web3 import HTTPProvider
-from dotenv import load_dotenv
 
-# Assuming the functions `get_eth_bridge_information` and `get_l2_network` are implemented in your Python code
+from dotenv import load_dotenv
+from web3 import HTTPProvider, Web3
+
 from src.lib.data_entities.networks import get_eth_bridge_information, get_l2_network
 
 load_dotenv()

@@ -1,7 +1,7 @@
-from web3 import Web3
 from eth_abi import decode
+from web3 import Web3
 
-from test import CaseDict
+from src.lib.utils.helper import CaseDict
 
 
 class SubmitRetryableMessageDataParser:

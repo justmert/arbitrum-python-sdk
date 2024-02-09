@@ -1,25 +1,28 @@
-import os
 import json
-from web3 import Web3, HTTPProvider
+import os
 import subprocess
-from web3 import Account
-from web3.middleware import geth_poa_middleware
-from src.lib.data_entities.errors import ArbSdkError
+
+from web3 import Account, HTTPProvider, Web3
 from web3.contract import Contract
-from src.lib.utils.helper import CaseDict, load_contract
+from web3.middleware import construct_sign_and_send_raw_middleware, geth_poa_middleware
+
+from src.lib.asset_briger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
+from src.lib.asset_briger.eth_bridger import EthBridger
+from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import (
+    EthBridge,
+    L1Network,
+    L2Network,
+    TokenBridge,
     add_custom_network,
     get_l1_network,
     get_l2_network,
 )
-from src.lib.asset_briger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
-from src.lib.asset_briger.eth_bridger import EthBridger
-from src.lib.inbox.inbox import InboxTools
-from src.scripts import PROJECT_DIRECTORY
-from .deploy_bridge import deploy_erc20_and_init
-from src.lib.data_entities.networks import L1Network, L2Network, EthBridge, TokenBridge
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from web3.middleware import construct_sign_and_send_raw_middleware
+from src.lib.inbox.inbox import InboxTools
+from src.lib.utils.helper import CaseDict, load_contract
+from src.scripts import PROJECT_DIRECTORY
+from src.scripts.deploy_bridge import deploy_erc20_and_init
 
 config = {
     "ARB_URL": os.getenv("ARB_URL"),
@@ -192,7 +195,7 @@ async def test_setup():
     l1_deployer = SignerOrProvider(get_signer(eth_provider, config["ETH_KEY"]), eth_provider)
     l2_deployer = SignerOrProvider(get_signer(arb_provider, config["ARB_KEY"]), arb_provider)
 
-    # Seed to test and compare from the results from the TS SDK
+    
     seed = Account.from_key("0x289ff350bbfd21499d32608d5c133869be9b9202cdd792a91ce3920dcabcc28a")
 
     l1_signer_address = Web3.to_checksum_address(seed.address)
@@ -205,15 +208,11 @@ async def test_setup():
 
     arb_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
 
-    # eth_provider.eth.default_account = l1_signer_address
-    # arb_provider.eth.default_account = l2_signer_address
+    
+    
 
     l1_signer = SignerOrProvider(signer_account, eth_provider)
     l2_signer = SignerOrProvider(signer_account, arb_provider)
-    print("L1_SIGNER_ADDRESS", l1_signer.account.address)
-    print("L2_SIGNER_ADDRESS", l2_signer.account.address)
-    print("L1_DEPLOYER_ADDRESS", l1_deployer.account.address)
-    print("L2_DEPLOYER_ADDRESS", l1_deployer.account.address)
 
     try:
         set_l1_network = get_l1_network(eth_provider)

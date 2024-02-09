@@ -8,8 +8,7 @@ from web3.exceptions import ContractCustomError
 from src.lib.data_entities.retryable_data import RetryableDataTools
 from src.lib.utils.helper import deploy_abi_contract, load_contract
 from src.scripts.test_setup import test_setup
-
-from .test_helpers import (
+from tests.integration.test_helpers import (
     fund_l1,
 )
 
@@ -130,7 +129,6 @@ async def test_erc20_deposit_comparison():
 
     l1_token_address = test_token.address
 
-    # Approve token on L1
     await erc20_bridger.approve_token({"erc20L1Address": l1_token_address, "l1Signer": l1_signer})
 
     retryable_overrides = {

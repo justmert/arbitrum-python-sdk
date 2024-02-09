@@ -1,18 +1,18 @@
-from src.lib.data_entities.event import parse_typed_logs
-from test import CaseDict
-from .l1_to_l2_message import (
-    L1ToL2Message,
-    L1ToL2MessageReaderClassic,
-    L1ToL2MessageStatus,
-    EthDepositMessage,
-)
 from src.lib.data_entities.errors import ArbSdkError
+from src.lib.data_entities.event import parse_typed_logs
+from src.lib.data_entities.message import InboxMessageKind
 from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.signer_or_provider import (
     SignerProviderUtils,
 )
-from src.lib.data_entities.message import InboxMessageKind
+from src.lib.message.l1_to_l2_message import (
+    EthDepositMessage,
+    L1ToL2Message,
+    L1ToL2MessageReaderClassic,
+    L1ToL2MessageStatus,
+)
 from src.lib.message.message_data_parser import SubmitRetryableMessageDataParser
+from src.lib.utils.helper import CaseDict
 from src.lib.utils.lib import is_defined
 
 

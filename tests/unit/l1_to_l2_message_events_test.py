@@ -1,12 +1,8 @@
 import pytest
-from unittest.mock import patch
-from web3 import Web3, EthereumTesterProvider, HTTPProvider
 from hexbytes import HexBytes
+from web3 import HTTPProvider, Web3
 
-# Assuming L1TransactionReceipt is properly converted and available
 from src.lib.message.l1_transaction import L1TransactionReceipt
-from src.lib.utils.event_fetcher import EventFetcher
-from hexbytes import HexBytes
 
 
 @pytest.mark.asyncio

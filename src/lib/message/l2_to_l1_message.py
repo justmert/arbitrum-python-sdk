@@ -1,11 +1,13 @@
+import asyncio
 from typing import Optional
+
 from web3.providers import BaseProvider
-from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+
 import src.lib.message.l2_to_l1_message_classic as classic
 import src.lib.message.l2_to_l1_message_nitro as nitro
-from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.errors import ArbSdkError
-import asyncio
+from src.lib.data_entities.networks import get_l2_network
+from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 
 
 class L2ToL1Message:

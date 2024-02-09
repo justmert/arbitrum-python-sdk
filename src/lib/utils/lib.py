@@ -1,11 +1,12 @@
 import asyncio
-from web3.exceptions import TimeExhausted
+
+from web3.exceptions import TimeExhausted, TransactionNotFound
+
+from src.lib.data_entities.constants import ARB_SYS_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import l2_networks
-from src.lib.data_entities.constants import ARB_SYS_ADDRESS
+from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import load_contract
-from .arb_provider import ArbitrumProvider
-from web3.exceptions import TransactionNotFound
 
 
 def get_contract_instance(provider, contract_address, contract_abi):
@@ -40,7 +41,6 @@ async def get_transaction_receipt(provider, tx_hash, confirmations=None, timeout
             return None
 
         except Exception as e:
-            print("Error waiting for transaction receipt")
             raise e
     else:
         try:
@@ -51,7 +51,6 @@ async def get_transaction_receipt(provider, tx_hash, confirmations=None, timeout
             return None
 
         except Exception as e:
-            print("Error getting transaction receipt")
             raise e
 
 

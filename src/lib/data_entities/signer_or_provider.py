@@ -1,7 +1,8 @@
 from eth_account import Account
-from web3 import Web3
 from eth_account.signers.local import LocalAccount
-from .errors import ArbSdkError, MissingProviderArbSdkError
+from web3 import Web3
+
+from src.lib.data_entities.errors import ArbSdkError, MissingProviderArbSdkError
 
 
 class SignerOrProvider:

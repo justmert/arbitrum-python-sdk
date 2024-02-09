@@ -1,15 +1,15 @@
 from src.lib.asset_briger.asset_bridger import AssetBridger
+from src.lib.data_entities.constants import ARB_SYS_ADDRESS
 from src.lib.data_entities.errors import MissingProviderArbSdkError
+from src.lib.data_entities.networks import get_l2_network
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.transaction_request import (
     is_l1_to_l2_transaction_request,
     is_l2_to_l1_transaction_request,
 )
 from src.lib.message.l1_to_l2_message_creator import L1ToL2MessageCreator
-from src.lib.data_entities.networks import get_l2_network
 from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.message.l2_transaction import L2TransactionReceipt
-from src.lib.data_entities.constants import ARB_SYS_ADDRESS
 from src.lib.utils.helper import load_contract
 
 
@@ -102,7 +102,6 @@ class EthBridger(AssetBridger):
         return L1TransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
     async def get_withdrawal_request(self, params):
-        print("paramseth_bridger", params)
         arb_sys = load_contract(
             provider=params["l2Signer"].provider,
             contract_name="ArbSys",

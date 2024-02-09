@@ -1,18 +1,19 @@
+import struct
+
 from web3 import Web3
 
+from src.lib.data_entities.constants import ADDRESS_ZERO, NODE_INTERFACE_ADDRESS
+from src.lib.data_entities.errors import ArbSdkError
+from src.lib.data_entities.message import InboxMessageKind
+from src.lib.data_entities.networks import l1_networks
+from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import (
     format_contract_output,
     load_contract,
 )
-from src.lib.data_entities.networks import l1_networks
-from src.lib.data_entities.signer_or_provider import SignerProviderUtils
-from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.lib import is_defined
 from src.lib.utils.multi_call import MultiCaller
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.constants import ADDRESS_ZERO, NODE_INTERFACE_ADDRESS
-from src.lib.data_entities.message import InboxMessageKind
-import struct
 
 
 class InboxTools:

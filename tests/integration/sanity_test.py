@@ -156,7 +156,6 @@ async def test_l1_gateway_router_points_to_right_weth_gateways():
     assert gateway == l2_network["tokenBridge"]["l1WethGateway"]
 
 
-# Example for one of the cases:
 @pytest.mark.asyncio
 async def test_l1_and_l2_implementations_of_calculate_l2_erc20_address_match():
     setup_state = await test_setup()

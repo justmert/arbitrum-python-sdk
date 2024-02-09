@@ -1,4 +1,3 @@
-from web3 import Web3
 from src.lib.data_entities.rpc import (
     ArbBlock,
     ArbBlockWithTransactions,
@@ -39,10 +38,10 @@ class ArbitrumProvider:
     def __init__(self, provider, network=None):
         if isinstance(provider, SignerOrProvider):
             provider = provider.provider
-        
+
         elif isinstance(provider, ArbitrumProvider):
             provider = provider.provider
-        
+
         self.provider = provider
         self.formatter = ArbFormatter()
 

@@ -1,12 +1,11 @@
 from web3 import Web3
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.utils.lib import get_base_fee, is_defined
-from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
-from src.lib.utils.helper import load_contract
-from src.lib.data_entities.retryable_data import RetryableDataTools
-from src.lib.data_entities.networks import get_l2_network
 
-from test import CaseDict
+from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
+from src.lib.data_entities.errors import ArbSdkError
+from src.lib.data_entities.networks import get_l2_network
+from src.lib.data_entities.retryable_data import RetryableDataTools
+from src.lib.utils.helper import CaseDict, load_contract
+from src.lib.utils.lib import get_base_fee, is_defined
 
 DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = 300
 DEFAULT_GAS_PRICE_PERCENT_INCREASE = 200
@@ -169,7 +168,6 @@ class L1ToL2MessageGasEstimator:
         retryable = None
 
         try:
-            print("null_data_request", null_data_request)
             res = l1_provider.eth.call(null_data_request)
             retryable = RetryableDataTools.try_parse_error(res)
             if not is_defined(retryable):

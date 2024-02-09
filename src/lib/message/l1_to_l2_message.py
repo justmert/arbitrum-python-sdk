@@ -1,21 +1,21 @@
-from web3 import Web3
+import math
+
 import rlp
-from eth_utils import to_bytes
-from src.lib.data_entities.signer_or_provider import SignerProviderUtils
-from src.lib.message.l2_transaction import L2TransactionReceipt
+from web3 import Web3
+from web3.exceptions import ContractCustomError
+
+from src.lib.data_entities.constants import ADDRESS_ZERO, ARB_RETRYABLE_TX_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import get_l2_network
+from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+from src.lib.message.l2_transaction import L2TransactionReceipt
 from src.lib.utils.event_fetcher import EventFetcher
-import math
-from src.lib.data_entities.constants import ARB_RETRYABLE_TX_ADDRESS
 from src.lib.utils.helper import get_address, load_contract
 from src.lib.utils.lib import get_transaction_receipt, is_defined
-from web3.exceptions import ContractCustomError
-from src.lib.data_entities.constants import ADDRESS_ZERO
 
 
 def int_to_bytes(value):
-    return to_bytes(value)
+    return Web3.to_bytes(value)
 
 
 def hex_to_bytes(value):
@@ -34,13 +34,11 @@ def format_number(value):
 
 
 def concat(*args):
-    # Check if args has only one item and that item is a list or tuple (but not bytes or bytearray)
     if len(args) == 1 and isinstance(args[0], (list, tuple)) and not isinstance(args[0], (bytes, bytearray)):
-        iterable = args[0]  # Use the first item as the iterable
+        iterable = args[0]
     else:
-        iterable = args  # Use args directly
-    
-    # Concatenate all bytes-like objects in the iterable
+        iterable = args
+
     return b"".join(iterable)
 
 

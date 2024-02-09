@@ -1,28 +1,30 @@
-from src.lib.message.l1_to_l2_message_gas_estimator import L1ToL2MessageGasEstimator
+from collections import namedtuple
+
+from eth_abi import encode
+from web3 import Web3
+from web3.exceptions import ContractLogicError
+
+from src.lib.asset_briger.asset_bridger import AssetBridger
+from src.lib.data_entities.constants import DISABLED_GATEWAY
 from src.lib.data_entities.errors import ArbSdkError, MissingProviderArbSdkError
 from src.lib.data_entities.networks import get_l2_network
+from src.lib.data_entities.retryable_data import RetryableDataTools
 from src.lib.data_entities.signer_or_provider import (
     SignerProviderUtils,
 )
-from src.lib.data_entities.constants import DISABLED_GATEWAY
-from src.lib.utils.event_fetcher import EventFetcher
-from src.lib.asset_briger.asset_bridger import AssetBridger
+from src.lib.data_entities.transaction_request import (
+    is_l1_to_l2_transaction_request,
+    is_l2_to_l1_transaction_request,
+)
+from src.lib.message.l1_to_l2_message_gas_estimator import L1ToL2MessageGasEstimator
+from src.lib.message.l1_transaction import L1TransactionReceipt
 from src.lib.message.l2_transaction import L2TransactionReceipt
-from src.lib.data_entities.retryable_data import RetryableDataTools
-from web3 import Web3
+from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import (
     CaseDict,
     is_contract_deployed,
     load_contract,
 )
-from src.lib.message.l1_transaction import L1TransactionReceipt
-from src.lib.data_entities.transaction_request import (
-    is_l1_to_l2_transaction_request,
-    is_l2_to_l1_transaction_request,
-)
-from eth_abi import encode
-from collections import namedtuple
-from web3.exceptions import ContractLogicError
 
 
 class Erc20Bridger(AssetBridger):
@@ -117,11 +119,7 @@ class Erc20Bridger(AssetBridger):
         await self.check_l2_network(l2_provider)
         event_fetcher = EventFetcher(l2_provider)
 
-        argument_filters = {
-            # "l1Token": None,
-            # "_from": from_address or None,
-            # "_to": to_address or None,
-        }
+        argument_filters = {}
 
         events = await event_fetcher.get_events(
             contract_factory="L2ArbitrumGateway",

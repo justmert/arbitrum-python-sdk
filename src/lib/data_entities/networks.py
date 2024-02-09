@@ -1,7 +1,8 @@
-from .constants import SEVEN_DAYS_IN_SECONDS
-from .errors import ArbSdkError
 from web3 import Web3
-from .signer_or_provider import SignerOrProvider
+
+from src.lib.data_entities.constants import SEVEN_DAYS_IN_SECONDS
+from src.lib.data_entities.errors import ArbSdkError
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.helper import CaseDict, load_contract
 
 

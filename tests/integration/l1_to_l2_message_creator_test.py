@@ -4,12 +4,10 @@ from web3 import Web3
 from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
 from src.lib.message.l1_to_l2_message_creator import L1ToL2MessageCreator
 from src.scripts.test_setup import test_setup
-
-from .test_helpers import (
+from tests.integration.test_helpers import (
     fund_l1,
 )
 
-# Assuming testAmount is defined globally
 TEST_AMOUNT = Web3.to_wei("0.01", "ether")
 
 
