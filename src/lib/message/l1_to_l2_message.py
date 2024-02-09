@@ -379,7 +379,9 @@ class L1ToL2MessageReaderClassic:
 
     @staticmethod
     def calculate_retryable_creation_id(chain_id, message_number):
-        bit_flip = lambda num: num | (1 << 255)
+        def bit_flip(num):
+            return num | 1 << 255
+
         data = concat(
             zero_pad(int_to_bytes(chain_id), 32),
             zero_pad(int_to_bytes(bit_flip(message_number)), 32),
@@ -469,8 +471,10 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             if "from" not in overrides:
                 overrides["from"] = self.l2_signer.account.address
 
-            if "gasLimit" in overrides and not overrides["gasLimit"]:
-                del overrides["gasLimit"]
+            if "gasLimit" in overrides:
+                overrides["gas"] = overrides.pop("gasLimit")
+                if not overrides["gas"]:
+                    del overrides["gas"]
 
             redeem_hash = arb_retryable_tx.functions.redeem(self.retryable_creation_id).transact(overrides)
 
@@ -500,6 +504,10 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             if "from" not in overrides:
                 overrides["from"] = self.l2_signer.account.address
 
+            if "gasLimit" in overrides:
+                overrides["gas"] = overrides.pop("gasLimit")
+                if not overrides["gas"]:
+                    del overrides["gas"]
             tx_hash = await arb_retryable_tx.functions.cancel(self.retryable_creation_id).transact(overrides)
 
             receipt = await self.l2_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
@@ -526,6 +534,11 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
             if "from" not in overrides:
                 overrides["from"] = self.l2_signer.account.address
 
+            if "gasLimit" in overrides:
+                overrides["gas"] = overrides.pop("gasLimit")
+                if not overrides["gas"]:
+                    del overrides["gas"]
+                    
             keepalive_tx = await arb_retryable_tx.functions.keepalive(self.retryable_creation_id).transact(overrides)
 
             receipt = await self.l2_signer.provider.eth.wait_for_transaction_receipt(keepalive_tx)
