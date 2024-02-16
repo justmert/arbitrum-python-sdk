@@ -124,7 +124,7 @@ async def withdraw_token(params):
         message.wait_until_ready_to_execute(params["l2Signer"].provider),
     ]
 
-    done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
     state["mining"] = False
 
@@ -137,6 +137,15 @@ async def withdraw_token(params):
 
     bal_after = params["l1Token"].functions.balanceOf(params["l1Signer"].account.address).call()
     assert bal_before + params["amount"] == bal_after, "Not withdrawn"
+
+    # Cancel all pending tasks
+    for task in pending:
+        task.cancel()
+        # Optionally, you can try to await task to let it handle the cancellation
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass  # Task cancellation is expected, handle it if necessary
 
 
 def get_gateways(gateway_type, l2_network):

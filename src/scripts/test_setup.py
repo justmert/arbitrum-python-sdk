@@ -195,8 +195,7 @@ async def test_setup():
     l1_deployer = SignerOrProvider(get_signer(eth_provider, config["ETH_KEY"]), eth_provider)
     l2_deployer = SignerOrProvider(get_signer(arb_provider, config["ARB_KEY"]), arb_provider)
 
-    
-    seed = Account.from_key("0x289ff350bbfd21499d32608d5c133869be9b9202cdd792a91ce3920dcabcc28a")
+    seed = Account.create()
 
     l1_signer_address = Web3.to_checksum_address(seed.address)
     l2_signer_address = Web3.to_checksum_address(seed.address)
@@ -207,9 +206,6 @@ async def test_setup():
     eth_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
 
     arb_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
-
-    
-    
 
     l1_signer = SignerOrProvider(signer_account, eth_provider)
     l2_signer = SignerOrProvider(signer_account, arb_provider)
