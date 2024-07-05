@@ -8,4 +8,12 @@ myenv
 test.py
 localNetwork.json
 .gitignore
+setup.py
+dist
+build
+arbitrum.py.egg-info/
+arbitrum_py.egg-info/
+arbitrum_sdk.egg-info/
+arbitrumpy.egg-info/
+.gitignore
 
