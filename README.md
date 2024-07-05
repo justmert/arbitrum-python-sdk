@@ -6,6 +6,12 @@ Below is an overview of the Arbitrum Python SDK functionality.
 
 > **Note**: Arbitrum Python SDK is NOT official and currently in alpha. It is NOT recommended for production use. Go to [Arbitrum Typescript SDK](https://github.com/OffchainLabs/arbitrum-sdk) for official library.
 
+### Installation
+
+```bash
+pip install arbitrum-sdk
+```
+
 ### Quickstart Recipes
 
 - ##### Deposit Ether Into Arbitrum
