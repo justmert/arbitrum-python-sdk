@@ -31,7 +31,7 @@ class InboxMessageKind(Enum):
     L2MessageType_signedTx = 4
 
 
-class L2ToL1MessageStatus(Enum):
+class ChildToParentMessageStatus(Enum):
     UNCONFIRMED = 1
     CONFIRMED = 2
     EXECUTED = 3

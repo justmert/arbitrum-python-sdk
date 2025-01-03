@@ -5,8 +5,30 @@ ARB_ADDRESS_TABLE_ADDRESS = "0x0000000000000000000000000000000000000066"
 ARB_OWNER_PUBLIC = "0x000000000000000000000000000000000000006B"
 ARB_GAS_INFO = "0x000000000000000000000000000000000000006C"
 ARB_STATISTICS = "0x000000000000000000000000000000000000006F"
+ARB_MINIMUM_BLOCK_TIME_IN_SECONDS = 0.25
 ADDRESS_ALIAS_OFFSET = "0x1111000000000000000000000000000000001111"
 DISABLED_GATEWAY = "0x0000000000000000000000000000000000000001"
 CUSTOM_TOKEN_IS_ENABLED = 42161
 SEVEN_DAYS_IN_SECONDS = 7 * 24 * 60 * 60
 ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
+"""
+How long to wait (in milliseconds) for a deposit to arrive before timing out a request.
+
+Finalisation on mainnet can be up to 2 epochs = 64 blocks.
+We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time.
+
+Total timeout: 30 minutes.
+"""
+DEFAULT_DEPOSIT_TIMEOUT = 30 * 60 * 1000
+
+"""
+The L1 block at which Nitro was activated for Arbitrum One.
+@see https://etherscan.io/block/15447158
+"""
+ARB1_NITRO_GENESIS_L1_BLOCK = 15447158
+
+"""
+The L2 block at which Nitro was activated for Arbitrum One.
+@see https://arbiscan.io/block/22207817
+"""
+ARB1_NITRO_GENESIS_L2_BLOCK = 22207817

@@ -1,14 +1,20 @@
 import math
+import json
 
 import rlp
 from web3 import Web3
 from web3.exceptions import ContractCustomError
 
-from src.lib.data_entities.constants import ADDRESS_ZERO, ARB_RETRYABLE_TX_ADDRESS
+from src.lib.data_entities.constants import (
+    ADDRESS_ZERO, 
+    ARB_RETRYABLE_TX_ADDRESS,
+    DEFAULT_DEPOSIT_TIMEOUT,
+    SEVEN_DAYS_IN_SECONDS
+)
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.networks import get_l2_network
+from src.lib.data_entities.networks import get_arbitrum_network
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
-from src.lib.message.l2_transaction import L2TransactionReceipt
+from src.lib.message.child_transaction import ChildTransactionReceipt
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import get_address, load_contract
 from src.lib.utils.lib import get_transaction_receipt, is_defined
@@ -38,42 +44,41 @@ def concat(*args):
         iterable = args[0]
     else:
         iterable = args
-
     return b"".join(iterable)
 
 
-class L1ToL2MessageStatus:
+class ParentToChildMessageStatus:
     NOT_YET_CREATED = 1
     CREATION_FAILED = 2
-    FUNDS_DEPOSITED_ON_L2 = 3
+    FUNDS_DEPOSITED_ON_CHILD = 3
     REDEEMED = 4
     EXPIRED = 5
 
 
-class EthDepositStatus:
+class EthDepositMessageStatus:
     PENDING = 1
     DEPOSITED = 2
 
 
-class L1ToL2Message:
+class ParentToChildMessage:
     def __init__(
         self,
         chain_id,
         sender,
         message_number,
-        l1_base_fee,
+        parent_base_fee,
         message_data,
     ):
         self.chain_id = chain_id
         self.sender = sender
         self.message_number = message_number
-        self.l1_base_fee = l1_base_fee
+        self.parent_base_fee = parent_base_fee
         self.message_data = message_data
-        self.retryable_creation_id = L1ToL2Message.calculate_submit_retryable_id(
+        self.retryable_creation_id = ParentToChildMessage.calculate_submit_retryable_id(
             chain_id,
             sender,
             message_number,
-            l1_base_fee,
+            parent_base_fee,
             message_data["destAddress"],
             message_data["l2CallValue"],
             message_data["l1Value"],
@@ -87,13 +92,13 @@ class L1ToL2Message:
 
     @staticmethod
     def calculate_submit_retryable_id(
-        l2_chain_id,
+        child_chain_id,
         from_address,
         message_number,
-        l1_base_fee,
+        parent_base_fee,
         dest_address,
-        l2_call_value,
-        l1_value,
+        child_call_value,
+        parent_call_value,
         max_submission_fee,
         excess_fee_refund_address,
         call_value_refund_address,
@@ -101,7 +106,7 @@ class L1ToL2Message:
         max_fee_per_gas,
         data,
     ):
-        chain_id = l2_chain_id
+        chain_id = child_chain_id
         msg_num = message_number
         from_addr = Web3.to_checksum_address(from_address)
         dest_addr = "0x" if dest_address == ADDRESS_ZERO else Web3.to_checksum_address(dest_address)
@@ -112,12 +117,12 @@ class L1ToL2Message:
             format_number(chain_id),
             zero_pad(format_number(msg_num), 32),
             bytes.fromhex(from_addr[2:]),
-            format_number(l1_base_fee),
-            format_number(l1_value),
+            format_number(parent_base_fee),
+            format_number(parent_call_value),
             format_number(max_fee_per_gas),
             format_number(gas_limit),
             bytes.fromhex(dest_addr[2:]) if dest_addr != "0x" else b"",
-            format_number(l2_call_value),
+            format_number(child_call_value),
             bytes.fromhex(call_value_refund_addr[2:]),
             format_number(max_submission_fee),
             bytes.fromhex(excess_fee_refund_addr[2:]),
@@ -132,51 +137,54 @@ class L1ToL2Message:
 
     @staticmethod
     def from_event_components(
-        l2_signer_or_provider,
+        chain_signer_or_provider,
         chain_id,
         sender,
         message_number,
-        l1_base_fee,
+        parent_base_fee,
         message_data,
     ):
-        if SignerProviderUtils.is_signer(l2_signer_or_provider):
-            return L1ToL2MessageWriter(
-                l2_signer_or_provider,
+        if SignerProviderUtils.is_signer(chain_signer_or_provider):
+            return ParentToChildMessageWriter(
+                chain_signer_or_provider,
                 chain_id,
                 sender,
                 message_number,
-                l1_base_fee,
+                parent_base_fee,
                 message_data,
             )
         else:
-            return L1ToL2MessageReader(
-                l2_signer_or_provider,
+            return ParentToChildMessageReader(
+                chain_signer_or_provider,
                 chain_id,
                 sender,
                 message_number,
-                l1_base_fee,
+                parent_base_fee,
                 message_data,
             )
+        
 
-
-class L1ToL2MessageReader(L1ToL2Message):
+class ParentToChildMessageReader(ParentToChildMessage):
     def __init__(
         self,
-        l2_provider,
+        child_provider,
         chain_id,
         sender,
         message_number,
-        l1_base_fee,
+        parent_base_fee,
         message_data,
     ):
-        super().__init__(chain_id, sender, message_number, l1_base_fee, message_data)
-        self.l2_provider = l2_provider
+        super().__init__(chain_id, sender, message_number, parent_base_fee, message_data)
+        self.child_provider = child_provider
         self.retryable_creation_receipt = None
 
     async def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
         if not self.retryable_creation_receipt:
             self.retryable_creation_receipt = await get_transaction_receipt(
-                self.l2_provider, self.retryable_creation_id, confirmations, timeout
+                self.child_provider, 
+                self.retryable_creation_id, 
+                confirmations, 
+                timeout
             )
         return self.retryable_creation_receipt or None
 
@@ -184,14 +192,12 @@ class L1ToL2MessageReader(L1ToL2Message):
         creation_receipt = await self.get_retryable_creation_receipt()
 
         if creation_receipt:
-            l2_receipt = L2TransactionReceipt(creation_receipt)
-
-            redeem_events = l2_receipt.get_redeem_scheduled_events(self.l2_provider)
+            child_receipt = ChildTransactionReceipt(creation_receipt)
+            redeem_events = child_receipt.get_redeem_scheduled_events(self.child_provider)
 
             if len(redeem_events) == 1:
                 try:
-                    return self.l2_provider.eth.get_transaction_receipt(redeem_events[0]["retryTxHash"])
-
+                    return self.child_provider.eth.get_transaction_receipt(redeem_events[0]["retryTxHash"])
                 except Exception:
                     pass
             elif len(redeem_events) > 1:
@@ -202,44 +208,43 @@ class L1ToL2MessageReader(L1ToL2Message):
         return None
 
     async def get_successful_redeem(self):
-        l2_network = get_l2_network(self.l2_provider)
-        event_fetcher = EventFetcher(self.l2_provider)
+        chainNetwork = await get_arbitrum_network(self.child_provider)
+        event_fetcher = EventFetcher(self.child_provider)
         creation_receipt = await self.get_retryable_creation_receipt()
 
         if not is_defined(creation_receipt):
-            return {"status": L1ToL2MessageStatus.NOT_YET_CREATED}
+            return {"status": ParentToChildMessageStatus.NOT_YET_CREATED}
 
         if creation_receipt.status == 0:
-            return {"status": L1ToL2MessageStatus.CREATION_FAILED}
+            return {"status": ParentToChildMessageStatus.CREATION_FAILED}
 
         auto_redeem = await self.get_auto_redeem_attempt()
-
         if auto_redeem and auto_redeem.status == 1:
-            return {"l2TxReceipt": auto_redeem, "status": L1ToL2MessageStatus.REDEEMED}
+            return {
+                "childTxReceipt": auto_redeem, 
+                "status": ParentToChildMessageStatus.REDEEMED
+            }
 
         if await self.retryable_exists():
-            return {"status": L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}
+            return {"status": ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD}
 
         increment = 1000
-
-        from_block = self.l2_provider.eth.get_block(creation_receipt.blockNumber)
-
-        timeout = from_block.timestamp + l2_network.retryable_lifetime_seconds
+        from_block = self.child_provider.eth.get_block(creation_receipt.blockNumber)
+        timeout = (from_block.timestamp + 
+                  (chainNetwork.retryableLifetimeSeconds or SEVEN_DAYS_IN_SECONDS))
 
         queried_range = []
-        max_block = self.l2_provider.eth.block_number
+        max_block = self.child_provider.eth.block_number
 
         while from_block.number < max_block:
             to_block_number = min(from_block.number + increment, max_block)
-
             outer_block_range = {"from": from_block.number, "to": to_block_number}
-
             queried_range.append(outer_block_range)
 
             redeem_events = await event_fetcher.get_events(
                 contract_factory="ArbRetryableTx",
                 event_name="RedeemScheduled",
-                argument_filters={"ticketId": self.retryable_creation_id},
+                argument_filters={"retryableCreationId": self.retryable_creation_id},
                 filter={
                     "fromBlock": outer_block_range["from"],
                     "toBlock": outer_block_range["to"],
@@ -248,30 +253,30 @@ class L1ToL2MessageReader(L1ToL2Message):
                 is_classic=False,
             )
 
-            reedems = [await get_transaction_receipt(self.l2_provider, e.event["retryTxHash"]) for e in redeem_events]
-
-            successful_redeems = [r for r in reedems if r is not None and r.status == 1]
+            successful_redeems = []
+            for e in redeem_events:
+                receipt = await get_transaction_receipt(self.child_provider, e["retryTxHash"])
+                if receipt and receipt.status == 1:
+                    successful_redeems.append(receipt)
 
             if len(successful_redeems) > 1:
                 raise ArbSdkError(
-                    f"Unexpected number of successful redeems. Expected only one redeem for ticket {self.retryable_creation_id}, but found {len(successful_redeems)}."
+                    f"Unexpected number of successful redeems for ticket {self.retryable_creation_id}."
                 )
-
             if len(successful_redeems) == 1:
                 return {
-                    "l2TxReceipt": successful_redeems[0],
-                    "status": L1ToL2MessageStatus.REDEEMED,
+                    "childTxReceipt": successful_redeems[0],
+                    "status": ParentToChildMessageStatus.REDEEMED,
                 }
 
-            to_block = self.l2_provider.eth.get_block(to_block_number)
+            to_block = self.child_provider.eth.get_block(to_block_number)
             if to_block.timestamp > timeout:
-                while len(queried_range) > 0:
+                while queried_range:
                     block_range = queried_range.pop(0)
-
-                    keep_alive_events = await event_fetcher.get_events(
+                    keepalive_events = await event_fetcher.get_events(
                         contract_factory="ArbRetryableTx",
                         event_name="LifetimeExtended",
-                        argument_filters={"retryableCreationId": self.retryable_creation_id},
+                        argument_filters={"ticketId": self.retryable_creation_id},
                         filter={
                             "fromBlock": block_range["from"],
                             "toBlock": block_range["to"],
@@ -279,17 +284,13 @@ class L1ToL2MessageReader(L1ToL2Message):
                         },
                         is_classic=False,
                     )
-
-                    if len(keep_alive_events) > 0:
-                        timeout = sorted(
-                            [e.event["newTimeout"] for e in keep_alive_events],
-                            reverse=True,
-                        )[0]
+                    if keepalive_events:
+                        timeout = sorted([e.event["newTimeout"] for e in keepalive_events], reverse=True)[0]
                         break
 
                 if to_block.timestamp > timeout:
                     break
-
+                
                 while len(queried_range) > 1:
                     queried_range.pop(0)
 
@@ -299,82 +300,83 @@ class L1ToL2MessageReader(L1ToL2Message):
 
             from_block = to_block
 
-        return {"status": L1ToL2MessageStatus.EXPIRED}
+        return {"status": ParentToChildMessageStatus.EXPIRED}
 
     async def is_expired(self):
+        """@deprecated Will be removed in v3.0.0"""
         return await self.retryable_exists()
 
     async def retryable_exists(self):
-        current_timestamp = (self.l2_provider.eth.get_block("latest")).timestamp
+        current_timestamp = (self.child_provider.eth.get_block("latest")).timestamp
         try:
             timeout_timestamp = await self.get_timeout()
             return current_timestamp <= timeout_timestamp
-
         except ContractCustomError as err:
-            if err.data == "0x80698456":
+            if err.data == "0x80698456":  # NoTicketWithID error
                 return False
-
-        except Exception as err:
             raise err
 
     async def status(self):
         return (await self.get_successful_redeem())["status"]
 
     async def wait_for_status(self, confirmations=None, timeout=None):
-        l2_network = get_l2_network(self.chain_id)
+        chosen_timeout = timeout if is_defined(timeout) else DEFAULT_DEPOSIT_TIMEOUT
 
-        chosen_timeout = timeout if timeout is not None else l2_network["depositTimeout"]
-
-        _retryable_creation_receipt = await self.get_retryable_creation_receipt(confirmations, chosen_timeout)
-
+        _retryable_creation_receipt = await self.get_retryable_creation_receipt(
+            confirmations, chosen_timeout
+        )
         if not _retryable_creation_receipt:
             if confirmations or chosen_timeout:
                 raise ArbSdkError(
-                    f"Timed out waiting to retrieve retryable creation receipt: {self.retryable_creation_id}."
+                    f"Timed out waiting for retryable creation receipt: {self.retryable_creation_id}."
                 )
-            else:
-                raise ArbSdkError(f"Retryable creation receipt not found {self.retryable_creation_id}.")
+            raise ArbSdkError(
+                f"Retryable creation receipt not found {self.retryable_creation_id}."
+            )
 
         return await self.get_successful_redeem()
 
     @staticmethod
-    async def get_lifetime(l2_provider):
-        arb_retryable_tx_contract = load_contract(
+    async def get_lifetime(child_provider):
+        arb_retryable = load_contract(
+            provider=child_provider,
             contract_name="ArbRetryableTx",
             address=ARB_RETRYABLE_TX_ADDRESS,
-            provider=l2_provider,
             is_classic=False,
         )
-        return arb_retryable_tx_contract.functions.getLifetime().call()
+        return arb_retryable.functions.getLifetime().call()
 
     async def get_timeout(self):
-        arb_retryable_tx_contract = load_contract(
+        arb_retryable = load_contract(
+            provider=self.child_provider,
             contract_name="ArbRetryableTx",
             address=ARB_RETRYABLE_TX_ADDRESS,
-            provider=self.l2_provider,
             is_classic=False,
         )
-        return arb_retryable_tx_contract.functions.getTimeout(self.retryable_creation_id).call()
+        return arb_retryable.functions.getTimeout(self.retryable_creation_id).call()
 
-    async def get_beneficiary(self):
-        arb_retryable_tx_contract = load_contract(
+    def get_beneficiary(self):
+        arb_retryable = load_contract(
+            provider=self.child_provider,
             contract_name="ArbRetryableTx",
             address=ARB_RETRYABLE_TX_ADDRESS,
-            provider=self.l2_provider,
             is_classic=False,
         )
-        return arb_retryable_tx_contract.functions.getBeneficiary(self.retryable_creation_id).call()
+        return arb_retryable.functions.getBeneficiary(self.retryable_creation_id).call()
 
-
-class L1ToL2MessageReaderClassic:
-    def __init__(self, l2_provider, chain_id, message_number):
+class ParentToChildMessageReaderClassic:
+    def __init__(self, child_provider, chain_id, message_number):
         self.message_number = message_number
-        self.l2_provider = l2_provider
-        self.retryable_creation_id = L1ToL2MessageReaderClassic.calculate_retryable_creation_id(
+        self.child_provider = child_provider
+        self.retryable_creation_id = ParentToChildMessageReaderClassic.calculate_retryable_creation_id(
             chain_id, message_number
         )
-        self.auto_redeem_id = L1ToL2MessageReaderClassic.calculate_auto_redeem_id(self.retryable_creation_id)
-        self.l2_tx_hash = L1ToL2MessageReaderClassic.calculate_l2_tx_hash(self.retryable_creation_id)
+        self.auto_redeem_id = ParentToChildMessageReaderClassic.calculate_auto_redeem_id(
+            self.retryable_creation_id
+        )
+        self.child_tx_hash = ParentToChildMessageReaderClassic.calculate_chain_tx_hash(
+            self.retryable_creation_id
+        )
         self.retryable_creation_receipt = None
 
     @staticmethod
@@ -397,7 +399,7 @@ class L1ToL2MessageReaderClassic:
         return Web3.keccak(data).hex()
 
     @staticmethod
-    def calculate_l2_tx_hash(retryable_creation_id):
+    def calculate_chain_tx_hash(retryable_creation_id):
         data = concat(
             zero_pad(hex_to_bytes(retryable_creation_id), 32),
             zero_pad(int_to_bytes(0), 32),
@@ -405,63 +407,79 @@ class L1ToL2MessageReaderClassic:
         return Web3.keccak(data).hex()
 
     @staticmethod
-    def calculate_l2_derived_hash(retryable_creation_id):
-        data = concat(
-            [
-                zero_pad(hex_to_bytes(retryable_creation_id), 32),
-                zero_pad(int_to_bytes(0), 32),
-            ]
-        )
+    def calculate_chain_derived_hash(retryable_creation_id):
+        """Calculate chain derived hash"""
+        data = concat([
+            zero_pad(hex_to_bytes(retryable_creation_id), 32),
+            # BN 0 meaning Chain TX
+            zero_pad(int_to_bytes(0), 32),
+        ])
         return Web3.keccak(data).hex()
 
     async def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
+        """
+        Try to get the receipt for the retryable ticket creation.
+        This is the Chain transaction that creates the retryable ticket.
+        If confirmations or timeout is provided, this will wait for the ticket to be created
+        
+        Returns:
+            Null if retryable has not been created
+        """
         if not self.retryable_creation_receipt:
             self.retryable_creation_receipt = await get_transaction_receipt(
-                self.l2_provider, self.retryable_creation_id, confirmations, timeout
+                self.child_provider, 
+                self.retryable_creation_id, 
+                confirmations, 
+                timeout
             )
         return self.retryable_creation_receipt
 
     async def status(self):
+        """Get the message status"""
         creation_receipt = await self.get_retryable_creation_receipt()
 
         if not is_defined(creation_receipt):
-            return L1ToL2MessageStatus.NOT_YET_CREATED
+            return ParentToChildMessageStatus.NOT_YET_CREATED
 
         if creation_receipt.status == 0:
-            return L1ToL2MessageStatus.CREATION_FAILED
+            return ParentToChildMessageStatus.CREATION_FAILED
 
-        l2_derived_hash = L1ToL2MessageReaderClassic.calculate_l2_derived_hash(self.retryable_creation_id)
+        chain_derived_hash = ParentToChildMessageReaderClassic.calculate_chain_derived_hash(
+            self.retryable_creation_id
+        )
 
-        l2_tx_receipt = await get_transaction_receipt(self.l2_provider, l2_derived_hash)
+        chain_tx_receipt = await get_transaction_receipt(
+            self.child_provider, 
+            chain_derived_hash
+        )
 
-        if l2_tx_receipt and l2_tx_receipt.status == 1:
-            return L1ToL2MessageStatus.REDEEMED
+        if chain_tx_receipt and chain_tx_receipt.status == 1:
+            return ParentToChildMessageStatus.REDEEMED
 
-        return L1ToL2MessageStatus.EXPIRED
+        return ParentToChildMessageStatus.EXPIRED
 
-
-class L1ToL2MessageWriter(L1ToL2MessageReader):
-    def __init__(self, l2_signer, chain_id, sender, message_number, l1_base_fee, message_data):
+class ParentToChildMessageWriter(ParentToChildMessageReader):
+    def __init__(self, chain_signer, chain_id, sender, message_number, parent_base_fee, message_data):
+        if not chain_signer.provider:
+            raise ArbSdkError("Signer not connected to provider.")
+            
         super().__init__(
-            l2_signer.provider,
+            chain_signer.provider,
             chain_id,
             sender,
             message_number,
-            l1_base_fee,
+            parent_base_fee,
             message_data,
         )
-        if not l2_signer.provider:
-            raise ArbSdkError("Signer not connected to provider.")
-
-        self.l2_signer = l2_signer
+        self.chain_signer = chain_signer
 
     async def redeem(self, overrides=None):
         status = await self.status()
-        if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
+        if status == ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD:
             arb_retryable_tx = load_contract(
                 contract_name="ArbRetryableTx",
                 address=ARB_RETRYABLE_TX_ADDRESS,
-                provider=self.l2_signer.provider,
+                provider=self.chain_signer.provider,
                 is_classic=False,
             )
 
@@ -469,32 +487,29 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
                 overrides = {}
 
             if "from" not in overrides:
-                overrides["from"] = self.l2_signer.account.address
+                overrides["from"] = self.chain_signer.account.address
 
-            if "gasLimit" in overrides:
-                overrides["gas"] = overrides.pop("gasLimit")
-                if not overrides["gas"]:
-                    del overrides["gas"]
+            redeem_tx = arb_retryable_tx.functions.redeem(self.retryable_creation_id).transact(overrides)
+            tx_receipt = self.chain_signer.provider.eth.wait_for_transaction_receipt(redeem_tx)
 
-            redeem_hash = arb_retryable_tx.functions.redeem(self.retryable_creation_id).transact(overrides)
-
-            tx_receipt = self.l2_signer.provider.eth.wait_for_transaction_receipt(redeem_hash)
-
-            return L2TransactionReceipt.to_redeem_transaction(
-                L2TransactionReceipt.monkey_patch_wait(tx_receipt), self.l2_provider
+            return ChildTransactionReceipt.to_redeem_transaction(
+                ChildTransactionReceipt.monkey_patch_wait(tx_receipt),
+                self.child_provider
             )
         else:
             raise ArbSdkError(
-                f"Cannot redeem as retryable does not exist. Message status: {L1ToL2MessageStatus[status]} must be: {L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]}."
+                f"Cannot redeem as retryable does not exist. Message status: "
+                f"{ParentToChildMessageStatus(status).name} must be: "
+                f"{ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD.name}."
             )
 
     async def cancel(self, overrides=None):
         status = await self.status()
-        if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
+        if status == ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD:
             arb_retryable_tx = load_contract(
                 contract_name="ArbRetryableTx",
                 address=ARB_RETRYABLE_TX_ADDRESS,
-                provider=self.l2_signer.provider,
+                provider=self.chain_signer.provider,
                 is_classic=False,
             )
 
@@ -502,29 +517,24 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
                 overrides = {}
 
             if "from" not in overrides:
-                overrides["from"] = self.l2_signer.account.address
+                overrides["from"] = self.chain_signer.account.address
 
-            if "gasLimit" in overrides:
-                overrides["gas"] = overrides.pop("gasLimit")
-                if not overrides["gas"]:
-                    del overrides["gas"]
-            tx_hash = await arb_retryable_tx.functions.cancel(self.retryable_creation_id).transact(overrides)
-
-            receipt = await self.l2_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
-
-            return receipt
+            tx_hash = arb_retryable_tx.functions.cancel(self.retryable_creation_id).transact(overrides)
+            return await self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         else:
             raise ArbSdkError(
-                f"Cannot cancel as retryable does not exist. Message status: {L1ToL2MessageStatus[status]} must be: {L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]}."
+                f"Cannot cancel as retryable does not exist. Message status: "
+                f"{ParentToChildMessageStatus(status).name} must be: "
+                f"{ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD.name}."
             )
 
     async def keep_alive(self, overrides=None):
         status = await self.status()
-        if status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
+        if status == ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD:
             arb_retryable_tx = load_contract(
                 contract_name="ArbRetryableTx",
                 address=ARB_RETRYABLE_TX_ADDRESS,
-                provider=self.l2_signer.provider,
+                provider=self.chain_signer.provider,
                 is_classic=False,
             )
 
@@ -532,40 +542,38 @@ class L1ToL2MessageWriter(L1ToL2MessageReader):
                 overrides = {}
 
             if "from" not in overrides:
-                overrides["from"] = self.l2_signer.account.address
+                overrides["from"] = self.chain_signer.account.address
 
-            if "gasLimit" in overrides:
-                overrides["gas"] = overrides.pop("gasLimit")
-                if not overrides["gas"]:
-                    del overrides["gas"]
-                    
-            keepalive_tx = await arb_retryable_tx.functions.keepalive(self.retryable_creation_id).transact(overrides)
-
-            receipt = await self.l2_signer.provider.eth.wait_for_transaction_receipt(keepalive_tx)
-
-            return receipt
+            tx_hash = arb_retryable_tx.functions.keepalive(self.retryable_creation_id).transact(overrides)
+            return await self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         else:
             raise ArbSdkError(
-                f"Cannot keep alive as retryable does not exist. Message status: {L1ToL2MessageStatus[status]} must be: {L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]}."
+                f"Cannot keep alive as retryable does not exist. Message status: "
+                f"{ParentToChildMessageStatus(status).name} must be: "
+                f"{ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD.name}."
             )
 
 
 class EthDepositMessage:
-    def __init__(self, l2_provider, l2_chain_id, message_number, from_address, to_address, value):
-        self.l2_provider = l2_provider
-        self.l2_chain_id = l2_chain_id
+    def __init__(self, child_provider, child_chain_id, message_number, from_address, to_address, value):
+        self.child_provider = child_provider
+        self.child_chain_id = child_chain_id
         self.message_number = message_number
         self.from_address = from_address
         self.to_address = to_address
         self.value = value
-        self.l2_deposit_tx_hash = self.calculate_deposit_tx_id(
-            l2_chain_id, message_number, from_address, to_address, value
+        self.child_tx_hash = self.calculate_deposit_tx_id(
+            child_chain_id,
+            message_number,
+            from_address,
+            to_address,
+            value
         )
-        self.l2_deposit_tx_receipt = None
+        self.child_tx_receipt = None
 
     @staticmethod
-    def calculate_deposit_tx_id(l2_chain_id, message_number, from_address, to_address, value):
-        chain_id = l2_chain_id
+    def calculate_deposit_tx_id(child_chain_id, message_number, from_address, to_address, value):
+        chain_id = child_chain_id
         msg_num = message_number
 
         fields = [
@@ -579,15 +587,15 @@ class EthDepositMessage:
         rlp_encoded = rlp.encode(fields)
         rlp_enc_with_type = b"\x64" + rlp_encoded
 
-        retryable_tx_id = Web3.keccak(rlp_enc_with_type)
-        return retryable_tx_id.hex()
+        tx_id = Web3.keccak(rlp_enc_with_type)
+        return tx_id.hex()
 
     @staticmethod
-    def from_event_components(l2_provider, message_number, sender_addr, inbox_message_event_data):
-        chain_id = l2_provider.eth.chain_id
+    async def from_event_components(child_provider, message_number, sender_addr, inbox_message_event_data):
+        chain_id = child_provider.eth.chain_id
         parsed_data = EthDepositMessage.parse_eth_deposit_data(inbox_message_event_data)
         return EthDepositMessage(
-            l2_provider,
+            child_provider,
             chain_id,
             message_number,
             sender_addr,
@@ -605,25 +613,29 @@ class EthDepositMessage:
         value_hex = event_data[address_end:]
         if value_hex.startswith("0"):
             value_hex = value_hex.lstrip("0")
+        if not value_hex:
+            value_hex = "0"
 
-        value = int("0x" + value_hex, 16)
+        value = int(value_hex, 16) if value_hex != "0" else 0
         return {"to": to_address, "value": value}
 
     async def status(self):
-        receipt = await get_transaction_receipt(self.l2_provider, self.l2_deposit_tx_hash)
-        if receipt is None:
-            return "PENDING"
-        else:
-            return "DEPOSITED"
+        receipt = await get_transaction_receipt(self.child_provider, self.child_tx_hash)
+        return (
+            EthDepositMessageStatus.DEPOSITED 
+            if receipt is not None 
+            else EthDepositMessageStatus.PENDING
+        )
 
     async def wait(self, confirmations=None, timeout=None):
-        l2_network = get_l2_network(self.l2_chain_id)
+        chosen_timeout = timeout if is_defined(timeout) else DEFAULT_DEPOSIT_TIMEOUT
 
-        chosen_timeout = timeout if is_defined(timeout) else l2_network["depositTimeout"]
-
-        if not self.l2_deposit_tx_receipt:
-            self.l2_deposit_tx_receipt = await get_transaction_receipt(
-                self.l2_provider, self.l2_deposit_tx_hash, confirmations, chosen_timeout
+        if not self.child_tx_receipt:
+            self.child_tx_receipt = await get_transaction_receipt(
+                self.child_provider,
+                self.child_tx_hash,
+                confirmations,
+                chosen_timeout
             )
 
-        return self.l2_deposit_tx_receipt or None
+        return self.child_tx_receipt or None

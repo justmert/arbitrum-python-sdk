@@ -1,7 +1,7 @@
 from web3 import Web3
 
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.networks import is_l1_network, l1_networks, l2_networks
+from src.lib.data_entities.networks import get_multicall_address
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import load_contract
@@ -25,30 +25,7 @@ class MultiCaller:
 
     @staticmethod
     async def from_provider(provider):
-        chain_id = provider.eth.chain_id
-
-        l2_network = l2_networks.get(chain_id, None)
-        l1_network = l1_networks.get(chain_id, None)
-
-        network = l2_network or l1_network
-
-        if not network:
-            raise ArbSdkError(
-                f"Unexpected network id: {chain_id}. Ensure that chain {chain_id} has been added as a network."
-            )
-
-        if is_l1_network(network):
-            first_l2 = l2_networks[network.partner_chain_ids[0]]
-            if not first_l2:
-                raise ArbSdkError(
-                    f"No partner chain found for L1 network: {network.chain_id}. Partner chain IDs: {l1_network.partner_chain_ids}"
-                )
-
-            multi_call_addr = first_l2.token_bridge.l1_multi_call
-        else:
-            multi_call_addr = network.token_bridge.l2_multi_call
-
-        return MultiCaller(provider, multi_call_addr)
+        return MultiCaller(provider, await get_multicall_address(provider))
 
     def get_block_number_input(self):
         iface = load_contract(
