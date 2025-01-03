@@ -6,9 +6,9 @@ from web3 import Web3
 
 from src.lib.data_entities.message import L2ToL1MessageStatus
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
-from src.lib.message.l2_to_l1_message import L2ToL1Message
-from src.lib.message.l2_transaction import L2TransactionReceipt
+from src.lib.message.parent_to_child_message import L1ToL2MessageStatus
+from src.lib.message.child_to_parent_message import L2ToL1Message
+from src.lib.message.child_transaction import L2TransactionReceipt
 from src.scripts.test_setup import test_setup
 from tests.integration.test_helpers import fund_l1, fund_l2, mine_until_stop
 

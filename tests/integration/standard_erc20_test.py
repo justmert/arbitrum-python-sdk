@@ -5,8 +5,8 @@ from src.lib.data_entities.constants import (
     NODE_INTERFACE_ADDRESS,
 )
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
-from src.lib.message.l2_transaction import L2TransactionReceipt
+from src.lib.message.parent_to_child_message import L1ToL2MessageStatus
+from src.lib.message.child_transaction import L2TransactionReceipt
 from src.lib.utils.helper import deploy_abi_contract, load_contract
 from src.lib.utils.lib import get_transaction_receipt, is_defined
 from src.scripts.test_setup import test_setup

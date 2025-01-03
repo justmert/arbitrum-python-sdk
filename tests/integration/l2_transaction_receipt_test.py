@@ -6,7 +6,7 @@ from web3 import Web3
 from web3.exceptions import ContractLogicError
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.message.l2_transaction import L2TransactionReceipt
+from src.lib.message.child_transaction import L2TransactionReceipt
 from src.scripts.test_setup import test_setup
 from tests.integration.test_helpers import fund_l1, fund_l2, mine_until_stop
 

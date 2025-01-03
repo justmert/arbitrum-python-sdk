@@ -1,8 +1,8 @@
 import pytest
 from web3 import Web3
 
-from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
-from src.lib.message.l1_to_l2_message_creator import L1ToL2MessageCreator
+from src.lib.message.parent_to_child_message import L1ToL2MessageStatus
+from src.lib.message.parent_to_child_message_creator import L1ToL2MessageCreator
 from src.scripts.test_setup import test_setup
 from tests.integration.test_helpers import (
     fund_l1,

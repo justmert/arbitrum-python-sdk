@@ -2,7 +2,7 @@ import pytest
 from web3 import constants
 
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
+from src.lib.message.parent_to_child_message import L1ToL2MessageStatus
 from src.lib.utils.helper import (
     deploy_abi_contract,
     is_contract_deployed,

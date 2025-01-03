@@ -2,7 +2,7 @@ import pytest
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 
-from src.lib.message.l1_transaction import L1TransactionReceipt
+from src.lib.message.parent_transaction import L1TransactionReceipt
 
 
 @pytest.mark.asyncio
