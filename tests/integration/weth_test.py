@@ -30,12 +30,12 @@ async def test_deposit_weth():
     fund_l1(l1_signer, Web3.to_wei(1, "ether"))
 
     l2_WETH = load_contract(
-        provider=l2_signer.provider, address=l2_network.token_bridge.l2_weth, contract_name="AeWETH", is_classic=True
+        provider=l2_signer.provider, address=l2_network.token_bridge.l2_weth, contract_name="AeWETH", 
     )
     assert (l2_WETH.functions.balanceOf(l2_signer.account.address).call()) == 0
 
     l1_WETH = load_contract(
-        provider=l1_signer.provider, address=l1_weth_address, contract_name="AeWETH", is_classic=True
+        provider=l1_signer.provider, address=l1_weth_address, contract_name="AeWETH", 
     )
 
     tx = l1_WETH.functions.deposit().transact({"from": l1_signer.account.address, "value": weth_to_wrap})
@@ -61,7 +61,7 @@ async def test_deposit_weth():
     fund_l2(l2_signer)
 
     l2_weth = load_contract(
-        provider=l2_signer.provider, address=l2_token.address, contract_name="AeWETH", is_classic=True
+        provider=l2_signer.provider, address=l2_token.address, contract_name="AeWETH", 
     )
 
     random_addr = Account.create().address
@@ -89,7 +89,7 @@ async def test_withdraw_weth():
     fund_l2(l2_signer)
 
     l2_weth = load_contract(
-        provider=l2_signer.provider, address=l2_network.token_bridge.l2_weth, contract_name="AeWETH", is_classic=True
+        provider=l2_signer.provider, address=l2_network.token_bridge.l2_weth, contract_name="AeWETH", 
     )
 
     tx = l2_weth.functions.deposit().transact({"from": l2_signer.account.address, "value": weth_to_wrap})
@@ -108,7 +108,7 @@ async def test_withdraw_weth():
                 provider=l1_signer.provider,
                 address=l2_network.token_bridge.l1_weth,
                 contract_name="ERC20",
-                is_classic=True,
+                
             ),
             "l2Signer": setup_state.l2_signer,
             "startBalance": weth_to_wrap,

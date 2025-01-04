@@ -120,7 +120,7 @@ async def test_erc20_deposit_comparison():
     fund_l1(l1_signer, Web3.to_wei(2, "ether"))
 
     test_token = deploy_abi_contract(
-        provider=l1_signer.provider, deployer=l1_signer.account, contract_name="TestERC20", is_classic=True
+        provider=l1_signer.provider, deployer=l1_signer.account, contract_name="TestERC20", 
     )
 
     tx_hash = test_token.functions.mint().transact({"from": l1_signer.account.address})

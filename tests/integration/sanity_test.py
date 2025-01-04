@@ -21,13 +21,13 @@ async def test_standard_gateways_public_storage_vars_properly_set():
         contract_name="L1ERC20Gateway",
         address=l2_network["tokenBridge"]["l1ERC20Gateway"],
         provider=l1_signer.provider,
-        is_classic=True,
+        
     )
     l2_gateway = load_contract(
         contract_name="L2ERC20Gateway",
         address=l2_network["tokenBridge"]["l2ERC20Gateway"],
         provider=l2_signer.provider,
-        is_classic=True,
+        
     )
 
     l1_clonable_proxy_hash = l1_gateway.functions.cloneableProxyHash().call()
@@ -62,13 +62,13 @@ async def test_custom_gateways_public_storage_vars_properly_set():
         contract_name="L1CustomGateway",
         address=l2_network["tokenBridge"]["l1CustomGateway"],
         provider=l1_signer.provider,
-        is_classic=True,
+        
     )
     l2_custom_gateway = load_contract(
         contract_name="L2CustomGateway",
         address=l2_network["tokenBridge"]["l2CustomGateway"],
         provider=l2_signer.provider,
-        is_classic=True,
+        
     )
 
     l1_gateway_counterparty = l1_custom_gateway.functions.counterpartGateway().call()
@@ -95,14 +95,14 @@ async def test_weth_gateways_gateways_public_storage_vars_properly_set():
         contract_name="L1WethGateway",
         address=l2_network["tokenBridge"]["l1WethGateway"],
         provider=l1_signer.provider,
-        is_classic=True,
+        
     )
 
     l2_weth_gateway = load_contract(
         contract_name="L2WethGateway",
         address=l2_network["tokenBridge"]["l2WethGateway"],
         provider=l2_signer.provider,
-        is_classic=True,
+        
     )
 
     l1_weth = l1_weth_gateway.functions.l1Weth().call()
@@ -134,7 +134,7 @@ async def test_ae_weth_public_vars_properly_set():
         contract_name="AeWETH",
         address=l2_network["tokenBridge"]["l2Weth"],
         provider=l2_signer.provider,
-        is_classic=True,
+        
     )
 
     l2_gateway_on_ae_weth = ae_weth.functions.l2Gateway().call()
@@ -171,7 +171,7 @@ async def test_l1_and_l2_implementations_of_calculate_l2_erc20_address_match():
         contract_name="L2GatewayRouter",
         address=l2_network["tokenBridge"]["l2GatewayRouter"],
         provider=l2_signer.provider,
-        is_classic=True,
+        
     )
     erc20_l2_address_as_per_l2 = l2_gateway_router.functions.calculateL2TokenAddress(address).call()
 

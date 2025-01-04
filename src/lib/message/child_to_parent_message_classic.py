@@ -1,4 +1,3 @@
-import asyncio
 from eth_typing import BlockNumber
 from web3.types import TxReceipt
 
@@ -10,6 +9,7 @@ from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import load_contract
 from src.lib.utils.lib import is_defined, wait
+from typing import List, Optional
 
 
 class MessageBatchProofInfo:
@@ -19,7 +19,7 @@ class MessageBatchProofInfo:
 
     def __init__(
         self,
-        proof: list[str],
+        proof: List[str],
         path,
         l2_sender: str,
         l1_dest: str,
@@ -138,7 +138,7 @@ class ChildToParentMessageClassic:
                 "address": ARB_SYS_ADDRESS,
                 **filter_dict,
             },
-            is_classic=False,
+            
         )
         for e in raw_events:
             event_data = {**e.event, "transactionHash": e.transactionHash}
@@ -184,8 +184,8 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
 
             # classic_outboxes is a dict of form {outboxAddress: activationBatchNumber}
             outboxes = (
-                child_chain.eth_bridge.classic_outboxes.items()
-                if is_defined(child_chain.eth_bridge.classic_outboxes)
+                child_chain.ethBridge.classicOutboxes.items()
+                if is_defined(child_chain.ethBridge.classicOutboxes)
                 else []
             )
 
@@ -219,7 +219,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
             provider=self.parent_provider,
             contract_name="Outbox",
             address=outbox_address,
-            is_classic=False,
+            
         )
 
         return outbox_contract.functions.outboxEntryExists(self.batch_number).call()
@@ -234,7 +234,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
             provider=child_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            is_classic=False,
+            
         )
         try:
             return node_interface_contract.functions.legacyLookupMessageBatchProof(
@@ -245,7 +245,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
                 return None
             raise e
 
-    async def try_get_proof(self, child_provider) -> MessageBatchProofInfo | None:
+    async def try_get_proof(self, child_provider) -> Optional[MessageBatchProofInfo]:
         """
         Returns the proof for this message if it exists on-chain, otherwise None.
         """
@@ -281,7 +281,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
             provider=self.parent_provider,
             contract_name="Outbox",
             address=outbox_address,
-            is_classic=False,
+            
         )
         try:
             # Dry-run call to see if it reverts with ALREADY_SPENT or NO_OUTBOX_ENTRY
@@ -342,7 +342,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
             await wait(retry_delay_ms)
             return await self.wait_until_outbox_entry_created(child_provider, retry_delay_ms)
 
-    async def get_first_executable_block(self, child_provider) -> BlockNumber | None:
+    async def get_first_executable_block(self, child_provider) -> Optional[BlockNumber]:
         """
         Classic outboxes can be executed in any block after the outbox entry is created,
         so we always return None for Classic.
@@ -398,7 +398,7 @@ class ChildToParentMessageWriterClassic(ChildToParentMessageReaderClassic):
             provider=self.parent_provider,
             contract_name="Outbox",
             address=outbox_address,
-            is_classic=False,
+            
         )
 
         if overrides is None:

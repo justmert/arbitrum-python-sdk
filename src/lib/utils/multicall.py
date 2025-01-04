@@ -6,7 +6,7 @@ from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import get_multicall_address
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
-from src.lib.utils.helper import load_contract
+from src.lib.utils.helper import create_contract_interface, load_contract
 
 class MultiCaller:
     """
@@ -52,11 +52,11 @@ class MultiCaller:
 
         :return: A dict with 'targetAddr', 'encoder', 'decoder'
         """
-        contract = load_contract(
-            provider=self.provider,
+        contract = create_contract_interface(
+            # provider=self.provider,
             contract_name="Multicall2",
-            address=self.address,
-            is_classic=True,
+            # address=self.address,
+            
         )
 
         return {
@@ -72,11 +72,11 @@ class MultiCaller:
 
         :return: A dict with 'targetAddr', 'encoder', 'decoder'
         """
-        contract = load_contract(
-            provider=self.provider,
+        contract = create_contract_interface(
+            # provider=self.provider,
             contract_name="Multicall2",
-            address=self.address,
-            is_classic=True,
+            # address=self.address,
+            
         )
         return {
             "targetAddr": self.address,
@@ -100,7 +100,7 @@ class MultiCaller:
             provider=self.provider,
             contract_name="Multicall2",
             address=self.address,
-            is_classic=True,
+            
         )
 
         # Build the array of calls
@@ -141,7 +141,8 @@ class MultiCaller:
             options = {"name": True}
 
         # We'll gather input calls, then decode them in batch
-        contract = load_contract(self.provider, "ERC20", is_classic=True)
+        contract = create_contract_interface("ERC20")
+        
         inputs: List[Dict[str, Any]] = []
 
         # For each token, for each option we want, create a call

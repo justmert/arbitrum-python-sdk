@@ -1,7 +1,5 @@
 import struct
 from typing import Optional, Dict, Any, List, Union
-
-from eth_typing import BlockNumber, HexStr
 from web3 import Web3
 from web3.types import BlockData
 
@@ -11,13 +9,8 @@ from src.lib.data_entities.message import InboxMessageKind
 from src.lib.data_entities.networks import ArbitrumNetwork
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.utils.event_fetcher import EventFetcher
-from src.lib.utils.helper import (
-    format_contract_output,
-    load_contract,
-    is_arbitrum_chain,
-    is_defined,
-    get_block_ranges_for_l1_block,
-)
+from src.lib.utils.helper import format_contract_output, load_contract
+from src.lib.utils.lib import is_arbitrum_chain, is_defined, get_block_ranges_for_l1_block
 from src.lib.utils.multicall import MultiCaller
 from src.lib.utils.arb_provider import ArbitrumProvider
 
@@ -25,8 +18,8 @@ from src.lib.utils.arb_provider import ArbitrumProvider
 class InboxTools:
     """
     Tools for interacting with the Inbox and Bridge contracts on Arbitrum networks.
-    Similar to the TypeScript 'InboxTools' class, 
-    includes methods for forced inclusion of delayed messages, 
+    Similar to the TypeScript 'InboxTools' class,
+    includes methods for forced inclusion of delayed messages,
     sending child-signed transactions, etc.
     """
 
@@ -43,11 +36,11 @@ class InboxTools:
 
     async def find_first_block_below(self, block_number: int, block_timestamp: int):
         """
-        Finds a block whose 'timestamp' is below a given timestamp, 
+        Finds a block whose 'timestamp' is below a given timestamp,
         starting from 'block_number' and working backwards if needed.
 
         :param block_number: A starting block number
-        :param block_timestamp: The target timestamp 
+        :param block_timestamp: The target timestamp
         :return: The block (dict) if found
         :raises: On failure to find a suitable block
         """
@@ -60,7 +53,7 @@ class InboxTools:
                 provider=self.parent_provider,
                 contract_name="NodeInterface",
                 address=NODE_INTERFACE_ADDRESS,
-                is_classic=False,
+                
             )
 
             try:
@@ -94,11 +87,11 @@ class InboxTools:
         Check if the transaction is a contract creation (i.e. no 'to' address or zero address).
         """
         to_addr = child_transaction_request.get("to")
-        return (to_addr == "0x" or not to_addr or to_addr == ADDRESS_ZERO)
+        return to_addr == "0x" or not to_addr or to_addr == ADDRESS_ZERO
 
     async def estimate_arbitrum_gas(self, child_tx_request: Dict[str, Any], child_provider: Web3):
         """
-        Estimate the gas usage for a child transaction using 
+        Estimate the gas usage for a child transaction using
         nodeInterface.gasEstimateComponents (Arbitrum's method).
 
         :param child_tx_request: Minimal fields like 'to', 'data', 'from', 'value', etc.
@@ -109,7 +102,7 @@ class InboxTools:
             provider=child_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            is_classic=False,
+            
         )
         contract_creation = self.is_contract_creation(child_tx_request)
 
@@ -124,9 +117,7 @@ class InboxTools:
         }
 
         result = node_interface.functions.gasEstimateComponents(
-            child_tx_request.get("to", ADDRESS_ZERO),
-            contract_creation,
-            child_tx_request["data"]
+            child_tx_request.get("to", ADDRESS_ZERO), contract_creation, child_tx_request["data"]
         ).call(tx_params)
 
         # Format the output
@@ -140,7 +131,7 @@ class InboxTools:
         Uses SequencerInbox.maxTimeVariation() and the current block to figure out a range.
 
         :param block_number_range_size: The number of blocks to look backward from the 'first eligible block'
-        :return: A dict { 'endBlock': <int>, 'startBlock': <int> } 
+        :return: A dict { 'endBlock': <int>, 'startBlock': <int> }
         """
         # Possibly the L1 block number if the parent chain is itself Arbitrum
         current_l1_block_number: Optional[int] = None
@@ -148,8 +139,8 @@ class InboxTools:
         sequencer_inbox = load_contract(
             provider=self.parent_provider,
             contract_name="SequencerInbox",
-            address=self.child_chain.eth_bridge.sequencer_inbox,
-            is_classic=False,
+            address=self.child_chain.ethBridge.sequencerInbox,
+            
         )
 
         is_parent_chain_arbitrum = await is_arbitrum_chain(self.parent_provider)
@@ -158,20 +149,24 @@ class InboxTools:
             # Use ArbitrumProvider to fetch the 'latest' block on the parent side
             arb_provider = ArbitrumProvider(self.parent_provider)
             current_arb_block = await arb_provider.get_block("latest")
-            current_l1_block_number = current_arb_block.l1_block_number
+            current_l1_block_number = current_arb_block['l1BlockNumber']
 
         multicall = await MultiCaller.from_provider(self.parent_provider)
         multicall_input = [
             {
                 "targetAddr": sequencer_inbox.address,
                 "encoder": lambda: sequencer_inbox.encode_function_data("maxTimeVariation"),
-                "decoder": lambda return_data: sequencer_inbox.decode_function_result("maxTimeVariation", return_data)[0],
+                "decoder": lambda return_data: sequencer_inbox.decode_function_result("maxTimeVariation", return_data)[
+                    0
+                ],
             },
             multicall.get_block_number_input(),
             multicall.get_current_block_timestamp_input(),
         ]
 
-        [max_time_variation, current_block_number, current_block_timestamp] = await multicall.multi_call(multicall_input, True)
+        [max_time_variation, current_block_number, current_block_timestamp] = await multicall.multi_call(
+            multicall_input, True
+        )
 
         # If parent is Arbitrum, we use current_l1_block_number, else we use the actual block number
         block_number = current_l1_block_number if is_parent_chain_arbitrum else current_block_number
@@ -187,11 +182,7 @@ class InboxTools:
         }
 
     async def get_events_and_increase_range(
-        self,
-        bridge_contract,
-        search_range_blocks: int,
-        max_search_range_blocks: int,
-        range_multiplier: int
+        self, bridge_contract, search_range_blocks: int, max_search_range_blocks: int, range_multiplier: int
     ) -> List[Dict[str, Any]]:
         """
         Recursively fetches 'MessageDelivered' events from the bridge contract within a certain block range,
@@ -224,10 +215,7 @@ class InboxTools:
         if capped_search_range == max_search_range_blocks:
             return []
         return await self.get_events_and_increase_range(
-            bridge_contract,
-            search_range_blocks * range_multiplier,
-            max_search_range_blocks,
-            range_multiplier
+            bridge_contract, search_range_blocks * range_multiplier, max_search_range_blocks, range_multiplier
         )
 
     async def get_force_includable_event(
@@ -247,15 +235,12 @@ class InboxTools:
         bridge_contract = load_contract(
             provider=self.parent_provider,
             contract_name="Bridge",
-            address=self.child_chain.eth_bridge.bridge,
-            is_classic=False,
+            address=self.child_chain.ethBridge.bridge,
+            
         )
 
         events = await self.get_events_and_increase_range(
-            bridge_contract,
-            start_search_range_blocks,
-            max_search_range_blocks,
-            range_multiplier
+            bridge_contract, start_search_range_blocks, max_search_range_blocks, range_multiplier
         )
         if not events:
             return None
@@ -266,26 +251,26 @@ class InboxTools:
         sequencer_inbox = load_contract(
             provider=self.parent_provider,
             contract_name="SequencerInbox",
-            address=self.child_chain.eth_bridge.sequencer_inbox,
-            is_classic=False,
+            address=self.child_chain.ethBridge.sequencerInbox,
+            
         )
         total_delayed_read = await sequencer_inbox.functions.totalDelayedMessagesRead().call()
         if total_delayed_read > event_info["event"]["messageIndex"]:
             # Already read, no force inclusion needed
             return None
 
-        delayed_acc = await bridge_contract.functions.delayedInboxAccs(
-            event_info["event"]["messageIndex"]
-        ).call()
+        delayed_acc = await bridge_contract.functions.delayedInboxAccs(event_info["event"]["messageIndex"]).call()
 
         return {**event_info, "delayedAcc": delayed_acc}
 
-    async def force_include(self, message_delivered_event: Optional[Dict[str, Any]] = None, overrides: Optional[Dict[str, Any]] = None):
+    async def force_include(
+        self, message_delivered_event: Optional[Dict[str, Any]] = None, overrides: Optional[Dict[str, Any]] = None
+    ):
         """
         Force-includes all eligible delayed messages up to and including the provided one.
         If no event is provided, we find the 'latest' includable event.
 
-        :param message_delivered_event: An event object from get_force_includable_event() 
+        :param message_delivered_event: An event object from get_force_includable_event()
                                         that is known to be eligible.
         :param overrides: Transaction overrides dict for 'from', 'gas', etc.
         :return: Transaction receipt if success, or None if no event is eligible
@@ -293,8 +278,8 @@ class InboxTools:
         sequencer_inbox = load_contract(
             provider=self.parent_provider,
             contract_name="SequencerInbox",
-            address=self.child_chain.eth_bridge.sequencer_inbox,
-            is_classic=False,
+            address=self.child_chain.ethBridge.sequencerInbox
+            
         )
 
         event_info = message_delivered_event or await self.get_force_includable_event()
@@ -321,18 +306,18 @@ class InboxTools:
 
     async def send_child_signed_tx(self, signed_tx: Union[str, bytes]):
         """
-        Send a child-chain-signed transaction via the delayed inbox on L1. 
-        The childChain user signs the transaction for L2 execution, 
+        Send a child-chain-signed transaction via the delayed inbox on L1.
+        The childChain user signs the transaction for L2 execution,
         and we embed it in an L1 transaction that is eventually replayed on L2.
-        
+
         :param signed_tx: The child's transaction raw signature data (hex or bytes).
         :return: Transaction receipt on L1 for sending the message
         """
         delayed_inbox = load_contract(
             provider=self.parent_provider,
             contract_name="IInbox",
-            address=self.child_chain.eth_bridge.inbox,
-            is_classic=False,
+            address=self.child_chain.ethBridge.inbox,
+            
         )
 
         if isinstance(signed_tx, str):
@@ -354,8 +339,8 @@ class InboxTools:
 
     async def sign_child_tx(self, tx_request: Dict[str, Any], child_signer) -> bytes:
         """
-        Sign a transaction for the child chain (L2). 
-        Typically, we then embed this signed Tx in the L1 delayed inbox message 
+        Sign a transaction for the child chain (L2).
+        Typically, we then embed this signed Tx in the L1 delayed inbox message
         via send_child_signed_tx(...).
 
         :param tx_request: A dict with fields like 'to', 'data', 'value', 'nonce', optional 'gasPrice' or EIP-1559 fields
@@ -389,7 +374,7 @@ class InboxTools:
         tx["from"] = child_signer.account.address
         tx["chainId"] = child_signer.provider.eth.chain_id
 
-        # If it's contract creation, user might not pass 'to'. 
+        # If it's contract creation, user might not pass 'to'.
         # But we need 'to'=0x0 for gas estimation. We'll remove it after.
         if not is_defined(tx.get("to")):
             tx["to"] = ADDRESS_ZERO

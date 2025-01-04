@@ -1,4 +1,4 @@
-from typing import Any, List, Union
+from typing import Any, List
 from eth_utils import int_to_big_endian
 from web3 import Web3
 
@@ -25,7 +25,7 @@ async def get_address_index(address: str, provider) -> int:
         provider=provider,
         contract_name="ArbAddressTable",
         address=ARB_ADDRESS_TABLE_ADDRESS,
-        is_classic=False,
+        
     )
 
     is_registered = await arb_address_table.functions.addressExists(address).call()

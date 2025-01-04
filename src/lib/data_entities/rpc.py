@@ -1,4 +1,4 @@
-from typing import List, TypedDict, Optional, Union
+from typing import List, TypedDict
 from eth_typing import HexStr
 from web3.types import BlockData as Web3Block, TxData
 

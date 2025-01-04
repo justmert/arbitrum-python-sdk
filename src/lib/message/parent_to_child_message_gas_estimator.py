@@ -9,10 +9,8 @@ from src.lib.utils.lib import (
     get_base_fee,
     is_defined,
     get_native_token_decimals,
-    scale_from18DecimalsToNativeTokenDecimals,
+    scale_from_18_decimals_to_native_token_decimals
 )
-from src.lib.utils.types import BytesLikeOrHexStr
-
 DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = 300
 DEFAULT_GAS_PRICE_PERCENT_INCREASE = 500
 
@@ -88,7 +86,7 @@ class ParentToChildMessageGasEstimator:
             contract_name="Inbox",
             address=network.ethBridge.inbox,
             provider=parent_provider,
-            is_classic=False,
+            
         )
 
         # If user did not supply a custom base, fetch from chain
@@ -115,7 +113,7 @@ class ParentToChildMessageGasEstimator:
             provider=self.child_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            is_classic=False,
+            
         )
 
         # estimateGas is used to get the gas limit for NodeInterface.estimateRetryableTicket()
@@ -203,7 +201,7 @@ class ParentToChildMessageGasEstimator:
             deposit_wei += max_submission_fee_estimate
             deposit_wei += retryable_estimate_data["l2CallValue"]
 
-            deposit = scale_from18DecimalsToNativeTokenDecimals({
+            deposit = scale_from_18_decimals_to_native_token_decimals({
                 "amount": deposit_wei,
                 "decimals": decimals,
             })
@@ -228,7 +226,7 @@ class ParentToChildMessageGasEstimator:
         :return: {
             "estimates": ParentToChildMessageGasParams,
             "retryable": dict,
-            "data": BytesLikeOrHexStr,
+            "data": bytes,
             "to": str,
             "value": int
         }

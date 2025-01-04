@@ -1,6 +1,4 @@
 import math
-import json
-
 import rlp
 from web3 import Web3
 from web3.exceptions import ContractCustomError
@@ -250,7 +248,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
                     "toBlock": outer_block_range["to"],
                     "address": ARB_RETRYABLE_TX_ADDRESS,
                 },
-                is_classic=False,
+                
             )
 
             successful_redeems = []
@@ -282,7 +280,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
                             "toBlock": block_range["to"],
                             "address": ARB_RETRYABLE_TX_ADDRESS,
                         },
-                        is_classic=False,
+                        
                     )
                     if keepalive_events:
                         timeout = sorted([e.event["newTimeout"] for e in keepalive_events], reverse=True)[0]
@@ -342,7 +340,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
             provider=child_provider,
             contract_name="ArbRetryableTx",
             address=ARB_RETRYABLE_TX_ADDRESS,
-            is_classic=False,
+            
         )
         return arb_retryable.functions.getLifetime().call()
 
@@ -351,7 +349,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
             provider=self.child_provider,
             contract_name="ArbRetryableTx",
             address=ARB_RETRYABLE_TX_ADDRESS,
-            is_classic=False,
+            
         )
         return arb_retryable.functions.getTimeout(self.retryable_creation_id).call()
 
@@ -360,7 +358,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
             provider=self.child_provider,
             contract_name="ArbRetryableTx",
             address=ARB_RETRYABLE_TX_ADDRESS,
-            is_classic=False,
+            
         )
         return arb_retryable.functions.getBeneficiary(self.retryable_creation_id).call()
 
@@ -480,7 +478,7 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 contract_name="ArbRetryableTx",
                 address=ARB_RETRYABLE_TX_ADDRESS,
                 provider=self.chain_signer.provider,
-                is_classic=False,
+                
             )
 
             if overrides is None:
@@ -510,7 +508,7 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 contract_name="ArbRetryableTx",
                 address=ARB_RETRYABLE_TX_ADDRESS,
                 provider=self.chain_signer.provider,
-                is_classic=False,
+                
             )
 
             if overrides is None:
@@ -535,7 +533,7 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 contract_name="ArbRetryableTx",
                 address=ARB_RETRYABLE_TX_ADDRESS,
                 provider=self.chain_signer.provider,
-                is_classic=False,
+                
             )
 
             if overrides is None:

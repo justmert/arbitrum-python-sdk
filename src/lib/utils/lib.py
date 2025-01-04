@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 from eth_typing import HexStr
 from web3 import Web3
 from web3.exceptions import TimeExhausted, TransactionNotFound
-from web3.types import TxReceipt, BlockData
+from web3.types import TxReceipt
 
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS, ADDRESS_ZERO
 from src.lib.data_entities.errors import ArbSdkError
@@ -104,7 +104,7 @@ async def is_arbitrum_chain(provider: Web3) -> bool:
         provider=provider,
         contract_name="ArbSys",
         address=ARB_SYS_ADDRESS,
-        is_classic=False,
+        
     )
     try:
         arb_sys_contract.functions.arbOSVersion().call()
@@ -144,7 +144,7 @@ async def get_first_block_for_l1_block(
 
     async def get_l1_block_number(l2_block_num: int) -> int:
         block = await arb_provider.get_block(l2_block_num)
-        return block.l1_block_number
+        return int(block['l1BlockNumber'], 16)
 
     if min_arbitrum_block is None:
         min_arbitrum_block = nitro_genesis_block
@@ -168,7 +168,6 @@ async def get_first_block_for_l1_block(
     while start <= end:
         mid = start + (end - start) // 2
         l1_block_of_mid = await get_l1_block_number(mid)
-
         if l1_block_of_mid == for_l1_block:
             result_for_target = mid
             end = mid - 1
@@ -183,7 +182,14 @@ async def get_first_block_for_l1_block(
     return result_for_target or result_for_greater
 
 
-async def get_block_ranges_for_l1_block(props: dict) -> Tuple[Optional[int], Optional[int]]:
+async def get_block_ranges_for_l1_block(
+    arbitrum_provider: Web3,
+    for_l1_block: int,
+    allow_greater: bool = False,
+    min_arbitrum_block: Optional[int] = None,
+    max_arbitrum_block: Union[int, str] = "latest"
+
+) -> Tuple[Optional[int], Optional[int]]:
     """
     Returns a [startBlock, endBlock] range in the Arbitrum chain for the given L1 block.
     If a start or end can't be found, we return (None, None).
@@ -198,29 +204,29 @@ async def get_block_ranges_for_l1_block(props: dict) -> Tuple[Optional[int], Opt
         }
     :return: A tuple (startBlock, endBlock) if found, else (None, None).
     """
-    arb_provider = ArbitrumProvider(props["arbitrum_provider"])
+    arb_provider = ArbitrumProvider(arbitrum_provider)
     current_l2_block = arb_provider.provider.eth.block_number
 
-    if not props.get("maxArbitrumBlock") or props["maxArbitrumBlock"] == "latest":
-        props["maxArbitrumBlock"] = current_l2_block
+    if not max_arbitrum_block or max_arbitrum_block == "latest":
+        max_arbitrum_block = current_l2_block
 
     # Search for the exact or earliest L2 block that has L1 block == for_l1_block
     # And also search for the earliest L2 block that has L1 block > for_l1_block
     # Then subtract 1 from that to get the end range
     results = await asyncio.gather(
         get_first_block_for_l1_block(
-            props["arbitrum_provider"],
-            props["for_l1_block"],
+            arbitrum_provider,
+            for_l1_block,
             allow_greater=False,
-            min_arbitrum_block=props.get("min_arbitrum_block"),
-            max_arbitrum_block=props["maxArbitrumBlock"],
+            min_arbitrum_block=min_arbitrum_block,
+            max_arbitrum_block=max_arbitrum_block,
         ),
         get_first_block_for_l1_block(
-            props["arbitrum_provider"],
-            props["for_l1_block"] + 1,
+            arbitrum_provider,
+            for_l1_block + 1,
             allow_greater=True,
-            min_arbitrum_block=props.get("min_arbitrum_block"),
-            max_arbitrum_block=props["maxArbitrumBlock"],
+            min_arbitrum_block=min_arbitrum_block,
+            max_arbitrum_block=max_arbitrum_block,
         )
     )
 
@@ -232,7 +238,7 @@ async def get_block_ranges_for_l1_block(props: dict) -> Tuple[Optional[int], Opt
     if start_block and block_after_end:
         return start_block, block_after_end - 1
 
-    return start_block, props["maxArbitrumBlock"]
+    return start_block, max_arbitrum_block
 
 
 async def get_native_token_decimals(parent_provider: Web3, child_network: ArbitrumNetwork) -> int:
@@ -243,7 +249,7 @@ async def get_native_token_decimals(parent_provider: Web3, child_network: Arbitr
     :param child_network: The ArbitrumNetwork config
     :return: The decimals for the native token
     """
-    native_token_address = child_network.native_token
+    native_token_address = child_network.nativeToken
     if not native_token_address or native_token_address == ADDRESS_ZERO:
         return 18
 
@@ -252,7 +258,7 @@ async def get_native_token_decimals(parent_provider: Web3, child_network: Arbitr
         provider=parent_provider,
         contract_name="ERC20",
         address=native_token_address,
-        is_classic=True,
+        
     )
     try:
         return token_contract.functions.decimals().call()

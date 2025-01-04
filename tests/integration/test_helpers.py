@@ -1,16 +1,39 @@
 import asyncio
 import time
+from typing import Dict, Any, Optional 
 
+from eth_typing import Address
 from web3 import Account, Web3
+from web3.types import Wei
 
-from src.lib.asset_briger.erc20_bridger import Erc20Bridger
+from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.message import L2ToL1MessageStatus
+
+from src.lib.data_entities.message import ChildToParentMessageStatus
+
+from src.lib.data_entities.networks import ArbitrumNetwork, assert_arbitrum_network_has_token_bridge
+
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
+
 from src.scripts.test_setup import config, get_signer
 
+from src.lib.utils.lib import scale_from_18_decimals_to_native_token_decimals
+
+from src.lib.utils.helper import load_contract
+
+from tests.integration.custom_fee_token.custom_fee_token_test_helpers import is_arbitrum_network_with_custom_fee_token
+
 PRE_FUND_AMOUNT = Web3.to_wei(0.1, "ether")
-arb_sys = "0x0000000000000000000000000000000000000064"
+
+
+def pretty_log(text: str) -> None:
+    """Print formatted log message"""
+    print(f"\n    *** {text}\n")
+
+
+def warn(text: str) -> None:
+    """Print warning message"""
+    print(f"\nWARNING: {text}\n")
 
 
 class GatewayType:
@@ -19,7 +42,8 @@ class GatewayType:
     WETH = 3
 
 
-async def mine_until_stop(miner, state):
+async def mine_until_stop(miner: SignerOrProvider, state: Dict[str, bool]) -> None:
+    """Mine blocks until stopped"""
     while state["mining"]:
         tx = {
             "from": miner.account.address,
@@ -29,227 +53,323 @@ async def mine_until_stop(miner, state):
             "gasPrice": miner.provider.eth.gas_price,
             "nonce": miner.provider.eth.get_transaction_count(miner.account.address),
         }
-
         gas_estimate = miner.provider.eth.estimate_gas(tx)
-
         tx["gas"] = gas_estimate
-
         signed_tx = miner.account.sign_transaction(tx)
-
         tx_hash = miner.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-
         miner.provider.eth.wait_for_transaction_receipt(tx_hash)
-
         await asyncio.sleep(15)
 
 
-async def withdraw_token(params):
-    withdrawal_params = await params["erc20Bridger"].get_withdrawal_request(
-        {
-            "amount": params["amount"],
-            "erc20L1Address": params["l1Token"].address,
-            "destinationAddress": params["l2Signer"].account.address,
-            "from": params["l2Signer"].account.address,
-            "l2Provider": params["l2Signer"].provider,
-        }
-    )
+async def withdraw_token(params: Dict[str, Any]) -> None:
+    """Withdraw token from child to parent chain"""
+    withdrawal_params = await params["erc20Bridger"].get_withdrawal_request({
+        "amount": params["amount"],
+        "erc20ParentAddress": params["parentToken"].address,
+        "destinationAddress": params["childSigner"].account.address,
+        "from": params["childSigner"].account.address,
+    })
 
-    l1_gas_estimate = await withdrawal_params["estimateL1GasLimit"](params["l1Signer"].provider)
+    parent_gas_estimate = await withdrawal_params["estimateParentGasLimit"](params["parentSigner"].provider)
 
-    withdraw_rec = await params["erc20Bridger"].withdraw(
-        {
-            "destinationAddress": params["l2Signer"].account.address,
-            "amount": params["amount"],
-            "erc20L1Address": params["l1Token"].address,
-            "l2Signer": params["l2Signer"],
-        }
-    )
+    withdraw_rec = await params["erc20Bridger"].withdraw({
+        "destinationAddress": params["childSigner"].account.address,
+        "amount": params["amount"],
+        "erc20ParentAddress": params["parentToken"].address,
+        "childSigner": params["childSigner"],
+    })
 
     assert withdraw_rec["status"] == 1, "initiate token withdraw txn failed"
 
-    message = (await withdraw_rec.get_l2_to_l1_messages(params["l1Signer"]))[0]
+    message = (await withdraw_rec.get_child_to_parent_messages(params["parentSigner"]))[0]
     assert message is not None, "withdraw message not found"
 
-    message_status = await message.status(params["l2Signer"].provider)
-    assert message_status == L2ToL1MessageStatus.UNCONFIRMED, "invalid withdraw status"
+    message_status = await message.status(params["childSigner"].provider)
+    assert message_status == ChildToParentMessageStatus.UNCONFIRMED, "invalid withdraw status"
 
-    l2_token_addr = await params["erc20Bridger"].get_l2_erc20_address(
-        params["l1Token"].address, params["l1Signer"].provider
-    )
-    l2_token = params["erc20Bridger"].get_l2_token_contract(params["l2Signer"].provider, l2_token_addr)
-
-    test_wallet_l2_balance = l2_token.functions.balanceOf(params["l2Signer"].account.address).call()
-
-    assert test_wallet_l2_balance == params["startBalance"] - params["amount"], "token withdraw balance not deducted"
-
-    wallet_address = params["l1Signer"].account.address
-
-    gateway_address = await params["erc20Bridger"].get_l2_gateway_address(
-        params["l1Token"].address, params["l2Signer"].provider
+    child_token_addr = await params["erc20Bridger"].get_child_erc20_address(
+        params["parentToken"].address,
+        params["parentSigner"].provider
     )
 
-    expected_l2_gateway = get_gateways(params["gatewayType"], params["erc20Bridger"].l2_network)["expectedL2Gateway"]
-    assert gateway_address == expected_l2_gateway, "Gateway is not custom gateway"
+    child_token = params["erc20Bridger"].get_child_token_contract(
+        params["childSigner"].provider,
+        child_token_addr
+    )
 
-    gateway_withdraw_events = await params["erc20Bridger"].get_l2_withdrawal_events(
-        params["l2Signer"].provider,
+    test_wallet_child_balance = child_token.functions.balanceOf(params["childSigner"].account.address).call()
+    assert test_wallet_child_balance == params["startBalance"] - params["amount"], "token withdraw balance not deducted"
+
+    gateway_address = await params["erc20Bridger"].get_child_gateway_address(
+        params["parentToken"].address,
+        params["childSigner"].provider
+    )
+
+    expected_l2_gateway = get_gateways(params["gatewayType"], params["erc20Bridger"].child_network)["expectedL2Gateway"]
+    assert gateway_address == expected_l2_gateway, "Gateway is not correct gateway"
+
+    gateway_withdraw_events = await params["erc20Bridger"].get_withdrawal_events(
+        params["childSigner"].provider,
         gateway_address,
         {"fromBlock": withdraw_rec["blockNumber"], "toBlock": "latest"},
-        params["l1Token"].address,
-        wallet_address,
+        params["parentToken"].address,
+        params["parentSigner"].account.address,
     )
     assert len(gateway_withdraw_events) == 1, "token query failed"
 
-    bal_before = params["l1Token"].functions.balanceOf(params["l1Signer"].account.address).call()
+    bal_before = params["parentToken"].functions.balanceOf(params["parentSigner"].account.address).call()
 
-    miner1_seed = Account.create()
-    miner2_seed = Account.create()
-
-    miner1_private_key = miner1_seed.key.hex()
-    miner2_private_key = miner2_seed.key.hex()
-
-    miner1_account = Account.from_key(miner1_private_key)
-    miner2_account = Account.from_key(miner2_private_key)
-
-    miner1 = SignerOrProvider(miner1_account, params["l1Signer"].provider)
-    miner2 = SignerOrProvider(miner2_account, params["l2Signer"].provider)
-
-    fund_l1(miner1, Web3.to_wei(1, "ether"))
-    fund_l2(miner2, Web3.to_wei(1, "ether"))
+    # Mine blocks until ready
+    miner1 = get_random_signer(params["parentSigner"].provider)
+    miner2 = get_random_signer(params["childSigner"].provider) 
+    
+    await fund_parent_signer(miner1, Wei(Web3.to_wei(1, "ether")))
+    await fund_child_signer(miner2, Wei(Web3.to_wei(1, "ether")))
+    
     state = {"mining": True}
-
-    tasks = [
+    
+    done, pending = await asyncio.wait([
         mine_until_stop(miner1, state),
         mine_until_stop(miner2, state),
-        message.wait_until_ready_to_execute(params["l2Signer"].provider),
-    ]
-
-    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        message.wait_until_ready_to_execute(params["childSigner"].provider)
+    ], return_when=asyncio.FIRST_COMPLETED)
 
     state["mining"] = False
 
-    assert await message.status(params["l2Signer"].provider) == L2ToL1MessageStatus.CONFIRMED, "confirmed status"
-
-    exec_rec = await message.execute(params["l2Signer"].provider)
-
-    assert exec_rec["gasUsed"] <= l1_gas_estimate, "Gas used greater than estimate"
-    assert await message.status(params["l2Signer"].provider) == L2ToL1MessageStatus.EXECUTED, "executed status"
-
-    bal_after = params["l1Token"].functions.balanceOf(params["l1Signer"].account.address).call()
-    assert bal_before + params["amount"] == bal_after, "Not withdrawn"
-
-    # Cancel all pending tasks
+    # Cancel pending tasks
     for task in pending:
         task.cancel()
-        # Optionally, you can try to await task to let it handle the cancellation
         try:
             await task
         except asyncio.CancelledError:
-            pass  # Task cancellation is expected, handle it if necessary
+            pass
 
+    assert (await message.status(params["childSigner"].provider)) == ChildToParentMessageStatus.CONFIRMED
 
-def get_gateways(gateway_type, l2_network):
+    exec_rec = await message.execute(params["childSigner"].provider) 
+
+    assert exec_rec["gasUsed"] <= parent_gas_estimate, "Gas used greater than estimate"
+    assert (await message.status(params["childSigner"].provider)) == ChildToParentMessageStatus.EXECUTED
+
+    bal_after = params["parentToken"].functions.balanceOf(params["parentSigner"].account.address).call()
+    assert bal_before + params["amount"] == bal_after, "Not withdrawn"
+
+def get_gateways(gateway_type: int, child_network: ArbitrumNetwork) -> Dict[str, Address]:
+    """Get gateway addresses based on gateway type"""
+    assert_arbitrum_network_has_token_bridge(child_network)
+    
     if gateway_type == GatewayType.CUSTOM:
         return {
-            "expectedL1Gateway": l2_network.token_bridge.l1_custom_gateway,
-            "expectedL2Gateway": l2_network.token_bridge.l2_custom_gateway,
+            "expectedL1Gateway": child_network.token_bridge.parent_custom_gateway,
+            "expectedL2Gateway": child_network.token_bridge.child_custom_gateway,
         }
     elif gateway_type == GatewayType.STANDARD:
         return {
-            "expectedL1Gateway": l2_network.token_bridge.l1_erc20_gateway,
-            "expectedL2Gateway": l2_network.token_bridge.l2_erc20_gateway,
+            "expectedL1Gateway": child_network.token_bridge.parent_erc20_gateway,
+            "expectedL2Gateway": child_network.token_bridge.child_erc20_gateway,
         }
     elif gateway_type == GatewayType.WETH:
         return {
-            "expectedL1Gateway": l2_network.token_bridge.l1_weth_gateway,
-            "expectedL2Gateway": l2_network.token_bridge.l2_weth_gateway,
+            "expectedL1Gateway": child_network.token_bridge.parent_weth_gateway,
+            "expectedL2Gateway": child_network.token_bridge.child_weth_gateway,
         }
     else:
         raise ArbSdkError(f"Unexpected gateway type: {gateway_type}")
 
 
-async def deposit_token(
-    deposit_amount,
-    l1_token_address,
-    erc20_bridger,
-    l1_signer,
-    l2_signer,
-    expected_status,
-    expected_gateway_type,
-    retryable_overrides=None,
-):
-    _ = await erc20_bridger.approve_token(
-        {
-            "erc20L1Address": l1_token_address,
-            "l1Signer": l1_signer,
-        }
+async def deposit_token(params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Deposit token from parent to child chain
+    
+    Args:
+        params: Dictionary containing:
+            - depositAmount: Amount to deposit
+            - ethDepositAmount: Optional ETH amount to deposit
+            - parentTokenAddress: Parent token address
+            - erc20Bridger: ERC20 bridger instance  
+            - parentSigner: Parent chain signer
+            - childSigner: Child chain signer
+            - expectedStatus: Expected message status
+            - expectedGatewayType: Expected gateway type
+            - retryableOverrides: Optional gas overrides
+            - destinationAddress: Optional destination address
+    """
+    fee_token_balance_before = None 
+    parent_signer = params["parentSigner"]
+    child_signer = params["childSigner"]
+
+    await (await params["erc20Bridger"].approve_token({
+        "erc20ParentAddress": params["parentTokenAddress"],
+        "parentSigner": parent_signer
+    })).wait()
+
+    sender_address = parent_signer.account.address
+    expected_parent_gateway_address = await params["erc20Bridger"].get_parent_gateway_address(
+        params["parentTokenAddress"],
+        parent_signer.provider
+    )
+    parent_token = params["erc20Bridger"].get_parent_token_contract(
+        parent_signer.provider,
+        params["parentTokenAddress"]
     )
 
-    expected_l1_gateway_address = await erc20_bridger.get_l1_gateway_address(l1_token_address, l1_signer.provider)
+    allowance = await parent_token.functions.allowance(
+        sender_address,
+        expected_parent_gateway_address
+    ).call()
+    assert allowance == params["erc20Bridger"].MAX_APPROVAL, "set token allowance failed"
 
-    l1_token = erc20_bridger.get_l1_token_contract(l1_signer.provider, l1_token_address)
+    if is_arbitrum_network_with_custom_fee_token():
+        await (await params["erc20Bridger"].approve_gas_token({
+            "parentSigner": parent_signer,
+            "erc20ParentAddress": params["parentTokenAddress"]
+        })).wait()
 
-    allowance = l1_token.functions.allowance(l1_signer.account.address, expected_l1_gateway_address).call()
+        fee_token_contract = load_contract(
+            provider=parent_signer.provider,
+            contract_name="ERC20",
+            address=params["erc20Bridger"].native_token,
+            
+        )
+        
+        fee_token_allowance = await fee_token_contract.functions.allowance(
+            sender_address,
+            expected_parent_gateway_address
+        ).call()
 
-    assert allowance == Erc20Bridger.MAX_APPROVAL, "set token allowance failed"
+        assert fee_token_allowance == params["erc20Bridger"].MAX_APPROVAL, "set fee token allowance failed"
+        
+        fee_token_balance_before = await fee_token_contract.functions.balanceOf(sender_address).call()
 
-    initial_bridge_token_balance = l1_token.functions.balanceOf(expected_l1_gateway_address).call()
+    initial_bridge_token_balance = await parent_token.functions.balanceOf(
+        expected_parent_gateway_address
+    ).call()
 
-    user_bal_before = l1_token.functions.balanceOf(l1_signer.account.address).call()
+    parent_token_balance_before = await parent_token.functions.balanceOf(sender_address).call()
+    
+    destination = params.get("destinationAddress", sender_address)
+    child_eth_balance_before = await child_signer.provider.eth.get_balance(destination)
 
-    deposit_rec = await erc20_bridger.deposit(
-        {
-            "l1Signer": l1_signer,
-            "l2Provider": l2_signer.provider,
-            "erc20L1Address": l1_token_address,
-            "amount": deposit_amount,
-            "retryableGasOverrides": retryable_overrides,
+    deposit_params = {
+        "parentSigner": parent_signer,
+        "childProvider": child_signer.provider,
+        "erc20ParentAddress": params["parentTokenAddress"],
+        "amount": params["depositAmount"],
+        "retryableGasOverrides": params.get("retryableOverrides"),
+        "maxSubmissionCost": params.get("ethDepositAmount"),
+        "excessFeeRefundAddress": params.get("destinationAddress"),
+        "destinationAddress": params.get("destinationAddress")
+    }
+
+    deposit_rec = await params["erc20Bridger"].deposit(deposit_params)
+    
+    final_bridge_token_balance = await parent_token.functions.balanceOf(
+        expected_parent_gateway_address
+    ).call()
+
+    # WETH gateway withdraws ETH rather than transferring
+    expected_balance = (0 if params["expectedGatewayType"] == GatewayType.WETH 
+                       else initial_bridge_token_balance + params["depositAmount"])
+    assert final_bridge_token_balance == expected_balance, "bridge balance not updated"
+
+    parent_token_balance_after = await parent_token.functions.balanceOf(sender_address).call()
+    assert parent_token_balance_after == parent_token_balance_before - params["depositAmount"]
+
+    if is_arbitrum_network_with_custom_fee_token():
+        fee_token_balance_after = await fee_token_contract.functions.balanceOf(sender_address).call()
+        decimals = await fee_token_contract.functions.decimals().call()
+
+        MAX_BASE_ESTIMATED_GAS_FEE = Web3.to_wei(1, "gwei")
+        max_scaled_estimated_gas_fee = scale_from_18_decimals_to_native_token_decimals(
+            amount=MAX_BASE_ESTIMATED_GAS_FEE,
+            decimals=decimals
+        )
+
+        gas_used = fee_token_balance_before - fee_token_balance_after
+        assert gas_used <= max_scaled_estimated_gas_fee, "Too much custom fee token used as gas"
+
+    wait_res = await deposit_rec.wait_for_child_transaction_receipt(child_signer)
+    
+    child_eth_balance_after = await child_signer.provider.eth.get_balance(destination)
+
+    assert wait_res["status"] == params["expectedStatus"], "Unexpected status"
+
+    if params.get("retryableOverrides"):
+        return {
+            "parentToken": parent_token,
+            "waitRes": wait_res
         }
+
+    # Gateway validation
+    gateways = get_gateways(params["expectedGatewayType"], params["erc20Bridger"].child_network)
+    
+    parent_gateway = await params["erc20Bridger"].get_parent_gateway_address(
+        params["parentTokenAddress"], 
+        parent_signer.provider
     )
+    assert parent_gateway == gateways["expectedL1Gateway"]
 
-    final_bridge_token_balance = l1_token.functions.balanceOf(expected_l1_gateway_address).call()
+    child_gateway = await params["erc20Bridger"].get_child_gateway_address(
+        params["parentTokenAddress"],
+        child_signer.provider  
+    )
+    assert child_gateway == gateways["expectedL2Gateway"]
 
-    if expected_gateway_type == GatewayType.WETH:
-        expected_balance = 0
-    else:
-        expected_balance = initial_bridge_token_balance + deposit_amount
+    # Token address checks
+    child_token_addr = await params["erc20Bridger"].get_child_erc20_address(
+        params["parentTokenAddress"],
+        parent_signer.provider
+    )
+    
+    child_token = params["erc20Bridger"].get_child_token_contract(
+        child_signer.provider,
+        child_token_addr
+    )
+    
+    parent_token_addr = await params["erc20Bridger"].get_parent_erc20_address(
+        child_token_addr,
+        child_signer.provider
+    )
+    
+    assert parent_token_addr == params["parentTokenAddress"]
 
-    assert final_bridge_token_balance == expected_balance, "bridge balance not updated after L1 token deposit txn"
+    token_bal_on_child_after = await child_token.functions.balanceOf(destination).call()
 
-    user_bal_after = l1_token.functions.balanceOf(l1_signer.account.address).call()
-    assert user_bal_after == user_bal_before - deposit_amount, "user bal after"
+    # Only check for standard deposits
+    if not params.get("destinationAddress") and not params.get("ethDepositAmount"):
+        assert token_bal_on_child_after == params["depositAmount"]
 
-    wait_res = await deposit_rec.wait_for_l2(l2_signer)
+    # Check ETH deposit if included 
+    if params.get("ethDepositAmount"):
+        assert child_eth_balance_after >= child_eth_balance_before + params["ethDepositAmount"]
 
-    assert wait_res["status"] == expected_status, "Unexpected status"
-    if retryable_overrides:
-        return {"l1Token": l1_token, "waitRes": wait_res}
-
-    gateways = get_gateways(expected_gateway_type, erc20_bridger.l2_network)
-    l1_gateway = await erc20_bridger.get_l1_gateway_address(l1_token_address, l1_signer.provider)
-    assert l1_gateway == gateways["expectedL1Gateway"], "incorrect l1 gateway address"
-
-    l2_gateway = await erc20_bridger.get_l2_gateway_address(l1_token_address, l2_signer.provider)
-    assert l2_gateway == gateways["expectedL2Gateway"], "incorrect l2 gateway address"
-
-    l2_erc20_addr = await erc20_bridger.get_l2_erc20_address(l1_token_address, l1_signer.provider)
-
-    l2_token = erc20_bridger.get_l2_token_contract(l2_signer.provider, l2_erc20_addr)
-
-    l1_erc20_addr = await erc20_bridger.get_l1_erc20_address(l2_erc20_addr, l2_signer.provider)
-
-    assert l1_erc20_addr == l1_token_address, "getERC20L1Address/getERC20L2Address failed with proper token address"
-
-    test_wallet_l2_balance = l2_token.functions.balanceOf(l2_signer.account.address).call()
-
-    assert test_wallet_l2_balance == deposit_amount, "l2 wallet not updated after deposit"
-
-    return {"l1Token": l1_token, "waitRes": wait_res, "l2Token": l2_token}
+    return {
+        "parentToken": parent_token,
+        "waitRes": wait_res,
+        "childToken": child_token
+    }
 
 
-def fund(signer, amount=None, funding_key=None):
+def get_random_signer(provider):
+    """Get a random signer connected to provider"""
+    wallet = Account.create()
+    return SignerOrProvider(wallet, provider)
+
+
+async def fund(
+    signer: SignerOrProvider,
+    amount: Optional[Wei] = None,
+    funding_key: Optional[str] = None
+) -> None:
+    """
+    Fund an account
+    
+    Args:
+        signer: Account to fund
+        amount: Amount to fund (defaults to PRE_FUND_AMOUNT)
+        funding_key: Private key of funding account
+    """
     wallet = get_signer(signer.provider, funding_key)
-
     tx = {
         "from": wallet.address,
         "to": signer.account.address,
@@ -258,24 +378,54 @@ def fund(signer, amount=None, funding_key=None):
         "gasPrice": signer.provider.eth.gas_price,
         "chainId": signer.provider.eth.chain_id,
     }
-    estimated_gas = signer.provider.eth.estimate_gas(tx)
 
+    estimated_gas = signer.provider.eth.estimate_gas(tx)
     tx["gas"] = estimated_gas
 
     signed_tx = wallet.sign_transaction(tx)
     tx_hash = signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-    tx_receipt = signer.provider.eth.wait_for_transaction_receipt(tx_hash)
-
-    return tx_receipt
+    await signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
 
-def fund_l1(l1_signer, amount=None):
-    fund(l1_signer, amount, config["ETH_KEY"])
+async def fund_parent_signer(
+    parent_signer: SignerOrProvider,
+    amount: Optional[Wei] = None
+) -> None:
+    """Fund an account on parent chain"""
+    await fund(parent_signer, amount, config["ethKey"])
 
 
-def fund_l2(l2_signer, amount=None):
-    fund(l2_signer, amount, config["ARB_KEY"])
+async def fund_child_signer(
+    child_signer: SignerOrProvider,
+    amount: Optional[Wei] = None
+) -> None:
+    """Fund an account on child chain"""
+    await fund(child_signer, amount, config["arbKey"])
 
 
-def wait(ms=0):
-    time.sleep(ms / 1000)
+async def wait(ms: int = 0) -> None:
+    """Wait for specified milliseconds"""
+    await asyncio.sleep(ms / 1000)
+
+
+def skip_if_mainnet() -> None:
+    """Skip test if running on mainnet"""
+    chain_id = None
+
+    async def _check(test_context):
+        nonlocal chain_id
+        if chain_id is None:
+            test_setup = await get_test_setup()
+            chain_id = test_setup["childChain"].chain_id
+
+        if chain_id in [42161, 42170]:  # Arbitrum One or Nova
+            print("You're writing to the chain on mainnet lol stop")
+            test_context.skip()
+
+    return _check
+
+
+async def get_test_setup():
+    """Get test setup for integration tests"""
+    from src.scripts.test_setup import test_setup
+    return await test_setup()

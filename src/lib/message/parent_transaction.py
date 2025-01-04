@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Dict
+from typing import Any, List, Dict
 
 from web3.types import TxReceipt
 
@@ -56,30 +56,30 @@ class ParentTransactionReceipt(CaseDict):
         
         return False
 
-    def get_message_delivered_events(self, provider) -> List[Dict[str, Any]]:
+    def get_message_delivered_events(self) -> List[Dict[str, Any]]:
         """Get MessageDelivered events"""
+        print(self.logs)
         return parse_typed_logs(
-            provider=provider,
             contract_name="Bridge", 
             logs=self.logs,
             event_name="MessageDelivered",
-            is_classic=False,
+            
         )
 
-    def get_inbox_message_delivered_events(self, provider) -> List[Dict[str, Any]]:
+    def get_inbox_message_delivered_events(self) -> List[Dict[str, Any]]:
         """Get InboxMessageDelivered events"""
         return parse_typed_logs(
-            provider=provider,
             contract_name="Inbox",
             logs=self.logs, 
             event_name="InboxMessageDelivered",
-            is_classic=False,
+            
         )
 
-    def get_message_events(self, provider) -> List[Dict[str, Any]]:
+    def get_message_events(self) -> List[Dict[str, Any]]:
         """Get combined message events"""
-        bridge_messages = self.get_message_delivered_events(provider)
-        inbox_messages = self.get_inbox_message_delivered_events(provider)
+        bridge_messages = self.get_message_delivered_events()
+        print('bridge_messages:', bridge_messages)
+        inbox_messages = self.get_inbox_message_delivered_events()
 
         if len(bridge_messages) != len(inbox_messages):
             raise ArbSdkError(
@@ -108,7 +108,7 @@ class ParentTransactionReceipt(CaseDict):
 
     async def get_eth_deposits(self, child_provider) -> List[EthDepositMessage]:
         """Get ETH deposit messages"""
-        messages = self.get_message_events(child_provider)
+        messages = self.get_message_events()
         eth_deposit_messages = []
 
         for e in messages:
@@ -129,7 +129,8 @@ class ParentTransactionReceipt(CaseDict):
     ) -> List[ParentToChildMessageReaderClassic]:
         """Get classic parent-to-child messages"""
         network = await get_arbitrum_network(child_provider)
-        chain_id = network.chain_id
+        chain_id = network.chainId
+
         is_classic = await self.is_classic(child_provider)
 
         if not is_classic:
@@ -140,7 +141,7 @@ class ParentTransactionReceipt(CaseDict):
 
         message_nums = [
             msg["messageNum"] 
-            for msg in self.get_inbox_message_delivered_events(child_provider)
+            for msg in self.get_inbox_message_delivered_events()
         ]
 
         return [
@@ -161,7 +162,8 @@ class ParentTransactionReceipt(CaseDict):
                 "Use 'getParentToChildMessagesClassic' for classic transactions."
             )
 
-        events = self.get_message_events(provider)
+        events = self.get_message_events()
+        print('events:', events)
         return [
             ParentToChildMessage.from_event_components(
                 child_signer_or_provider,
@@ -176,18 +178,17 @@ class ParentTransactionReceipt(CaseDict):
                 event["bridgeMessageEvent"]["kind"] == 
                     InboxMessageKind.L1MessageType_submitRetryableTx.value
                 and event["bridgeMessageEvent"]["inbox"].lower() == 
-                    network.eth_bridge.inbox.lower()
+                    network.ethBridge.inbox.lower()
             )
         ]
 
-    def get_token_deposit_events(self, provider):
+    def get_token_deposit_events(self):
         """Get token deposit events"""
         return parse_typed_logs(
-            provider=provider,
             contract_name="L1ERC20Gateway",
             logs=self.logs,
             event_name="DepositInitiated",
-            is_classic=True,
+            
         )
 
     @staticmethod

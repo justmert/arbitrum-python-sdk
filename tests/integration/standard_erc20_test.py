@@ -33,7 +33,7 @@ async def setup_state():
         provider=setup.l1_signer.provider,
         deployer=setup.l1_signer.account,
         contract_name="TestERC20",
-        is_classic=True,
+        
     )
     tx_hash = test_token.functions.mint().transact({"from": setup.l1_signer.account.address})
 
@@ -158,13 +158,13 @@ async def test_deposit_with_low_funds_fails_first_redeem_then_succeeds(setup_sta
         provider=setup_state.l2_signer.provider,
         contract_name="ArbRetryableTx",
         address=ARB_RETRYABLE_TX_ADDRESS,
-        is_classic=False,
+        
     )
     n_interface = load_contract(
         provider=setup_state.l2_signer.provider,
         contract_name="NodeInterface",
         address=NODE_INTERFACE_ADDRESS,
-        is_classic=False,
+        
     )
 
     redeem_function_data = arb_retryable_tx.encodeABI(
@@ -208,7 +208,7 @@ async def test_withdraws_erc20(setup_state):
                 provider=setup_state.l1_signer.provider,
                 contract_name="ERC20",
                 address=setup_state.l1_token.address,
-                is_classic=True,
+                
             ),
         }
     )

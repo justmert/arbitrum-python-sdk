@@ -1,5 +1,3 @@
-from web3 import Web3
-
 from src.lib.data_entities.rpc import (
     ArbBlock,
     ArbBlockWithTransactions,

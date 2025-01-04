@@ -1,0 +1,260 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IL2ForwarderFactory",
+  "sourceName": "contracts/interfaces/IL2ForwarderFactory.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "OnlyL1Teleporter",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "l2Forwarder",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "l2Token",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "l3FeeTokenL2Addr",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "routerOrInbox",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "gasLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "gasPriceBid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxSubmissionCost",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct IL2Forwarder.L2ForwarderParams",
+          "name": "params",
+          "type": "tuple"
+        }
+      ],
+      "name": "CalledL2Forwarder",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "l2Forwarder",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "routerOrInbox",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "CreatedL2Forwarder",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "aliasedL1Teleporter",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "l2Token",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "l3FeeTokenL2Addr",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "routerOrInbox",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "gasLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "gasPriceBid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxSubmissionCost",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IL2Forwarder.L2ForwarderParams",
+          "name": "params",
+          "type": "tuple"
+        }
+      ],
+      "name": "callForwarder",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "routerOrInbox",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "createL2Forwarder",
+      "outputs": [
+        {
+          "internalType": "contract IL2Forwarder",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "routerOrInbox",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "l2ForwarderAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "l2ForwarderFactory",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "l2ForwarderImplementation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

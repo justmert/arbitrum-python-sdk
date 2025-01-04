@@ -120,7 +120,7 @@ class EventFetcher:
                 provider=self.provider,
                 contract_name=contract_factory,
                 address=contract_address,
-                is_classic=is_classic,
+                
             )
         elif isinstance(contract_factory, Contract):
             contract = contract_factory

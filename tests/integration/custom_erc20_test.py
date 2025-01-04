@@ -73,7 +73,7 @@ async def test_withdraw_token(setup_state):
                 provider=setup_state.l1_signer.provider,
                 contract_name="ERC20",
                 address=setup_state.l1_custom_token.address,
-                is_classic=True,
+                
             ),
         }
     )
@@ -84,7 +84,7 @@ async def register_custom_token(l2_network, l1_signer, l2_signer, admin_erc20_br
     l1_custom_token = deploy_abi_contract(
         provider=l1_signer.provider,
         contract_name="TestCustomTokenL1",
-        is_classic=True,
+        
         deployer=l1_signer.account,
         constructor_args=[l2_network.token_bridge.l1_custom_gateway, l2_network.token_bridge.l1_gateway_router],
     )
@@ -95,7 +95,7 @@ async def register_custom_token(l2_network, l1_signer, l2_signer, admin_erc20_br
     l2_custom_token = deploy_abi_contract(
         provider=l2_signer.provider,
         contract_name="TestArbCustomToken",
-        is_classic=True,
+        
         deployer=l2_signer.account,
         constructor_args=[l2_network.token_bridge.l2_custom_gateway, l1_custom_token.address],
     )
@@ -107,25 +107,25 @@ async def register_custom_token(l2_network, l1_signer, l2_signer, admin_erc20_br
         provider=l1_signer.provider,
         contract_name="L1GatewayRouter",
         address=l2_network.token_bridge.l1_gateway_router,
-        is_classic=True,
+        
     )
     l2_gateway_router = load_contract(
         provider=l2_signer.provider,
         contract_name="L2GatewayRouter",
         address=l2_network.token_bridge.l2_gateway_router,
-        is_classic=True,
+        
     )
     l1_custom_gateway = load_contract(
         provider=l1_signer.provider,
         contract_name="L1CustomGateway",
         address=l2_network.token_bridge.l1_custom_gateway,
-        is_classic=True,
+        
     )
     l2_custom_gateway = load_contract(
         provider=l2_signer.provider,
         contract_name="L1CustomGateway",
         address=l2_network.token_bridge.l2_custom_gateway,
-        is_classic=True,
+        
     )
 
     start_l1_gateway_address = l1_gateway_router.functions.l1TokenToGateway(l1_custom_token.address).call()

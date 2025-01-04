@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, Dict, List, Union, Any
 from eth_typing import HexAddress
-from web3 import Web3
 from web3.constants import ADDRESS_ZERO
 
 from src.lib.data_entities.constants import (
@@ -11,15 +10,17 @@ from src.lib.data_entities.constants import (
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.helper import load_contract
-from src.lib.utils.types import Prettify  # If you have a custom 'Prettify' type or function
+from src.lib.utils.helper import CaseDict
+from dataclasses import fields
 
 
 @dataclass
-class EthBridge:
+class EthBridge(CaseDict):
     """
     Represents the core bridging contracts (ethBridge) on an Arbitrum chain.
     Usually includes the main 'bridge', 'inbox', 'outbox', 'rollup', etc.
     """
+
     bridge: HexAddress
     inbox: HexAddress
     sequencerInbox: HexAddress
@@ -29,11 +30,12 @@ class EthBridge:
 
 
 @dataclass
-class TokenBridge:
+class TokenBridge(CaseDict):
     """
-    Represents the token bridging contracts. 
+    Represents the token bridging contracts.
     For bridging ERC20 tokens, custom tokens, WETH, etc.
     """
+
     parentGatewayRouter: HexAddress
     childGatewayRouter: HexAddress
     parentErc20Gateway: HexAddress
@@ -51,30 +53,32 @@ class TokenBridge:
 
 
 @dataclass
-class Teleporter:
+class Teleporter(CaseDict):
     """
-    Represents teleporter contracts for bridging cross-chain messages, 
+    Represents teleporter contracts for bridging cross-chain messages,
     includes e.g. l2ForwarderFactory addresses, etc.
     """
+
     l1Teleporter: HexAddress
     l2ForwarderFactory: HexAddress
 
 
 @dataclass
-class ArbitrumNetwork:
+class ArbitrumNetwork(CaseDict):
     """
     Represents an Arbitrum chain, either an L2 or further child chain.
     Contains addresses for bridging, the chain ID, whether it's testnet or custom, etc.
     """
+
     name: str
     chainId: int
     parentChainId: int
     ethBridge: EthBridge
     tokenBridge: Optional[TokenBridge]
-    teleporter: Optional[Teleporter]
     confirmPeriodBlocks: int
     isCustom: bool
-    isTestnet: bool
+    teleporter: Optional[Teleporter] = None
+    isTestnet: bool = True
     explorerUrl: Optional[str] = None
     retryableLifetimeSeconds: Optional[int] = None
     nativeToken: Optional[HexAddress] = None
@@ -160,9 +164,7 @@ def is_parent_network(parent_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> 
     return any(net.parentChainId == parent_chain_id for net in get_arbitrum_networks())
 
 
-def get_children_for_network(
-    parent_chain_or_chain_id: Union[ArbitrumNetwork, int]
-) -> List[ArbitrumNetwork]:
+def get_children_for_network(parent_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> List[ArbitrumNetwork]:
     """
     Returns all child chains that have the specified chain as their parent.
 
@@ -177,9 +179,7 @@ def get_children_for_network(
     return [c for c in get_arbitrum_networks() if c.parentChainId == parent_chain_id]
 
 
-async def get_arbitrum_network(
-    provider_or_chain_id: Union[SignerOrProvider, int]
-) -> ArbitrumNetwork:
+async def get_arbitrum_network(provider_or_chain_id: Union[SignerOrProvider, int]) -> ArbitrumNetwork:
     """
     Returns the ArbitrumNetwork associated with the given provider or chain ID.
 
@@ -234,7 +234,6 @@ async def get_native_token(bridge: str, provider: SignerOrProvider) -> str:
             provider=provider,
             contract_name="IERC20Bridge",
             address=bridge,
-            is_classic=True,
         )
         return await bridge_contract.functions.nativeToken().call()
     except Exception:
@@ -261,7 +260,6 @@ async def get_arbitrum_network_information_from_rollup(
         provider=parent_provider,
         contract_name="RollupAdminLogic",
         address=rollup_address,
-        is_classic=True,
     )
     chain_id = parent_provider.eth.chain_id
     bridge = await rollup.functions.bridge().call()
@@ -285,8 +283,7 @@ async def get_arbitrum_network_information_from_rollup(
 
 
 def register_custom_arbitrum_network(
-    network: ArbitrumNetwork,
-    options: Optional[Dict[str, bool]] = None
+    network: ArbitrumNetwork, options: Optional[Dict[str, bool]] = None
 ) -> ArbitrumNetwork:
     """
     Registers a custom (user-defined) Arbitrum network in the global 'networks' dictionary.
@@ -300,9 +297,7 @@ def register_custom_arbitrum_network(
     throw_if_already_registered = options.get("throwIfAlreadyRegistered", False) if options else False
 
     if not network.isCustom:
-        raise ArbSdkError(
-            f"Custom network {network.chainId} must have isCustom flag set to true"
-        )
+        raise ArbSdkError(f"Custom network {network.chainId} must have isCustom flag set to true")
 
     if network.chainId in networks:
         message = f"Network {network.chainId} already included"
@@ -316,7 +311,7 @@ def register_custom_arbitrum_network(
 
 def create_network_state_handler():
     """
-    Creates a handler to reset networks to an initial default state. 
+    Creates a handler to reset networks to an initial default state.
     Useful for development or testing when you want to revert the 'networks' dict.
     """
     initial_state = networks.copy()
@@ -328,9 +323,7 @@ def create_network_state_handler():
     return {"resetNetworksToDefault": reset_networks_to_default}
 
 
-def get_nitro_genesis_block(
-    arbitrum_chain_or_chain_id: Union[ArbitrumNetwork, int]
-) -> int:
+def get_nitro_genesis_block(arbitrum_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> int:
     """
     Returns the block number where Nitro upgrade began for a given chain.
     For Arbitrum One, returns ARB1_NITRO_GENESIS_L2_BLOCK; otherwise 0.
@@ -344,30 +337,24 @@ def get_nitro_genesis_block(
         else arbitrum_chain_or_chain_id
     )
 
-    # Only Arbitrum One had a distinct pre-Nitro period; 
+    # Only Arbitrum One had a distinct pre-Nitro period;
     # all others started on Nitro from block 0.
     return ARB1_NITRO_GENESIS_L2_BLOCK if chain_id == 42161 else 0
 
 
-async def get_multicall_address(
-    provider_or_chain_id: Union[SignerOrProvider, int]
-) -> str:
+async def get_multicall_address(provider_or_chain_id: Union[SignerOrProvider, int]) -> str:
     """
-    Returns the multicall contract address for a chain or for the chain 
+    Returns the multicall contract address for a chain or for the chain
     indicated by the given provider.
-    
-    If not found, attempts to see if any chain references this chain as parent 
+
+    If not found, attempts to see if any chain references this chain as parent
     and returns the parent's multicall address.
 
     :param provider_or_chain_id: Either an int chain ID or a SignerOrProvider
     :return: The multicall address (string).
     :raises ValueError if chain not recognized
     """
-    chain_id = (
-        provider_or_chain_id
-        if isinstance(provider_or_chain_id, int)
-        else provider_or_chain_id.eth.chain_id
-    )
+    chain_id = provider_or_chain_id if isinstance(provider_or_chain_id, int) else provider_or_chain_id.eth.chain_id
 
     # If the chain is recognized in 'networks'
     chain = next((c for c in get_arbitrum_networks() if c.chainId == chain_id), None)
@@ -392,44 +379,66 @@ def map_l2_network_token_bridge_to_token_bridge(input_bridge) -> TokenBridge:
     :return: A new TokenBridge dataclass instance reflecting the updated naming conventions.
     """
     return TokenBridge(
-        parentGatewayRouter=input_bridge.l1GatewayRouter,
-        childGatewayRouter=input_bridge.l2GatewayRouter,
-        parentErc20Gateway=input_bridge.l1ERC20Gateway,
-        childErc20Gateway=input_bridge.l2ERC20Gateway,
-        parentCustomGateway=input_bridge.l1CustomGateway,
-        childCustomGateway=input_bridge.l2CustomGateway,
-        parentWethGateway=input_bridge.l1WethGateway,
-        childWethGateway=input_bridge.l2WethGateway,
-        parentWeth=input_bridge.l1Weth,
-        childWeth=input_bridge.l2Weth,
-        parentProxyAdmin=input_bridge.l1ProxyAdmin,
-        childProxyAdmin=input_bridge.l2ProxyAdmin,
-        parentMultiCall=input_bridge.l1MultiCall,
-        childMultiCall=input_bridge.l2Multicall,
+        parentGatewayRouter=input_bridge["l1GatewayRouter"],
+        childGatewayRouter=input_bridge["l2GatewayRouter"],
+        parentErc20Gateway=input_bridge["l1ERC20Gateway"],
+        childErc20Gateway=input_bridge["l2ERC20Gateway"],
+        parentCustomGateway=input_bridge["l1CustomGateway"],
+        childCustomGateway=input_bridge["l2CustomGateway"],
+        parentWethGateway=input_bridge["l1WethGateway"],
+        childWethGateway=input_bridge["l2WethGateway"],
+        parentWeth=input_bridge["l1Weth"],
+        childWeth=input_bridge["l2Weth"],
+        parentProxyAdmin=input_bridge["l1ProxyAdmin"],
+        childProxyAdmin=input_bridge["l2ProxyAdmin"],
+        parentMultiCall=input_bridge["l1MultiCall"],
+        childMultiCall=input_bridge["l2Multicall"],
     )
 
 
-def map_l2_network_to_arbitrum_network(l2_network) -> ArbitrumNetwork:
+def map_l2_network_to_arbitrum_network(l2_network: Dict[str, Any]) -> ArbitrumNetwork:
     """
     Maps the old L2Network object (SDK v3) to a new ArbitrumNetwork (SDK v4).
     Retains other fields while renaming chainID -> chainId, partnerChainID -> parentChainId, etc.
 
-    :param l2_network: The old L2Network object
-    :return: A new ArbitrumNetwork object 
+    :param l2_network: The old L2Network object as a dictionary
+    :return: A new ArbitrumNetwork instance
     """
-    return ArbitrumNetwork(
-        **{
-            **l2_network.__dict__,
-            "chainId": l2_network.chainID,
-            "parentChainId": l2_network.partnerChainID,
-            "tokenBridge": map_l2_network_token_bridge_to_token_bridge(l2_network.tokenBridge),
-        }
-    )
+    # Start by copying all properties
+    mapped_network = l2_network.copy()
+
+    # Rename specific fields
+    if 'chainID' in mapped_network:
+        mapped_network['chainId'] = mapped_network.pop('chainID')
+
+    if 'partnerChainID' in mapped_network:
+        mapped_network['parentChainId'] = mapped_network.pop('partnerChainID')
+
+    # Map tokenBridge field
+    if 'tokenBridge' in mapped_network and mapped_network['tokenBridge'] is not None:
+        mapped_network['tokenBridge'] = map_l2_network_token_bridge_to_token_bridge(mapped_network['tokenBridge'])
+
+    # Convert ethBridge dict to EthBridge dataclass
+    if 'ethBridge' in mapped_network and isinstance(mapped_network['ethBridge'], dict):
+        mapped_network['ethBridge'] = EthBridge(**mapped_network['ethBridge'])
+
+    # Convert teleporter dict to Teleporter dataclass if present
+    if 'teleporter' in mapped_network and isinstance(mapped_network['teleporter'], dict):
+        mapped_network['teleporter'] = Teleporter(**mapped_network['teleporter'])
+
+    # Define the allowed keys based on ArbitrumNetwork dataclass
+    allowed_keys = {field.name for field in fields(ArbitrumNetwork)}
+
+    # Filter the mapped_network to include only allowed keys
+    filtered_network = {k: v for k, v in mapped_network.items() if k in allowed_keys}
+
+    # Create and return the ArbitrumNetwork instance
+    return ArbitrumNetwork(**filtered_network)
 
 
 def assert_arbitrum_network_has_token_bridge(network: ArbitrumNetwork) -> None:
     """
-    Asserts that the given ArbitrumNetwork has a valid TokenBridge object. 
+    Asserts that the given ArbitrumNetwork has a valid TokenBridge object.
     Used for network calls that require bridging info.
 
     :param network: The ArbitrumNetwork
@@ -444,10 +453,10 @@ def assert_arbitrum_network_has_token_bridge(network: ArbitrumNetwork) -> None:
 
 def is_arbitrum_network_native_token_ether(network: ArbitrumNetwork) -> bool:
     """
-    Checks if a network uses ETH as its native/gas token. 
+    Checks if a network uses ETH as its native/gas token.
     If 'nativeToken' is unset or AddressZero, it's ETH-based.
 
-    :param network: The ArbitrumNetwork 
+    :param network: The ArbitrumNetwork
     :return: True if ETH-based, False if a custom ERC20 is used as the gas token.
     """
     return (network.nativeToken is None) or (network.nativeToken == ADDRESS_ZERO)

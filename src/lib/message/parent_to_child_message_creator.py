@@ -1,4 +1,3 @@
-from ethers_utils import constants
 from src.lib.data_entities.errors import MissingProviderArbSdkError
 from src.lib.data_entities.networks import (
     get_arbitrum_network,
@@ -12,7 +11,7 @@ from src.lib.message.parent_transaction import ParentTransactionReceipt
 from src.lib.message.parent_to_child_message_gas_estimator import (
     ParentToChildMessageGasEstimator
 )
-from src.lib.utils.helper import load_contract
+from src.lib.utils.helper import create_contract_interface, load_contract
 from src.lib.utils.lib import get_base_fee
 
 
@@ -72,11 +71,11 @@ class ParentToChildMessageCreator:
         # Inbox__factory.createInterface() or ERC20Inbox__factory.createInterface()
         if not native_token_is_eth:
             # use ERC20Inbox
-            erc20_inbox_contract = load_contract(
+            erc20_inbox_contract = create_contract_interface(
                 contract_name="ERC20Inbox",
-                address="0x",  # Not used in encodeABI, so dummy
-                provider=None,  # We only need the ABI here
-                is_classic=False,
+                # address="0x",  # Not used in encodeABI, so dummy
+                # provider=None,  # We only need the ABI here
+                
             )
             return erc20_inbox_contract.encodeABI(
                 fn_name="createRetryableTicket",
@@ -94,11 +93,11 @@ class ParentToChildMessageCreator:
             )
 
         # else, native token is ETH -> use Inbox
-        inbox_contract = load_contract(
+        inbox_contract = create_contract_interface(
             contract_name="Inbox",
-            address="0x",
-            provider=None,
-            is_classic=False,
+            # address="0x",
+            # provider=None,
+            
         )
         return inbox_contract.encodeABI(
             fn_name="createRetryableTicket",
@@ -171,9 +170,9 @@ class ParentToChildMessageCreator:
 
         # Final transaction request
         tx_request = {
-            "to": child_network.eth_bridge.inbox,
+            "to": child_network.ethBridge.inbox,
             "data": function_data,
-            "value": estimates["deposit"] if native_token_is_eth else constants.Zero,
+            "value": estimates["deposit"] if native_token_is_eth else 0,
             "from": params["from"],
         }
 

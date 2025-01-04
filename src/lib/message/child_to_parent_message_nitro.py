@@ -14,8 +14,8 @@ from src.lib.utils.helper import format_contract_output, load_contract
 from src.lib.utils.lib import (
     get_block_ranges_for_l1_block,
     is_arbitrum_chain,
-    wait,
 )
+from typing import List, Optional
 
 # Same constants you had before, now referencing child->parent
 ASSERTION_CREATED_PADDING = 50
@@ -30,7 +30,7 @@ def get_child_block_range_cache_key(child_chain_id: int, l1_block_number: int) -
     return f"{child_chain_id}-{l1_block_number}"
 
 
-def set_child_block_range_cache(key: str, value: list[int | None]) -> None:
+def set_child_block_range_cache(key: str, value: List[Optional[int]]) -> None:
     """Cache the child block range under the given key."""
     child_block_range_cache[key] = value
 
@@ -42,7 +42,7 @@ async def get_block_ranges_for_l1_block_with_cache(
     Looks up the child block range for a given L1 block, using a shared cache to avoid repeated
     calls. Corresponds to getBlockRangesForL1BlockWithCache in TS code.
     """
-    child_chain_id = child_provider.eth.chainId
+    child_chain_id = child_provider.eth.chain_id
     key = get_child_block_range_cache_key(child_chain_id, for_l1_block)
 
     # Return cached value if exists
@@ -118,7 +118,7 @@ class ChildToParentMessageNitro:
                 "address": ARB_SYS_ADDRESS,
                 **filter_dict,
             },
-            is_classic=False,
+            
         )
         return events
 
@@ -151,7 +151,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             provider=child_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            is_classic=False,
+            
         )
 
         # callStatic.constructOutboxProof(...) in TS
@@ -175,7 +175,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             provider=self.parent_provider,
             contract_name="Outbox",
             address=child_chain.ethBridge.outbox,
-            is_classic=False,
+            
         )
         return outbox_contract.functions.isSpent(self.event["position"]).call()
 
@@ -298,7 +298,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                     provider=self.parent_provider,
                     contract_name="NodeInterface",
                     address=NODE_INTERFACE_ADDRESS,
-                    is_classic=False,
+                    
                 )
                 block_range = node_interface.functions.l2BlockRangeForL1(created_at_block).call()
                 block_range = format_contract_output(node_interface, "l2BlockRangeForL1", block_range)
@@ -361,7 +361,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             child_provider, logs[0] if logs else None
         )
 
-    async def get_batch_number(self, child_provider) -> int | None:
+    async def get_batch_number(self, child_provider) -> Optional[int]:
         """
         findBatchContainingBlock parallels TS logic, but might fail if the block doesn't exist yet.
         """
@@ -371,7 +371,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                     provider=child_provider,
                     contract_name="NodeInterface",
                     address=NODE_INTERFACE_ADDRESS,
-                    is_classic=False,
+                    
                 )
                 res = node_interface_contract.functions.findBatchContainingBlock(
                     self.event["arbBlockNum"]
@@ -392,7 +392,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                 provider=self.parent_provider,
                 contract_name="RollupUserLogic",  # or BoldRollupUserLogic if determined
                 address=child_chain.ethBridge.rollup,
-                is_classic=False,
+                
             )
 
             # latestConfirmed is the ID (nodeNum or assertionHash) of the last confirmed node
@@ -453,7 +453,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         await asyncio.sleep(retry_delay / 1000.0)
         return await self.wait_until_ready_to_execute(child_provider, retry_delay)
 
-    async def get_first_executable_block(self, child_provider) -> BlockNumber | None:
+    async def get_first_executable_block(self, child_provider) -> Optional[BlockNumber]:
         """
         getFirstExecutableBlock from the TS code:
         - If message can be or is already executed, return None
@@ -464,7 +464,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             provider=self.parent_provider,
             contract_name="RollupUserLogic",
             address=child_chain.ethBridge.rollup,
-            is_classic=False,
+            
         )
 
         current_status = await self.status(child_provider)
@@ -489,7 +489,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             argument_filters={},
             filter={
                 "fromBlock": max(
-                    latest_block - child_chain.confirm_period_blocks - ASSERTION_CONFIRMED_PADDING,
+                    latest_block - child_chain.confirmPeriodBlocks - ASSERTION_CONFIRMED_PADDING,
                     0,
                 ),
                 "toBlock": "latest",
@@ -510,7 +510,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         # we assume we must wait the max time for a new node + confirmation
         if last_send_count <= self.event["position"]:
             return (
-                child_chain.confirm_period_blocks
+                child_chain.confirmPeriodBlocks
                 + ASSERTION_CREATED_PADDING
                 + ASSERTION_CONFIRMED_PADDING
                 + latest_block
@@ -533,7 +533,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         if not found_log:
             # No logs, fallback
             return (
-                child_chain.confirm_period_blocks
+                child_chain.confirmPeriodBlocks
                 + ASSERTION_CREATED_PADDING
                 + ASSERTION_CONFIRMED_PADDING
                 + latest_block
@@ -575,7 +575,7 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
             provider=self.parent_signer.provider,
             contract_name="Outbox",
             address=child_chain.ethBridge.outbox,
-            is_classic=False,
+            
         )
 
         if overrides is None:

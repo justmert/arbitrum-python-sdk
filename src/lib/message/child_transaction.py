@@ -67,7 +67,7 @@ class ChildTransactionReceipt(CaseDict):
             contract_name="ArbSys",
             logs=self.logs,
             event_name="L2ToL1Transaction",
-            is_classic=False
+            
         )
 
         nitro_logs = parse_typed_logs(
@@ -75,7 +75,7 @@ class ChildTransactionReceipt(CaseDict):
             contract_name="ArbSys", 
             logs=self.logs,
             event_name="L2ToL1Tx",
-            is_classic=False
+            
         )
 
         return [*classic_logs, *nitro_logs]
@@ -106,7 +106,7 @@ class ChildTransactionReceipt(CaseDict):
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
             provider=child_provider,
-            is_classic=False,
+            
         )
         return node_interface.functions.getL1Confirmations(self.block_hash).call()
 
@@ -117,7 +117,7 @@ class ChildTransactionReceipt(CaseDict):
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
             provider=child_provider, 
-            is_classic=False,
+            
         )
 
         receipt = await arb_provider.get_transaction_receipt(self.transaction_hash)
