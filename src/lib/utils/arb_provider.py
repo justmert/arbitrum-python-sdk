@@ -76,10 +76,15 @@ class ArbitrumProvider:
         if isinstance(provider, SignerOrProvider):
             provider = provider.provider
         elif isinstance(provider, ArbitrumProvider):
-            provider = provider.provider
+            provider = provider._provider
 
-        self.provider = provider
+        self._provider = provider
         self.formatter = ArbFormatter()
+
+    @property
+    def provider(self):
+        return self._provider
+    
 
     async def get_transaction_receipt(self, transaction_hash: str) -> ArbTransactionReceipt:
         """
@@ -89,7 +94,7 @@ class ArbitrumProvider:
         :param transaction_hash: The tx hash to fetch
         :return: ArbTransactionReceipt with Arbitrum fields
         """
-        receipt = self.provider.eth.get_transaction_receipt(transaction_hash)
+        receipt = self._provider.eth.get_transaction_receipt(transaction_hash)
         return self.formatter.receipt(receipt)
 
     async def get_block_with_transactions(self, block_identifier) -> ArbBlockWithTransactions:
@@ -100,7 +105,7 @@ class ArbitrumProvider:
         :param block_identifier: e.g. 'latest', a block number, or a block hash
         :return: ArbBlockWithTransactions including Arbitrum fields
         """
-        block = self.provider.eth.get_block(
+        block = self._provider.eth.get_block(
             block_identifier, full_transactions=True
         )
         return self.formatter.block_with_transactions(block)
@@ -112,5 +117,5 @@ class ArbitrumProvider:
         :param block_identifier: e.g. 'latest', a block number, or a block hash
         :return: ArbBlock including Arbitrum fields
         """
-        block = self.provider.eth.get_block(block_identifier)
+        block = self._provider.eth.get_block(block_identifier)
         return self.formatter.block(block)

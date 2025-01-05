@@ -30,7 +30,7 @@ from src.lib.message.parent_to_child_message_gas_estimator import (
     ParentToChildMessageGasEstimator,
 )
 from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
-from src.lib.utils.helper import create_contract_interface, load_contract, get_address
+from src.lib.utils.helper import create_contract_instance, load_contract, get_address
 
 # ------------------------------------------------------------------------------------
 # Data structures and “type” equivalents
@@ -585,7 +585,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         if amount is None:
             amount = (1 << 256) - 1  # MaxUint256
 
-        erc20_contract = create_contract_interface(
+        erc20_contract = create_contract_instance(
             # provider=None,
             contract_name="IERC20",
             # address=erc20_address
@@ -700,7 +700,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         teleport_params = filled["teleportParams"]
         costs = filled["costs"]
 
-        teleporter_contract = create_contract_interface(
+        teleporter_contract = create_contract_instance(
             # l1_provider,
             "IL1Teleporter",
             # address=self.teleporter.l1Teleporter
@@ -1104,7 +1104,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             "gasPriceBid": 0,
             "maxSubmissionCost": 0,
         }
-        forwarder_factory = create_contract_interface(
+        forwarder_factory = create_contract_instance(
             # provider=None,
             contract_name="IL2ForwarderFactory",
             # address="0x0000000000000000000000000000000000000000"
@@ -1118,7 +1118,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         return total_bytes - 4
 
     def _decode_teleport_calldata(self, data: str) -> Dict[str, Any]:
-        teleporter_iface = create_contract_interface(
+        teleporter_iface = create_contract_instance(
             # provider=None,
             contract_name="IL1Teleporter",
             # address="0x0000000000000000000000000000000000000000"
@@ -1129,7 +1129,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         return decoded[1]
 
     def _decode_call_forwarder_calldata(self, data: str) -> Dict[str, Any]:
-        forwarder_factory = create_contract_interface(
+        forwarder_factory = create_contract_instance(
             # provider=None,
             contract_name="IL2ForwarderFactory",
             # address="0x0000000000000000000000000000000000000000"
@@ -1291,7 +1291,7 @@ class EthL1L3Bridger(BaseL1L3Bridger):
         }
 
     def _decode_create_retryable_ticket(self, data: str) -> Dict[str, Any]:
-        inbox_iface = create_contract_interface(
+        inbox_iface = create_contract_instance(
             # provider=None,
             contract_name="IInbox",
             # address="0x0000000000000000000000000000000000000000"

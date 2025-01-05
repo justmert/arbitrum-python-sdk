@@ -11,7 +11,7 @@ from src.lib.message.parent_transaction import ParentTransactionReceipt
 from src.lib.message.parent_to_child_message_gas_estimator import (
     ParentToChildMessageGasEstimator
 )
-from src.lib.utils.helper import create_contract_interface, load_contract
+from src.lib.utils.helper import create_contract_instance, load_contract
 from src.lib.utils.lib import get_base_fee
 
 
@@ -71,7 +71,7 @@ class ParentToChildMessageCreator:
         # Inbox__factory.createInterface() or ERC20Inbox__factory.createInterface()
         if not native_token_is_eth:
             # use ERC20Inbox
-            erc20_inbox_contract = create_contract_interface(
+            erc20_inbox_contract = create_contract_instance(
                 contract_name="ERC20Inbox",
                 # address="0x",  # Not used in encodeABI, so dummy
                 # provider=None,  # We only need the ABI here
@@ -93,7 +93,7 @@ class ParentToChildMessageCreator:
             )
 
         # else, native token is ETH -> use Inbox
-        inbox_contract = create_contract_interface(
+        inbox_contract = create_contract_instance(
             contract_name="Inbox",
             # address="0x",
             # provider=None,

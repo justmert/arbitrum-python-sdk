@@ -23,7 +23,6 @@ class RedeemTransaction:
         """Wait for redeem completion"""
         child_receipt = ChildTransactionReceipt(self.transaction)
         redeem_scheduled_events = child_receipt.get_redeem_scheduled_events(
-            self.child_provider
         )
 
         if len(redeem_scheduled_events) != 1:
@@ -60,10 +59,9 @@ class ChildTransactionReceipt(CaseDict):
             "status": tx.get("status"),
         })
 
-    def get_child_to_parent_events(self, provider) -> List[Dict[str, Any]]:
+    def get_child_to_parent_events(self) -> List[Dict[str, Any]]:
         """Get child-to-parent transaction events"""
         classic_logs = parse_typed_logs(
-            provider=provider,
             contract_name="ArbSys",
             logs=self.logs,
             event_name="L2ToL1Transaction",
@@ -71,7 +69,6 @@ class ChildTransactionReceipt(CaseDict):
         )
 
         nitro_logs = parse_typed_logs(
-            provider=provider,
             contract_name="ArbSys", 
             logs=self.logs,
             event_name="L2ToL1Tx",
@@ -80,10 +77,9 @@ class ChildTransactionReceipt(CaseDict):
 
         return [*classic_logs, *nitro_logs]
 
-    def get_redeem_scheduled_events(self, provider) -> List[Dict[str, Any]]:
+    def get_redeem_scheduled_events(self) -> List[Dict[str, Any]]:
         """Get redeem scheduled events"""
         return parse_typed_logs(
-            provider=provider,
             contract_name="ArbRetryableTx",
             logs=self.logs,
             event_name="RedeemScheduled"
@@ -97,7 +93,7 @@ class ChildTransactionReceipt(CaseDict):
 
         return [
             ChildToParentMessage.from_event(parent_signer_or_provider, log)
-            for log in self.get_child_to_parent_events(provider)
+            for log in self.get_child_to_parent_events()
         ]
 
     def get_batch_confirmations(self, child_provider) -> int:
@@ -116,8 +112,7 @@ class ChildTransactionReceipt(CaseDict):
         node_interface = load_contract(
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            provider=child_provider, 
-            
+            provider=arb_provider.provider, 
         )
 
         receipt = await arb_provider.get_transaction_receipt(self.transaction_hash)

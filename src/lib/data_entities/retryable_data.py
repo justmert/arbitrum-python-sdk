@@ -52,15 +52,15 @@ class RetryableData:
         :param max_fee_per_gas: The max L2 gas price
         :param data: The calldata (bytes) for the L2 contract call
         """
-        self.from_address = from_address
+        self.fromAddress = from_address
         self.to = to
-        self.l2_call_value = l2_call_value
+        self.l2CallValue = l2_call_value
         self.deposit = deposit
-        self.max_submission_cost = max_submission_cost
-        self.excess_fee_refund_address = excess_fee_refund_address
-        self.call_value_refund_address = call_value_refund_address
-        self.gas_limit = gas_limit
-        self.max_fee_per_gas = max_fee_per_gas
+        self.maxSubmissionCost = max_submission_cost
+        self.excessFeeRefundAddress = excess_fee_refund_address
+        self.callValueRefundAddress = call_value_refund_address
+        self.gasLimit = gas_limit
+        self.maxFeePerGas = max_fee_per_gas
         self.data = data
 
 

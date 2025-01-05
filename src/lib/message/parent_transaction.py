@@ -48,7 +48,7 @@ class ParentTransactionReceipt(CaseDict):
     async def is_classic(self, child_signer_or_provider):
         """Check if transaction is classic"""
         provider = SignerProviderUtils.get_provider_or_throw(child_signer_or_provider)
-        network = await get_arbitrum_network(provider)
+        network = get_arbitrum_network(provider)
 
         # All networks except Arbitrum One started with Nitro
         if network.chain_id == 42161:
@@ -58,7 +58,6 @@ class ParentTransactionReceipt(CaseDict):
 
     def get_message_delivered_events(self) -> List[Dict[str, Any]]:
         """Get MessageDelivered events"""
-        print(self.logs)
         return parse_typed_logs(
             contract_name="Bridge", 
             logs=self.logs,
@@ -78,7 +77,7 @@ class ParentTransactionReceipt(CaseDict):
     def get_message_events(self) -> List[Dict[str, Any]]:
         """Get combined message events"""
         bridge_messages = self.get_message_delivered_events()
-        print('bridge_messages:', bridge_messages)
+        
         inbox_messages = self.get_inbox_message_delivered_events()
 
         if len(bridge_messages) != len(inbox_messages):
@@ -128,7 +127,7 @@ class ParentTransactionReceipt(CaseDict):
         child_provider
     ) -> List[ParentToChildMessageReaderClassic]:
         """Get classic parent-to-child messages"""
-        network = await get_arbitrum_network(child_provider)
+        network = get_arbitrum_network(child_provider)
         chain_id = network.chainId
 
         is_classic = await self.is_classic(child_provider)
@@ -152,7 +151,7 @@ class ParentTransactionReceipt(CaseDict):
     async def get_parent_to_child_messages(self, child_signer_or_provider):
         """Get parent-to-child messages"""
         provider = SignerProviderUtils.get_provider_or_throw(child_signer_or_provider)
-        network = await get_arbitrum_network(provider)
+        network = get_arbitrum_network(provider)
         chain_id = network.chain_id
         is_classic = await self.is_classic(provider)
 
@@ -163,7 +162,7 @@ class ParentTransactionReceipt(CaseDict):
             )
 
         events = self.get_message_events()
-        print('events:', events)
+        
         return [
             ParentToChildMessage.from_event_components(
                 child_signer_or_provider,

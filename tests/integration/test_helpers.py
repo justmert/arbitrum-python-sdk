@@ -15,7 +15,7 @@ from src.lib.data_entities.networks import ArbitrumNetwork, assert_arbitrum_netw
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 
-from src.scripts.test_setup import config, get_signer
+from scripts.setup_common import config, get_signer
 
 from src.lib.utils.lib import scale_from_18_decimals_to_native_token_decimals
 
@@ -370,6 +370,7 @@ async def fund(
         funding_key: Private key of funding account
     """
     wallet = get_signer(signer.provider, funding_key)
+    print(f"Funding {wallet.address} with {amount if amount else PRE_FUND_AMOUNT}")
     tx = {
         "from": wallet.address,
         "to": signer.account.address,
@@ -384,7 +385,7 @@ async def fund(
 
     signed_tx = wallet.sign_transaction(tx)
     tx_hash = signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-    await signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+    signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
 
 async def fund_parent_signer(
@@ -427,5 +428,5 @@ def skip_if_mainnet() -> None:
 
 async def get_test_setup():
     """Get test setup for integration tests"""
-    from src.scripts.test_setup import test_setup
+    from scripts.test_setup import test_setup
     return await test_setup()

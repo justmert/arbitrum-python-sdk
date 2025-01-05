@@ -138,8 +138,8 @@ async def get_first_block_for_l1_block(
         return for_l1_block
 
     arb_provider = ArbitrumProvider(arbitrum_provider)
-    current_l2_block = arb_provider.provider.eth.block_number
-    chain_id = arb_provider.provider.eth.chain_id
+    current_l2_block = arb_provider._provider.eth.block_number
+    chain_id = arb_provider._provider.eth.chain_id
     nitro_genesis_block = get_nitro_genesis_block(chain_id)
 
     async def get_l1_block_number(l2_block_num: int) -> int:
@@ -205,7 +205,7 @@ async def get_block_ranges_for_l1_block(
     :return: A tuple (startBlock, endBlock) if found, else (None, None).
     """
     arb_provider = ArbitrumProvider(arbitrum_provider)
-    current_l2_block = arb_provider.provider.eth.block_number
+    current_l2_block = arb_provider._provider.eth.block_number
 
     if not max_arbitrum_block or max_arbitrum_block == "latest":
         max_arbitrum_block = current_l2_block

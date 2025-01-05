@@ -191,7 +191,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
 
         if creation_receipt:
             child_receipt = ChildTransactionReceipt(creation_receipt)
-            redeem_events = child_receipt.get_redeem_scheduled_events(self.child_provider)
+            redeem_events = child_receipt.get_redeem_scheduled_events()
 
             if len(redeem_events) == 1:
                 try:
@@ -206,7 +206,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
         return None
 
     async def get_successful_redeem(self):
-        chainNetwork = await get_arbitrum_network(self.child_provider)
+        chainNetwork = get_arbitrum_network(self.child_provider)
         event_fetcher = EventFetcher(self.child_provider)
         creation_receipt = await self.get_retryable_creation_receipt()
 

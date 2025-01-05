@@ -6,7 +6,7 @@ from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import get_multicall_address
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
-from src.lib.utils.helper import create_contract_interface, load_contract
+from src.lib.utils.helper import create_contract_instance, load_contract
 
 class MultiCaller:
     """
@@ -27,7 +27,7 @@ class MultiCaller:
                 raise ArbSdkError("No underlying provider found in SignerOrProvider.")
             self.provider = provider.provider
         elif isinstance(provider, ArbitrumProvider):
-            self.provider = provider.provider
+            self.provider = provider._provider
         else:
             raise ArbSdkError("Invalid provider type for MultiCaller.")
 
@@ -52,7 +52,7 @@ class MultiCaller:
 
         :return: A dict with 'targetAddr', 'encoder', 'decoder'
         """
-        contract = create_contract_interface(
+        contract = create_contract_instance(
             # provider=self.provider,
             contract_name="Multicall2",
             # address=self.address,
@@ -72,7 +72,7 @@ class MultiCaller:
 
         :return: A dict with 'targetAddr', 'encoder', 'decoder'
         """
-        contract = create_contract_interface(
+        contract = create_contract_instance(
             # provider=self.provider,
             contract_name="Multicall2",
             # address=self.address,
@@ -141,7 +141,7 @@ class MultiCaller:
             options = {"name": True}
 
         # We'll gather input calls, then decode them in batch
-        contract = create_contract_interface("ERC20")
+        contract = create_contract_instance("ERC20")
         
         inputs: List[Dict[str, Any]] = []
 

@@ -188,10 +188,10 @@ class ParentToChildMessageGasEstimator:
         # Now figure out the deposit
         # The new code scales from 18 decimals to the child chain's native decimals if needed
         child_network = get_arbitrum_network(self.child_provider)
-        decimals = await get_native_token_decimals({
-            "parentProvider": parent_provider,
-            "childNetwork": child_network,
-        })
+        decimals = await get_native_token_decimals(
+            parent_provider=parent_provider,
+            child_network=child_network,
+        )
 
         deposit = options.get("deposit", {}).get("base")
         if deposit is None:
@@ -201,10 +201,11 @@ class ParentToChildMessageGasEstimator:
             deposit_wei += max_submission_fee_estimate
             deposit_wei += retryable_estimate_data["l2CallValue"]
 
-            deposit = scale_from_18_decimals_to_native_token_decimals({
-                "amount": deposit_wei,
-                "decimals": decimals,
-            })
+            deposit = scale_from_18_decimals_to_native_token_decimals(
+            amount=deposit_wei,
+            decimals=decimals,
+            
+            )
 
         return {
             "gasLimit": gas_limit,

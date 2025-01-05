@@ -19,6 +19,9 @@ class AssetBridger(ABC):
                               (including child_network.chain_id, child_network.parent_chain_id, etc.)
         :raises ArbSdkError: If the parent chain ID is invalid or undefined
         """
+        
+        child_network['parent_chain_id']
+        
         if not child_network or not hasattr(child_network, "parent_chain_id"):
             raise ArbSdkError("Invalid or missing child_network object.")
         

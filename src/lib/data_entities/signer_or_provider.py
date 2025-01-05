@@ -53,6 +53,39 @@ class SignerProviderUtils:
         return False
 
     @staticmethod
+    def get_signer(signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]) -> Optional[Account]:
+        """
+        If 'signer_or_provider' is effectively a signer, return it.
+        If it's a provider, attempt to get the underlying signer, else None.
+
+        :param signer_or_provider: Could be a Web3 provider, a local signer, or the SignerOrProvider class.
+        :return: The signer object if a signer is available, or None otherwise.
+        """
+        if isinstance(signer_or_provider, LocalAccount):
+            return signer_or_provider
+        elif isinstance(signer_or_provider, Account):
+            return signer_or_provider
+        elif isinstance(signer_or_provider, SignerOrProvider):
+            return signer_or_provider.account
+        return None
+    
+    @staticmethod
+    def get_signer_or_throw(
+        signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]
+    ) -> Account:
+        """
+        Same as get_signer(...) but throws an error if no signer is found.
+
+        :param signer_or_provider: Potential signer or provider
+        :return: A LocalAccount signer
+        :raises MissingProviderArbSdkError if no signer is found.
+        """
+        signer = SignerProviderUtils.get_signer(signer_or_provider)
+        if not signer:
+            raise MissingProviderArbSdkError("signerOrProvider")
+        return signer
+
+    @staticmethod
     def get_provider(signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]) -> Optional[Web3]:
         """
         If 'signer_or_provider' is effectively a provider, return it.

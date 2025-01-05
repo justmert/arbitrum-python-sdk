@@ -21,7 +21,8 @@ from src.lib.message.child_transaction import ChildTransactionReceipt
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import (
     CaseDict,
-    create_contract_interface,
+    create_contract_instance,
+    create_contract_instance,
     is_contract_deployed,
     load_contract,
 )
@@ -56,7 +57,7 @@ class Erc20Bridger(AssetBridger):
         :param child_provider: A Web3 or similar provider connected to the child chain.
         :return: An instance of Erc20Bridger
         """
-        child_network = await get_arbitrum_network(child_provider)
+        child_network = get_arbitrum_network(child_provider)
         return cls(child_network)
 
     async def get_parent_gateway_address(self, erc20_parent_address, parent_provider):
@@ -161,7 +162,7 @@ class Erc20Bridger(AssetBridger):
             SignerProviderUtils.get_provider_or_throw(params["parentProvider"]),
         )
 
-        i_erc20_interface = create_contract_interface(
+        i_erc20_interface = create_contract_instance(
             contract_name="ERC20",
             
         )
@@ -495,7 +496,8 @@ class Erc20Bridger(AssetBridger):
                 retryable_gas_overrides["gasLimit"]["min"] = self.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
 
         decimals = await get_native_token_decimals(
-            {"parentProvider": parent_provider, "childNetwork": self.child_network}
+            parent_provider=parent_provider,
+            child_network=self.child_network,
         )
 
         def deposit_func(deposit_params):
@@ -508,7 +510,7 @@ class Erc20Bridger(AssetBridger):
             inner_data = self.get_deposit_request_outbound_transfer_inner_data(deposit_params, decimals)
 
             # Load the L1GatewayRouter ABI interface
-            i_gateway_router = create_contract_interface(
+            i_gateway_router = create_contract_instance(
                 # provider=parent_provider,
                 contract_name="L1GatewayRouter",
                 
@@ -665,7 +667,7 @@ class Erc20Bridger(AssetBridger):
         #     provider = params["childSigner"].provider
 
         # Create function data for L2GatewayRouter.outboundTransfer
-        router_interface = create_contract_interface(
+        router_interface = create_contract_instance(
             contract_name="L2GatewayRouter",
             
         )
@@ -817,7 +819,7 @@ class AdminErc20Bridger(Erc20Bridger):
         if self.native_token_is_eth:
             raise ValueError("Chain uses ETH as its native/gas token")
 
-        i_erc20_interface = create_contract_interface(
+        i_erc20_interface = create_contract_instance(
             contract_name="ERC20",
             
         )
@@ -947,7 +949,7 @@ class AdminErc20Bridger(Erc20Bridger):
             )
 
         native_token_decimals = await get_native_token_decimals(
-            {"parentProvider": parent_provider, "childNetwork": self.child_network}
+            parent_provider=parent_provider, child_network=self.child_network
         )
         GasParams = namedtuple("GasParams", ["maxSubmissionCost", "gasLimit"])
         from_address = parent_signer.account.address
@@ -1001,8 +1003,8 @@ class AdminErc20Bridger(Erc20Bridger):
             lambda p: encode_func_data(
                 GasParams(p["maxSubmissionCost"], p["gasLimit"]),
                 GasParams(
-                    RetryableDataTools.ErrorTriggeringParams["maxSubmissionCost"],
-                    RetryableDataTools.ErrorTriggeringParams["gasLimit"],
+                    gasLimit=RetryableDataTools.ErrorTriggeringParams['gasLimit'],
+                    maxSubmissionCost=1,
                 ),
                 p["maxFeePerGas"],
             ),

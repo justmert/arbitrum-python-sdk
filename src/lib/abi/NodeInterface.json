@@ -1,8 +1,61 @@
 {
   "_format": "hh-sol-artifact-1",
   "contractName": "NodeInterface",
-  "sourceName": "contracts/rpc-utils/NodeInterface.sol",
+  "sourceName": "src/node-interface/NodeInterface.sol",
   "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "l2BlockNum",
+          "type": "uint64"
+        }
+      ],
+      "name": "blockL1Num",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "l1BlockNum",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "size",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "leaf",
+          "type": "uint64"
+        }
+      ],
+      "name": "constructOutboxProof",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "send",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "root",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32[]",
+          "name": "proof",
+          "type": "bytes32[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
     {
       "inputs": [
         {
@@ -17,17 +70,12 @@
         },
         {
           "internalType": "address",
-          "name": "destAddr",
+          "name": "to",
           "type": "address"
         },
         {
           "internalType": "uint256",
           "name": "l2CallValue",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "maxSubmissionCost",
           "type": "uint256"
         },
         {
@@ -41,14 +89,46 @@
           "type": "address"
         },
         {
-          "internalType": "uint256",
-          "name": "maxGas",
-          "type": "uint256"
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "estimateRetryableTicket",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "blockNum",
+          "type": "uint64"
+        }
+      ],
+      "name": "findBatchContainingBlock",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "batch",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
         },
         {
-          "internalType": "uint256",
-          "name": "gasPriceBid",
-          "type": "uint256"
+          "internalType": "bool",
+          "name": "contractCreation",
+          "type": "bool"
         },
         {
           "internalType": "bytes",
@@ -56,20 +136,112 @@
           "type": "bytes"
         }
       ],
-      "name": "estimateRetryableTicket",
+      "name": "gasEstimateComponents",
       "outputs": [
         {
+          "internalType": "uint64",
+          "name": "gasEstimate",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "gasEstimateForL1",
+          "type": "uint64"
+        },
+        {
           "internalType": "uint256",
-          "name": "",
+          "name": "baseFee",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "l1BaseFeeEstimate",
           "type": "uint256"
         }
       ],
-      "stateMutability": "pure",
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "contractCreation",
+          "type": "bool"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "gasEstimateL1Component",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "gasEstimateForL1",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "baseFee",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "l1BaseFeeEstimate",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "blockHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getL1Confirmations",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "confirmations",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "blockNum",
+          "type": "uint64"
+        }
+      ],
+      "name": "l2BlockRangeForL1",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "firstBlock",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "lastBlock",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -85,7 +257,7 @@
           "type": "uint64"
         }
       ],
-      "name": "lookupMessageBatchProof",
+      "name": "legacyLookupMessageBatchProof",
       "outputs": [
         {
           "internalType": "bytes32[]",
@@ -134,6 +306,19 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nitroGenesisBlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "number",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
       "type": "function"
     }
   ],

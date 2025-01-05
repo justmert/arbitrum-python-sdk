@@ -12,7 +12,7 @@ from src.lib.data_entities.transaction_request import (
 from src.lib.message.parent_to_child_message_creator import ParentToChildMessageCreator
 from src.lib.message.parent_transaction import ParentTransactionReceipt
 from src.lib.message.child_transaction import ChildTransactionReceipt
-from src.lib.utils.helper import create_contract_interface
+from src.lib.utils.helper import create_contract_instance
 from src.lib.utils.lib import (
     load_contract,
     get_native_token_decimals,
@@ -42,7 +42,7 @@ class EthBridger(AssetBridger):
         :param child_provider: A Web3 provider for the child chain (Arbitrum).
         :return: An EthBridger instance configured for that child network.
         """
-        network = await get_arbitrum_network(child_provider)
+        network = get_arbitrum_network(child_provider)
         return EthBridger(network)
 
     def is_approve_gas_token_params(self, params: Dict[str, Any]) -> bool:
@@ -73,7 +73,7 @@ class EthBridger(AssetBridger):
             raise ValueError("Chain uses ETH as its native/gas token")
 
         # parent_provider = params.get("parentProvider") if params else None
-        erc20_interface = create_contract_interface(
+        erc20_interface = create_contract_instance(
             # provider=parent_provider,
             contract_name="ERC20",
             
@@ -134,7 +134,7 @@ class EthBridger(AssetBridger):
         # parent_provider = params.get("parentProvider")
 
         if not self.native_token_is_eth:
-            erc20_inbox = create_contract_interface(
+            erc20_inbox = create_contract_instance(
                 # provider=parent_provider,
                 contract_name="ERC20Inbox",
                 
@@ -144,7 +144,7 @@ class EthBridger(AssetBridger):
                 args=[params["amount"]],
             )
 
-        inbox = create_contract_interface(
+        inbox = create_contract_instance(
             # provider=parent_provider,
             contract_name="Inbox",
             
@@ -226,11 +226,9 @@ class EthBridger(AssetBridger):
           }
         :return: A ParentToChildTransactionRequest with "txRequest" & "retryableData".
         """
-        decimals = await get_native_token_decimals({
-            "parentProvider": params["parentProvider"],
-            "childNetwork": self.child_network,
-        })
-
+        decimals = await get_native_token_decimals(
+            parent_provider=params["parentProvider"],
+            child_network=self.child_network)
         # Convert the deposit amount to 18 decimals for the child chain
         amount_to_be_minted_on_child_chain = scale_from_native_token_decimals_to_18_decimals(
             amount=params["amount"],
@@ -305,7 +303,7 @@ class EthBridger(AssetBridger):
         :return: A ChildToParentTransactionRequest dict with "txRequest" & "estimateParentGasLimit"
         """
         # The child side uses ArbSys.withdrawEth(...) 
-        arb_sys = create_contract_interface(
+        arb_sys = create_contract_instance(
             # provider=params.get("childProvider") or params["childSigner"].provider,
             contract_name="ArbSys",
             # address=ARB_SYS_ADDRESS,

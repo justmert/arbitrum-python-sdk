@@ -10,8 +10,7 @@ from eth_typing import URI
 
 from src.lib.data_entities.networks import map_l2_network_to_arbitrum_network
 from src.lib.utils.helper import CaseDict, load_contract
-from src.scripts import PROJECT_DIRECTORY
-from src.lib.utils.helper import convert_dataclasses
+from src.lib import PROJECT_DIRECTORY
 
 env_path = os.path.join(PROJECT_DIRECTORY, ".env")
 dotenv.load_dotenv(dotenv_path=env_path)
@@ -123,11 +122,11 @@ async def main():
         output['l2Network'] = patched_networks['patchedL2Network']
 
 
-    json_ready_output = convert_dataclasses(output)
+    json_ready_output = CaseDict(output)
 
     # Write updated configuration
     with open("localNetwork.json", "w") as f:
-        json.dump(json_ready_output, f, indent=2)
+        json.dump(json_ready_output.to_dict(), f, indent=2)
     
     print("localNetwork.json updated")
 
