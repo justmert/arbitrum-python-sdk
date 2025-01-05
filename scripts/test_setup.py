@@ -32,7 +32,7 @@ from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
 )
 
 
-async def test_setup():
+def test_setup():
     """Setup test environment with bridgers and networks"""
     eth_provider = Web3(HTTPProvider(config["ethUrl"]))
     arb_provider = Web3(HTTPProvider(config["arbUrl"]))
@@ -41,8 +41,8 @@ async def test_setup():
     arb_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
 
 
-    parent_deployer = get_signer(eth_provider, config["ethKey"])
-    child_deployer = get_signer(arb_provider, config["arbKey"])
+    parent_deployer = SignerOrProvider(get_signer(eth_provider, config["ethKey"]), eth_provider)
+    child_deployer = SignerOrProvider(get_signer(arb_provider, config["arbKey"]), arb_provider)
 
     seed = Account.create()
     signer_private_key = seed.key.hex()
@@ -71,11 +71,11 @@ async def test_setup():
 
     # Handle custom fee token setup if needed
     if is_arbitrum_network_with_custom_fee_token():
-        await fund_parent_signer(parent_signer)
-        await fund_parent_custom_fee_token(parent_signer)
-        await approve_parent_custom_fee_token(parent_signer)
+         fund_parent_signer(parent_signer)
+         fund_parent_custom_fee_token(parent_signer)
+         approve_parent_custom_fee_token(parent_signer)
 
-    x = CaseDict(
+    return CaseDict(
         {
             "parentSigner": parent_signer,
             "childSigner": child_signer,
@@ -91,5 +91,3 @@ async def test_setup():
         }
     )
     
-    
-    return x

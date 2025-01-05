@@ -1,4 +1,4 @@
-import asyncio
+
 from typing import Optional, Tuple, Union
 
 from eth_typing import HexStr
@@ -11,18 +11,18 @@ from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import ArbitrumNetwork, get_nitro_genesis_block
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import load_contract
+import time
 
-
-async def wait(ms: int):
+def wait(ms: int):
     """
     Wait for the specified number of milliseconds.
 
     :param ms: Time in milliseconds to sleep.
     """
-    await asyncio.sleep(ms / 1000)
+    time.sleep(ms / 1000)
 
 
-async def get_base_fee(provider: Web3) -> int:
+def get_base_fee(provider: Web3) -> int:
     """
     Retrieves the base fee per gas from the latest block.
     
@@ -39,7 +39,7 @@ async def get_base_fee(provider: Web3) -> int:
     return base_fee
 
 
-async def get_transaction_receipt(
+def get_transaction_receipt(
     provider: Web3,
     tx_hash: HexStr,
     confirmations: Optional[int] = None,
@@ -93,7 +93,7 @@ def is_defined(value) -> bool:
     return value is not None
 
 
-async def is_arbitrum_chain(provider: Web3) -> bool:
+def is_arbitrum_chain(provider: Web3) -> bool:
     """
     Check if this provider is connected to an Arbitrum chain by calling arbOSVersion on ArbSys.
 
@@ -113,7 +113,7 @@ async def is_arbitrum_chain(provider: Web3) -> bool:
         return False
 
 
-async def get_first_block_for_l1_block(
+def get_first_block_for_l1_block(
     arbitrum_provider: Web3,
     for_l1_block: int,
     allow_greater: bool = False,
@@ -134,7 +134,7 @@ async def get_first_block_for_l1_block(
     :return: The L2 block number or None if not found.
     """
     # If it's not actually an Arbitrum chain, we just return for_l1_block as no search is needed
-    if not await is_arbitrum_chain(arbitrum_provider):
+    if not is_arbitrum_chain(arbitrum_provider):
         return for_l1_block
 
     arb_provider = ArbitrumProvider(arbitrum_provider)
@@ -142,8 +142,8 @@ async def get_first_block_for_l1_block(
     chain_id = arb_provider._provider.eth.chain_id
     nitro_genesis_block = get_nitro_genesis_block(chain_id)
 
-    async def get_l1_block_number(l2_block_num: int) -> int:
-        block = await arb_provider.get_block(l2_block_num)
+    def get_l1_block_number(l2_block_num: int) -> int:
+        block = arb_provider.get_block(l2_block_num)
         return int(block['l1BlockNumber'], 16)
 
     if min_arbitrum_block is None:
@@ -167,7 +167,7 @@ async def get_first_block_for_l1_block(
 
     while start <= end:
         mid = start + (end - start) // 2
-        l1_block_of_mid = await get_l1_block_number(mid)
+        l1_block_of_mid = get_l1_block_number(mid)
         if l1_block_of_mid == for_l1_block:
             result_for_target = mid
             end = mid - 1
@@ -182,26 +182,22 @@ async def get_first_block_for_l1_block(
     return result_for_target or result_for_greater
 
 
-async def get_block_ranges_for_l1_block(
+def get_block_ranges_for_l1_block(
     arbitrum_provider: Web3,
     for_l1_block: int,
     allow_greater: bool = False,
     min_arbitrum_block: Optional[int] = None,
     max_arbitrum_block: Union[int, str] = "latest"
-
 ) -> Tuple[Optional[int], Optional[int]]:
     """
     Returns a [startBlock, endBlock] range in the Arbitrum chain for the given L1 block.
     If a start or end can't be found, we return (None, None).
 
-    :param props: 
-        {
-          "arbitrum_provider": Web3,
-          "for_l1_block": number,
-          "allow_greater": bool,
-          "min_arbitrum_block": int,
-          "max_arbitrum_block": int or 'latest'
-        }
+    :param arbitrum_provider: Web3 provider instance
+    :param for_l1_block: The L1 block number to find range for
+    :param allow_greater: Whether to allow greater block numbers
+    :param min_arbitrum_block: Minimum Arbitrum block to consider
+    :param max_arbitrum_block: Maximum Arbitrum block to consider or 'latest'
     :return: A tuple (startBlock, endBlock) if found, else (None, None).
     """
     arb_provider = ArbitrumProvider(arbitrum_provider)
@@ -211,26 +207,22 @@ async def get_block_ranges_for_l1_block(
         max_arbitrum_block = current_l2_block
 
     # Search for the exact or earliest L2 block that has L1 block == for_l1_block
-    # And also search for the earliest L2 block that has L1 block > for_l1_block
-    # Then subtract 1 from that to get the end range
-    results = await asyncio.gather(
-        get_first_block_for_l1_block(
-            arbitrum_provider,
-            for_l1_block,
-            allow_greater=False,
-            min_arbitrum_block=min_arbitrum_block,
-            max_arbitrum_block=max_arbitrum_block,
-        ),
-        get_first_block_for_l1_block(
-            arbitrum_provider,
-            for_l1_block + 1,
-            allow_greater=True,
-            min_arbitrum_block=min_arbitrum_block,
-            max_arbitrum_block=max_arbitrum_block,
-        )
+    start_block = get_first_block_for_l1_block(
+        arbitrum_provider,
+        for_l1_block,
+        allow_greater=False,
+        min_arbitrum_block=min_arbitrum_block,
+        max_arbitrum_block=max_arbitrum_block,
     )
 
-    start_block, block_after_end = results
+    # Search for the earliest L2 block that has L1 block > for_l1_block
+    block_after_end = get_first_block_for_l1_block(
+        arbitrum_provider,
+        for_l1_block + 1,
+        allow_greater=True,
+        min_arbitrum_block=min_arbitrum_block,
+        max_arbitrum_block=max_arbitrum_block,
+    )
 
     if not start_block:
         return None, None
@@ -241,7 +233,7 @@ async def get_block_ranges_for_l1_block(
     return start_block, max_arbitrum_block
 
 
-async def get_native_token_decimals(parent_provider: Web3, child_network: ArbitrumNetwork) -> int:
+def get_native_token_decimals(parent_provider: Web3, child_network: ArbitrumNetwork) -> int:
     """
     Returns the decimals for the chain's native token, or 18 if it's ETH or zero address.
 

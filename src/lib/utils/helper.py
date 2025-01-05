@@ -290,9 +290,9 @@ class CaseDict:
             self.__setitem__(key, value)
 
     def __setitem__(self, key, value):
-        for special_key, special_value in self.SPECIAL_CASES.items():
-            if special_key in key:
-                key = key.replace(special_key, special_value)
+        # for special_key, special_value in self.SPECIAL_CASES.items():
+        #     if special_key in key:
+        #         key = key.replace(special_key, special_value)
         self.__setattr__(key, value)
 
     def __getitem__(self, key):

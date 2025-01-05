@@ -86,7 +86,7 @@ class ArbitrumProvider:
         return self._provider
     
 
-    async def get_transaction_receipt(self, transaction_hash: str) -> ArbTransactionReceipt:
+    def get_transaction_receipt(self, transaction_hash: str) -> ArbTransactionReceipt:
         """
         Get a transaction receipt from the underlying provider, 
         then format it to an ArbTransactionReceipt.
@@ -97,7 +97,7 @@ class ArbitrumProvider:
         receipt = self._provider.eth.get_transaction_receipt(transaction_hash)
         return self.formatter.receipt(receipt)
 
-    async def get_block_with_transactions(self, block_identifier) -> ArbBlockWithTransactions:
+    def get_block_with_transactions(self, block_identifier) -> ArbBlockWithTransactions:
         """
         Get a block by number or hash, including full transaction objects,
         then format it to ArbBlockWithTransactions.
@@ -110,7 +110,7 @@ class ArbitrumProvider:
         )
         return self.formatter.block_with_transactions(block)
 
-    async def get_block(self, block_identifier) -> ArbBlock:
+    def get_block(self, block_identifier) -> ArbBlock:
         """
         Get a block by number or hash, then format it to ArbBlock.
 

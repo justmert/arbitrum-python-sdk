@@ -341,27 +341,27 @@ class BaseL1L3Bridger:
         self.defaultGasPricePercentIncrease = 500
         self.defaultGasLimitPercentIncrease = 100
 
-    async def _check_l1_network(self, sop: SignerOrProvider):
+    def _check_l1_network(self, sop: SignerOrProvider):
         """
         Ensure the signer/provider is on the expected L1 chainId.
         """
-        await SignerProviderUtils.check_network_matches(
+        SignerProviderUtils.check_network_matches(
             sop, self.l1Network["chainId"]
         )
 
-    async def _check_l2_network(self, sop: SignerOrProvider):
+    def _check_l2_network(self, sop: SignerOrProvider):
         """
         Ensure the signer/provider is on the expected L2 chainId.
         """
-        await SignerProviderUtils.check_network_matches(
+        SignerProviderUtils.check_network_matches(
             sop, self.l2Network.chainId
         )
 
-    async def _check_l3_network(self, sop: SignerOrProvider):
+    def _check_l3_network(self, sop: SignerOrProvider):
         """
         Ensure the signer/provider is on the expected L3 chainId.
         """
-        await SignerProviderUtils.check_network_matches(
+        SignerProviderUtils.check_network_matches(
             sop, self.l3Network.chainId
         )
 
@@ -383,7 +383,7 @@ class BaseL1L3Bridger:
         else:
             return tx_ref["txReceipt"].transactionHash
 
-    async def _get_tx_from_tx_ref(
+    def _get_tx_from_tx_ref(
         self,
         tx_ref: Union[Dict[str, Any], "TxReference"],
         provider: Web3
@@ -399,7 +399,7 @@ class BaseL1L3Bridger:
         raw_tx = provider.eth.get_transaction(tx_hash)
         return ParentTransactionReceipt.monkey_patch_contract_call_wait(raw_tx)
 
-    async def _get_tx_receipt_from_tx_ref(
+    def _get_tx_receipt_from_tx_ref(
         self,
         tx_ref: Union[Dict[str, Any], "TxReference"],
         provider: Web3
@@ -458,7 +458,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
 
         self._l1FeeTokenAddress: Optional[str] = None
 
-    async def get_gas_token_on_l1(self, l1_provider: Web3, l2_provider: Web3) -> str:
+    def get_gas_token_on_l1(self, l1_provider: Web3, l2_provider: Web3) -> str:
         """
         Equivalent to getGasTokenOnL1 in TS
         """
@@ -468,13 +468,13 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         if self._l1FeeTokenAddress is not None:
             return self._l1FeeTokenAddress
 
-        await self._check_l1_network(l1_provider)
-        await self._check_l2_network(l2_provider)
+        self._check_l1_network(l1_provider)
+        self._check_l2_network(l2_provider)
 
         l1_fee_token_address: Optional[str] = None
 
         try:
-            l1_fee_token_address = await self.l2Erc20Bridger.get_parent_erc20_address(
+            l1_fee_token_address = self.l2Erc20Bridger.get_parent_erc20_address(
                 self.l2GasTokenAddress,
                 l2_provider
             )
@@ -498,11 +498,11 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         if decimals_l2 != 18:
             raise ArbSdkError("L2 gas token has incorrect decimals. Use skipGasToken when depositing")
 
-        if await self.l1_token_is_disabled(l1_fee_token_address, l1_provider):
+        if self.l1_token_is_disabled(l1_fee_token_address, l1_provider):
             raise ArbSdkError(
                 "L1 gas token is disabled on the L1->L2 token bridge. Use skipGasToken when depositing"
             )
-        if await self.l2_token_is_disabled(self.l2GasTokenAddress, l2_provider):
+        if self.l2_token_is_disabled(self.l2GasTokenAddress, l2_provider):
             raise ArbSdkError(
                 "L2 gas token is disabled on the L2->L3 token bridge. Use skipGasToken when depositing"
             )
@@ -518,7 +518,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             l1_provider
         )
 
-    async def get_l3_erc20_address(
+    def get_l3_erc20_address(
         self, erc20_l1_address: str, l1_provider: Web3, l2_provider: Web3
     ) -> str:
         l2_token = self.get_l2_erc20_address(erc20_l1_address, l1_provider)
@@ -529,7 +529,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             erc20_l1_address, l1_provider
         )
 
-    async def get_l2_l3_gateway_address(
+    def get_l2_l3_gateway_address(
         self, erc20_l1_address: str, l1_provider: Web3, l2_provider: Web3
     ) -> str:
         l2_token = self.get_l2_erc20_address(erc20_l1_address, l1_provider)
@@ -544,13 +544,13 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
     def get_l3_token_contract(self, l3_token_addr: str, l3_provider: Web3):
         return load_contract(l3_provider, "L2GatewayToken", address=l3_token_addr)
 
-    async def l1_token_is_disabled(self, l1_token_address: str, l1_provider: Web3) -> bool:
-        return await self.l2Erc20Bridger.is_deposit_disabled(l1_token_address, l1_provider)
+    def l1_token_is_disabled(self, l1_token_address: str, l1_provider: Web3) -> bool:
+        return self.l2Erc20Bridger.is_deposit_disabled(l1_token_address, l1_provider)
 
-    async def l2_token_is_disabled(self, l2_token_address: str, l2_provider: Web3) -> bool:
-        return await self.l3Erc20Bridger.is_deposit_disabled(l2_token_address, l2_provider)
+    def l2_token_is_disabled(self, l2_token_address: str, l2_provider: Web3) -> bool:
+        return self.l3Erc20Bridger.is_deposit_disabled(l2_token_address, l2_provider)
 
-    async def l2_forwarder_address(
+    def l2_forwarder_address(
         self,
         owner: str,
         router_or_inbox: str,
@@ -576,7 +576,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             destination_address
         ).call()
 
-    async def get_approve_token_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_approve_token_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Return a transaction request to approve tokens for teleportation.
         """
@@ -601,37 +601,37 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             "value": 0
         }
 
-    async def approve_token(self, params: Dict[str, Any]):
+    def approve_token(self, params: Dict[str, Any]):
         l1_signer = params["l1Signer"]
-        await self._check_l1_network(l1_signer)
+        self._check_l1_network(l1_signer)
 
         if "txRequest" in params:
             approve_request = params["txRequest"]
         else:
-            approve_request = await self.get_approve_token_request(params)
+            approve_request = self.get_approve_token_request(params)
 
         overrides = params.get("overrides", {})
         return l1_signer.send_transaction({**approve_request, **overrides})
 
-    async def get_approve_gas_token_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_approve_gas_token_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Return a tx request to approve the L3's fee token for teleportation.
         """
         amount = params.get("amount")
-        fee_token_l1 = await self.get_gas_token_on_l1(params["l1Provider"], params["l2Provider"])
-        return await self.get_approve_token_request({
+        fee_token_l1 = self.get_gas_token_on_l1(params["l1Provider"], params["l2Provider"])
+        return self.get_approve_token_request({
             "erc20L1Address": fee_token_l1,
             "amount": amount
         })
 
-    async def approve_gas_token(self, params: Dict[str, Any]):
+    def approve_gas_token(self, params: Dict[str, Any]):
         l1_signer = params["l1Signer"]
-        await self._check_l1_network(l1_signer)
+        self._check_l1_network(l1_signer)
 
         if "txRequest" in params:
             approve_request = params["txRequest"]
         else:
-            built = await self.get_approve_gas_token_request({
+            built = self.get_approve_gas_token_request({
                 "l1Provider": l1_signer.provider,
                 "l2Provider": params["l2Provider"],
                 "amount": params.get("amount")
@@ -646,7 +646,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
     # The bridging / deposit flow
     # ---------------------------------------------------------------------------
 
-    async def get_deposit_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_deposit_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Equivalent to getDepositRequest in TS
         """
@@ -659,21 +659,21 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             l1_signer = params["l1Signer"]
             l1_provider = l1_signer.provider
 
-        await self._check_l1_network(l1_provider)
-        await self._check_l2_network(params["l2Provider"])
-        await self._check_l3_network(params["l3Provider"])
+        self._check_l1_network(l1_provider)
+        self._check_l2_network(params["l2Provider"])
+        self._check_l3_network(params["l3Provider"])
 
         if "from" in params:
             from_addr = params["from"]
         else:
-            from_addr = await params["l1Signer"].get_address()
+            from_addr = params["l1Signer"].get_address()
 
         if not self.l2GasTokenAddress:
             l1_fee_token = "0x0000000000000000000000000000000000000000"
         elif params.get("skipGasToken", False):
             l1_fee_token = self.skipL1GasTokenMagic
         else:
-            l1_fee_token = await self.get_gas_token_on_l1(l1_provider, params["l2Provider"])
+            l1_fee_token = self.get_gas_token_on_l1(l1_provider, params["l2Provider"])
 
         partial_teleport_params = {
             "l1Token": params["erc20L1Address"],
@@ -690,7 +690,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
 
         retryable_overrides = params.get("retryableOverrides", {})
 
-        filled = await self._fill_partial_teleport_params(
+        filled = self._fill_partial_teleport_params(
             partial_teleport_params,
             retryable_overrides,
             l1_provider,
@@ -719,33 +719,33 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             "gasTokenAmount": costs["feeTokenAmount"]
         }
 
-    async def deposit(self, params: Dict[str, Any]) -> ParentContractCallTransaction:
-        await self._check_l1_network(params["l1Signer"])
+    def deposit(self, params: Dict[str, Any]) -> ParentContractCallTransaction:
+        self._check_l1_network(params["l1Signer"])
 
         if "txRequest" in params:
             deposit_request = params["txRequest"]
         else:
-            dr = await self.get_deposit_request(params)
+            dr = self.get_deposit_request(params)
             deposit_request = dr["txRequest"]
 
         overrides = params.get("overrides", {})
-        tx = await params["l1Signer"].sendTransaction({**deposit_request, **overrides})
+        tx = params["l1Signer"].sendTransaction({**deposit_request, **overrides})
         return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx)
 
-    async def get_deposit_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        await self._check_l1_network(params["l1Provider"])
-        await self._check_l2_network(params["l2Provider"])
+    def get_deposit_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        self._check_l1_network(params["l1Provider"])
+        self._check_l2_network(params["l2Provider"])
 
-        tx = await self._get_tx_from_tx_ref(params, params["l1Provider"])
-        tx_receipt = await tx.wait()
+        tx = self._get_tx_from_tx_ref(params, params["l1Provider"])
+        tx_receipt = tx.wait()
 
-        l1l2_messages = await self._get_l1_to_l2_messages(tx_receipt, params["l2Provider"])
+        l1l2_messages = self._get_l1_to_l2_messages(tx_receipt, params["l2Provider"])
 
         l2_forwarder_params = self._decode_call_forwarder_calldata(
             l1l2_messages["l2ForwarderFactoryRetryable"]["messageData"]["data"]
         )
 
-        l2_forwarder_address = await self.l2_forwarder_address(
+        l2_forwarder_address = self.l2_forwarder_address(
             l2_forwarder_params["owner"],
             l2_forwarder_params["routerOrInbox"],
             l2_forwarder_params["to"],
@@ -760,26 +760,26 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             "l2ForwarderAddress": l2_forwarder_address
         }
 
-    async def get_deposit_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        await self._check_l1_network(params["l1Provider"])
-        await self._check_l2_network(params["l2Provider"])
-        await self._check_l3_network(params["l3Provider"])
+    def get_deposit_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        self._check_l1_network(params["l1Provider"])
+        self._check_l2_network(params["l2Provider"])
+        self._check_l3_network(params["l3Provider"])
 
-        l1_tx_receipt = await self._get_tx_receipt_from_tx_ref(params, params["l1Provider"])
-        partial_result = await self._get_l1_to_l2_messages(l1_tx_receipt, params["l2Provider"])
+        l1_tx_receipt = self._get_tx_receipt_from_tx_ref(params, params["l1Provider"])
+        partial_result = self._get_l1_to_l2_messages(l1_tx_receipt, params["l2Provider"])
 
-        factory_redeem = await partial_result["l2ForwarderFactoryRetryable"].get_successful_redeem()
+        factory_redeem = partial_result["l2ForwarderFactoryRetryable"].get_successful_redeem()
 
         if factory_redeem["status"] == ParentToChildMessageStatus.REDEEMED:
             child_ptx_receipt = ParentTransactionReceipt(factory_redeem["childTxReceipt"])
-            l2l3_messages = await child_ptx_receipt.getParentToChildMessages(params["l3Provider"])
+            l2l3_messages = child_ptx_receipt.getParentToChildMessages(params["l3Provider"])
             l2l3_message = l2l3_messages[0] if l2l3_messages else None
         else:
             l2l3_message = None
 
         l2_forwarder_factory_retryable_front_ran = False
 
-        l1l2_token_bridge_status = await partial_result["l1l2TokenBridgeRetryable"].status()
+        l1l2_token_bridge_status = partial_result["l1l2TokenBridgeRetryable"].status()
         if (
             l1l2_token_bridge_status == ParentToChildMessageStatus.REDEEMED
             and factory_redeem["status"] == ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
@@ -787,7 +787,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             decoded_factory_call = self._decode_call_forwarder_calldata(
                 partial_result["l2ForwarderFactoryRetryable"]["messageData"]["data"]
             )
-            forwarder_addr = await self.l2_forwarder_address(
+            forwarder_addr = self.l2_forwarder_address(
                 decoded_factory_call["owner"],
                 decoded_factory_call["routerOrInbox"],
                 decoded_factory_call["to"],
@@ -799,7 +799,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                 l2_forwarder_factory_retryable_front_ran = True
 
         if l2l3_message:
-            completed = (await l2l3_message.status()) == ParentToChildMessageStatus.REDEEMED
+            completed = (l2l3_message.status()) == ParentToChildMessageStatus.REDEEMED
         else:
             completed = False
 
@@ -817,7 +817,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         else:
             return TeleportationType.NonGasTokenToCustomGas
 
-    async def _get_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
+    def _get_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
         parent_gateway = load_contract(
             params["parentProvider"],
             "L1GatewayRouter",  # or your gateway router name
@@ -831,7 +831,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             "0x"
         ).call()
 
-        estimates = await ParentToChildMessageGasEstimator(params["childProvider"]).estimateAll(
+        estimates = ParentToChildMessageGasEstimator(params["childProvider"]).estimateAll(
             {
                 "to": parent_gateway.functions.counterpartGateway().call(),
                 "data": outbound_calldata,
@@ -849,12 +849,12 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             "maxSubmissionFee": estimates["maxSubmissionCost"]
         }
 
-    async def _get_l1_l2_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
+    def _get_l1_l2_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
         assert_arbitrum_network_has_token_bridge(self.l2Network)
-        parent_gateway_address = await self.get_l1_l2_gateway_address(
+        parent_gateway_address = self.get_l1_l2_gateway_address(
             params["l1Token"], params["l1Provider"]
         )
-        return await self._get_token_bridge_gas_estimates({
+        return self._get_token_bridge_gas_estimates({
             "parentProvider": params["l1Provider"],
             "childProvider": params["l2Provider"],
             "parentGasPrice": params["l1GasPrice"],
@@ -869,16 +869,16 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             ),
         })
 
-    async def _get_l1_l2_fee_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
+    def _get_l1_l2_fee_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
         assert_arbitrum_network_has_token_bridge(self.l2Network)
 
         if params["l3FeeTokenL1Addr"] == self.skipL1GasTokenMagic:
             return {"gasLimit": 0, "maxSubmissionFee": 0}
 
-        parent_gateway_address = await self.get_l1_l2_gateway_address(
+        parent_gateway_address = self.get_l1_l2_gateway_address(
             params["l3FeeTokenL1Addr"], params["l1Provider"]
         )
-        return await self._get_token_bridge_gas_estimates({
+        return self._get_token_bridge_gas_estimates({
             "parentProvider": params["l1Provider"],
             "childProvider": params["l2Provider"],
             "parentGasPrice": params["l1GasPrice"],
@@ -893,7 +893,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             ),
         })
 
-    async def _get_l2_forwarder_factory_gas_estimates(self, l1_gas_price: int, l1_provider: Web3) -> Dict[str, int]:
+    def _get_l2_forwarder_factory_gas_estimates(self, l1_gas_price: int, l1_provider: Web3) -> Dict[str, int]:
         inbox = load_contract(
             l1_provider,
             "IInbox",
@@ -906,7 +906,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             "maxSubmissionFee": max_submission_fee
         }
 
-    async def _get_l2_l3_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
+    def _get_l2_l3_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
         assert_arbitrum_network_has_token_bridge(self.l3Network)
 
         t_type = self.teleportation_type(params["partialTeleportParams"])
@@ -915,7 +915,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             return {"gasLimit": 0, "maxSubmissionFee": 0}
         elif t_type == TeleportationType.OnlyGasToken:
             partial = params["partialTeleportParams"]
-            estimate = await ParentToChildMessageGasEstimator(params["l3Provider"]).estimateAll(
+            estimate = ParentToChildMessageGasEstimator(params["l3Provider"]).estimateAll(
                 {
                     "to": partial["to"],
                     "data": "0x",
@@ -932,7 +932,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                 "maxSubmissionFee": estimate["maxSubmissionCost"]
             }
         else:
-            parent_gateway_address = await self.get_l2_l3_gateway_address(
+            parent_gateway_address = self.get_l2_l3_gateway_address(
                 params["partialTeleportParams"]["l1Token"],
                 params["l1Provider"],
                 params["l2Provider"]
@@ -945,7 +945,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                 get_address(parent_gateway_address)
                 == get_address(self.l3Network.tokenBridge["parentWethGateway"])
             )
-            return await self._get_token_bridge_gas_estimates({
+            return self._get_token_bridge_gas_estimates({
                 "parentProvider": params["l2Provider"],
                 "childProvider": params["l3Provider"],
                 "parentGasPrice": params["l2GasPrice"],
@@ -957,7 +957,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                 "isWeth": is_weth
             })
 
-    async def _fill_partial_teleport_params(
+    def _fill_partial_teleport_params(
         self,
         partial_teleport_params: Dict[str, Any],
         retryable_overrides: Dict[str, Any],
@@ -966,7 +966,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         l3_provider: Web3
     ) -> Dict[str, Any]:
 
-        async def get_retryable_gas_values_with_overrides(
+        def get_retryable_gas_values_with_overrides(
             overrides: Optional[Dict[str, Any]],
             get_estimates
         ) -> Dict[str, int]:
@@ -976,7 +976,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                 base_gas_limit = overrides["gasLimit"]["base"]
                 base_max_submission_fee = overrides["maxSubmissionFee"]["base"]
             else:
-                calc = await get_estimates()
+                calc = get_estimates()
                 base_gas_limit = overrides.get("gasLimit", {}).get("base", calc["gasLimit"]) if overrides else calc["gasLimit"]
                 base_max_submission_fee = overrides.get("maxSubmissionFee", {}).get("base", calc["maxSubmissionFee"]) if overrides else calc["maxSubmissionFee"]
 
@@ -995,7 +995,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                 "maxSubmissionFee": sub_fee_adjusted
             }
 
-        async def apply_gas_percent_increase(
+        def apply_gas_percent_increase(
             override_dict: Dict[str, Any],
             get_estimate
         ) -> int:
@@ -1004,23 +1004,23 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                 # call get_estimate
                 val = get_estimate()
                 if callable(val):
-                    val = await val
+                    val = val
                 base_val = val
 
             inc = override_dict.get("percentIncrease", self.defaultGasPricePercentIncrease) if override_dict else self.defaultGasPricePercentIncrease
             return self._percent_increase(base_val, inc)
 
-        l1_gas_price = await apply_gas_percent_increase(retryable_overrides.get("l1GasPrice", {}), lambda: l1_provider.eth.gas_price)
-        l2_gas_price = await apply_gas_percent_increase(retryable_overrides.get("l2GasPrice", {}), lambda: l2_provider.eth.gas_price)
+        l1_gas_price = apply_gas_percent_increase(retryable_overrides.get("l1GasPrice", {}), lambda: l1_provider.eth.gas_price)
+        l2_gas_price = apply_gas_percent_increase(retryable_overrides.get("l2GasPrice", {}), lambda: l2_provider.eth.gas_price)
 
         if partial_teleport_params["l3FeeTokenL1Addr"] == self.skipL1GasTokenMagic:
             l3_gas_price = 0
         else:
-            l3_gas_price = await apply_gas_percent_increase(retryable_overrides.get("l3GasPrice", {}), lambda: l3_provider.eth.gas_price)
+            l3_gas_price = apply_gas_percent_increase(retryable_overrides.get("l3GasPrice", {}), lambda: l3_provider.eth.gas_price)
 
         fake_random_l2_forwarder = "0x" + os.urandom(20).hex()
 
-        l1l2_token_bridge = await get_retryable_gas_values_with_overrides(
+        l1l2_token_bridge = get_retryable_gas_values_with_overrides(
             retryable_overrides.get("l1l2TokenBridgeRetryableGas"),
             lambda: self._get_l1_l2_token_bridge_gas_estimates({
                 "l1Token": partial_teleport_params["l1Token"],
@@ -1032,12 +1032,12 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             })
         )
 
-        l2_forwarder_factory = await get_retryable_gas_values_with_overrides(
+        l2_forwarder_factory = get_retryable_gas_values_with_overrides(
             retryable_overrides.get("l2ForwarderFactoryRetryableGas"),
             lambda: self._get_l2_forwarder_factory_gas_estimates(l1_gas_price, l1_provider)
         )
 
-        l2l3_token_bridge = await get_retryable_gas_values_with_overrides(
+        l2l3_token_bridge = get_retryable_gas_values_with_overrides(
             retryable_overrides.get("l2l3TokenBridgeRetryableGas"),
             lambda: self._get_l2_l3_bridge_gas_estimates({
                 "partialTeleportParams": partial_teleport_params,
@@ -1051,7 +1051,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
 
         from_type = self.teleportation_type(partial_teleport_params)
         if from_type == TeleportationType.NonGasTokenToCustomGas:
-            fee_gas = await get_retryable_gas_values_with_overrides(
+            fee_gas = get_retryable_gas_values_with_overrides(
                 retryable_overrides.get("l1l2GasTokenBridgeRetryableGas"),
                 lambda: self._get_l1_l2_fee_token_bridge_gas_estimates({
                     "l1GasPrice": l1_gas_price,
@@ -1139,12 +1139,12 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             raise ArbSdkError("not callForwarder data")
         return decoded[1]
 
-    async def _get_l1_to_l2_messages(
+    def _get_l1_to_l2_messages(
         self,
         l1_tx_receipt: ParentContractCallTransactionReceipt,
         l2_provider: Web3
     ) -> Dict[str, Optional[ParentToChildMessageReader]]:
-        l1l2_messages: List[ParentToChildMessageReader] = await l1_tx_receipt.getParentToChildMessages(l2_provider)
+        l1l2_messages: List[ParentToChildMessageReader] = l1_tx_receipt.getParentToChildMessages(l2_provider)
 
         if len(l1l2_messages) == 2:
             return {
@@ -1172,21 +1172,21 @@ class EthL1L3Bridger(BaseL1L3Bridger):
                 f"L3 network {l3_network.name} uses a custom fee token"
             )
 
-    async def get_deposit_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_deposit_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         if "l1Provider" in params:
             l1_provider = params["l1Provider"]
         else:
             l1_signer = params["l1Signer"]
             l1_provider = l1_signer.provider
 
-        await self._check_l1_network(l1_provider)
-        await self._check_l2_network(params["l2Provider"])
-        await self._check_l3_network(params["l3Provider"])
+        self._check_l1_network(l1_provider)
+        self._check_l2_network(params["l2Provider"])
+        self._check_l3_network(params["l3Provider"])
 
         if "from" in params:
             from_addr = params["from"]
         else:
-            from_addr = await params["l1Signer"].get_address()
+            from_addr = params["l1Signer"].get_address()
 
         l3_destination_address = params.get("destinationAddress", from_addr)
         l2_refund_address = params.get("l2RefundAddress", from_addr)
@@ -1195,7 +1195,7 @@ class EthL1L3Bridger(BaseL1L3Bridger):
         # You'd presumably call something akin to:
         #   l3TicketRequest = ParentToChildMessageCreator.get_ticket_creation_request(...)
         # For brevity, we assume a placeholder method `_create_retryable_ticket_request(...)`
-        l3_ticket_request = await ParentToChildMessageCreator.get_ticket_creation_request(
+        l3_ticket_request = ParentToChildMessageCreator.get_ticket_creation_request(
             {
                 "to": l3_destination_address,
                 "data": "0x",
@@ -1209,7 +1209,7 @@ class EthL1L3Bridger(BaseL1L3Bridger):
             params.get("l3TicketGasOverrides")
         )
 
-        l2_ticket_request = await ParentToChildMessageCreator.get_ticket_creation_request(
+        l2_ticket_request = ParentToChildMessageCreator.get_ticket_creation_request(
             {
                 "from": from_addr,
                 "to": l3_ticket_request["txRequest"]["to"],
@@ -1225,23 +1225,23 @@ class EthL1L3Bridger(BaseL1L3Bridger):
 
         return l2_ticket_request
 
-    async def deposit(self, params: Dict[str, Any]) -> ParentContractCallTransaction:
-        await self._check_l1_network(params["l1Signer"])
+    def deposit(self, params: Dict[str, Any]) -> ParentContractCallTransaction:
+        self._check_l1_network(params["l1Signer"])
 
         if "txRequest" in params:
             deposit_request = params["txRequest"]
         else:
-            dr = await self.get_deposit_request(params)
+            dr = self.get_deposit_request(params)
             deposit_request = dr["txRequest"]
 
         overrides = params.get("overrides", {})
-        tx = await params["l1Signer"].sendTransaction({**deposit_request, **overrides})
+        tx = params["l1Signer"].sendTransaction({**deposit_request, **overrides})
         return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx)
 
-    async def get_deposit_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        await self._check_l1_network(params["l1Provider"])
+    def get_deposit_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        self._check_l1_network(params["l1Provider"])
 
-        tx = await self._get_tx_from_tx_ref(params, params["l1Provider"])
+        tx = self._get_tx_from_tx_ref(params, params["l1Provider"])
 
         l1l2_ticket_data = dict(self._decode_create_retryable_ticket(tx.data))
         l1l2_ticket_data["l1Value"] = tx.value
@@ -1254,13 +1254,13 @@ class EthL1L3Bridger(BaseL1L3Bridger):
             "l2l3TicketData": l2l3_ticket_data
         }
 
-    async def get_deposit_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        await self._check_l1_network(params["l1Provider"])
-        await self._check_l2_network(params["l2Provider"])
-        await self._check_l3_network(params["l3Provider"])
+    def get_deposit_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        self._check_l1_network(params["l1Provider"])
+        self._check_l2_network(params["l2Provider"])
+        self._check_l3_network(params["l3Provider"])
 
-        l1_tx_receipt = await self._get_tx_receipt_from_tx_ref(params, params["l1Provider"])
-        all_messages = await l1_tx_receipt.getParentToChildMessages(params["l2Provider"])
+        l1_tx_receipt = self._get_tx_receipt_from_tx_ref(params, params["l1Provider"])
+        all_messages = l1_tx_receipt.getParentToChildMessages(params["l2Provider"])
         if not all_messages:
             return {
                 "l2Retryable": None,
@@ -1269,7 +1269,7 @@ class EthL1L3Bridger(BaseL1L3Bridger):
             }
 
         l1l2_message = all_messages[0]
-        l1l2_redeem = await l1l2_message.get_successful_redeem()
+        l1l2_redeem = l1l2_message.get_successful_redeem()
         if l1l2_redeem["status"] != ParentToChildMessageStatus.REDEEMED:
             return {
                 "l2Retryable": l1l2_message,
@@ -1278,12 +1278,12 @@ class EthL1L3Bridger(BaseL1L3Bridger):
             }
 
         child_tx_receipt = ParentEthDepositTransactionReceipt(l1l2_redeem["childTxReceipt"])
-        l2l3_msgs = await child_tx_receipt.getParentToChildMessages(params["l3Provider"])
+        l2l3_msgs = child_tx_receipt.getParentToChildMessages(params["l3Provider"])
         if not l2l3_msgs:
             raise ArbSdkError("L2 to L3 message not found")
 
         l2l3_message = l2l3_msgs[0]
-        completed = (await l2l3_message.status()) == ParentToChildMessageStatus.REDEEMED
+        completed = (l2l3_message.status()) == ParentToChildMessageStatus.REDEEMED
         return {
             "l2Retryable": l1l2_message,
             "l3Retryable": l2l3_message,

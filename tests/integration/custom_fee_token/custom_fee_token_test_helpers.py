@@ -36,11 +36,11 @@ def is_arbitrum_network_with_custom_fee_token() -> bool:
     return native_token is not None and native_token != "0x" + "0" * 40
 
 
-async def test_setup():
+def test_setup():
     """Extended test setup with native token contract"""
     from scripts.test_setup import test_setup as _test_setup  # Deferred import
 
-    result = await _test_setup()
+    result = _test_setup()
     child_chain = result["childChain"]
     parent_provider = result["parentProvider"]
 
@@ -56,7 +56,7 @@ async def test_setup():
     return result
 
 
-async def fund_parent_custom_fee_token(parent_signer_or_address: Union[SignerOrProvider, str]) -> None:
+def fund_parent_custom_fee_token(parent_signer_or_address: Union[SignerOrProvider, str]) -> None:
     """Fund parent chain account with custom fee tokens"""
     native_token = local_networks().get("l3Network", {}).get("nativeToken")
 
@@ -94,17 +94,17 @@ async def fund_parent_custom_fee_token(parent_signer_or_address: Union[SignerOrP
 
     signed_tx = deployer.account.sign_transaction(tx)
     tx_hash = deployer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-    await deployer.provider.eth.wait_for_transaction_receipt(tx_hash)
+    deployer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
 
-async def approve_parent_custom_fee_token(parent_signer: SignerOrProvider):
+def approve_parent_custom_fee_token(parent_signer: SignerOrProvider):
     """Approve custom fee token spending"""
-    eth_bridger = await EthBridger.from_provider(arb_provider())
-    tx = await eth_bridger.approve_gas_token({"parentSigner": parent_signer})
-    await tx.wait()
+    eth_bridger = EthBridger.from_provider(arb_provider())
+    tx = eth_bridger.approve_gas_token({"parentSigner": parent_signer})
+    tx.wait()
 
 
-async def get_parent_custom_fee_token_allowance(owner: str, spender: str):
+def get_parent_custom_fee_token_allowance(owner: str, spender: str):
     """Get token allowance for owner->spender"""
     native_token = local_networks().get("l3Network", {}).get("nativeToken")
     native_token_contract = load_contract(
@@ -115,21 +115,21 @@ async def get_parent_custom_fee_token_allowance(owner: str, spender: str):
     return native_token_contract.functions.allowance(owner, spender).call()
 
 
-async def approve_parent_custom_fee_token_for_erc20_deposit(parent_signer: SignerOrProvider, erc20_parent_address: str):
+def approve_parent_custom_fee_token_for_erc20_deposit(parent_signer: SignerOrProvider, erc20_parent_address: str):
     """Approve custom fee token for ERC20 deposit"""
-    erc20_bridger = await Erc20Bridger.from_provider(arb_provider())
-    tx = await erc20_bridger.approve_gas_token(
+    erc20_bridger = Erc20Bridger.from_provider(arb_provider())
+    tx = erc20_bridger.approve_gas_token(
         {"erc20ParentAddress": erc20_parent_address, "parentSigner": parent_signer}
     )
-    await tx.wait()
+    tx.wait()
 
 
-async def fund_child_custom_fee_token(child_signer: SignerOrProvider):
+def fund_child_custom_fee_token(child_signer: SignerOrProvider):
     """Fund child chain account with custom fee tokens"""
     deployer_account = Account.from_key(config["arbKey"])
     deployer = SignerOrProvider(deployer_account, arb_provider())
 
-    decimals = await get_native_token_decimals(
+    decimals = get_native_token_decimals(
         parent_provider=eth_provider(), child_network=local_networks()["l2Network"]
     )
 
@@ -144,4 +144,4 @@ async def fund_child_custom_fee_token(child_signer: SignerOrProvider):
 
     signed_tx = deployer.account.sign_transaction(tx)
     tx_hash = deployer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-    await deployer.provider.eth.wait_for_transaction_receipt(tx_hash)
+    deployer.provider.eth.wait_for_transaction_receipt(tx_hash)

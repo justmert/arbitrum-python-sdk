@@ -9,7 +9,7 @@ from src.lib.utils.helper import load_contract
 # Cache for previously looked-up addresses -> index
 address_to_index_memo = {}
 
-async def get_address_index(address: str, provider) -> int:
+def get_address_index(address: str, provider) -> int:
     """
     Check if an address is registered in the Arbitrum address table contract.
     Return its index if found, or -1 if not registered.
@@ -28,16 +28,16 @@ async def get_address_index(address: str, provider) -> int:
         
     )
 
-    is_registered = await arb_address_table.functions.addressExists(address).call()
+    is_registered =  arb_address_table.functions.addressExists(address).call()
 
     if is_registered:
-        index = await arb_address_table.functions.lookup(address).call()
+        index =  arb_address_table.functions.lookup(address).call()
         address_to_index_memo[address] = index
         return index
     else:
         return -1
 
-async def arg_serializer_constructor(provider):
+def arg_serializer_constructor(provider):
     """
     Creates a function that can serialize parameters by 
     looking up each address in the Arbitrum address table 
@@ -47,11 +47,11 @@ async def arg_serializer_constructor(provider):
     :return: A function that takes a list of primitive or array-of-primitive items 
              and returns a serialized byte array
     """
-    async def serialize_params_with_index(params: List[Any]) -> bytes:
-        async def address_to_index(address: str) -> int:
-            return await get_address_index(address, provider)
+    def serialize_params_with_index(params: List[Any]) -> bytes:
+        def address_to_index(address: str) -> int:
+            return  get_address_index(address, provider)
 
-        return await serialize_params(params, address_to_index)
+        return  serialize_params(params, address_to_index)
 
     return serialize_params_with_index
 
@@ -100,7 +100,7 @@ def format_primitive(value: Any) -> bytes:
         raise ArbSdkError("Unsupported type for format_primitive()")
 
 
-async def serialize_params(
+def serialize_params(
     params: List[Any],
     address_to_index=lambda addr: -1,
 ) -> bytes:
@@ -126,7 +126,7 @@ async def serialize_params(
             if array_length > 0 and is_address_type(param[0]):
                 indices = []
                 for addr in param:
-                    idx = await address_to_index(addr)
+                    idx =  address_to_index(addr)
                     indices.append(idx)
 
                 if all(i > -1 for i in indices):
@@ -148,7 +148,7 @@ async def serialize_params(
             # single item
             if is_address_type(param):
                 # check if registered
-                idx = await address_to_index(param)
+                idx =  address_to_index(param)
                 if idx > -1:
                     # 1 + 4 bytes
                     formatted_parts.append(to_uint(1, 1))

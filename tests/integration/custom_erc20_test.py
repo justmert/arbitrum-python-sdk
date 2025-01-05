@@ -22,24 +22,24 @@ WITHDRAWAL_AMOUNT = 10
 
 
 @pytest.fixture(scope="module")
-async def setup_state():
-    setup_state = await test_setup()
-    await fund_parent_signer(setup_state.parent_signer)
-    await fund_child_signer(setup_state.child_signer)
+def setup_state():
+    setup_state = test_setup()
+    fund_parent_signer(setup_state.parent_signer)
+    fund_child_signer(setup_state.child_signer)
     return setup_state
 
 
 @pytest.fixture(scope="function", autouse=True)
-async def skip_if_mainnet(request, setup_state):
+def skip_if_mainnet(request, setup_state):
     chain_id = setup_state.child_chain.chainId
     if chain_id == 1:
         pytest.skip("Skipping test on mainnet")
 
 
-@pytest.mark.asyncio
-async def test_register_custom_token(setup_state):
+
+def test_register_custom_token(setup_state):
     print('here', setup_state)
-    parent_token, child_token = await register_custom_token(
+    parent_token, child_token = register_custom_token(
         setup_state.child_chain,
         setup_state.parent_signer,
         setup_state.child_signer,
@@ -48,14 +48,14 @@ async def test_register_custom_token(setup_state):
     setup_state.parent_custom_token = parent_token
 
 
-@pytest.mark.asyncio
-async def test_deposit(setup_state):
+
+def test_deposit(setup_state):
     tx_hash = setup_state.parent_custom_token.functions.mint().transact(
         {"from": setup_state.parent_signer.account.address}
     )
     setup_state.parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
-    await deposit_token({
+    deposit_token({
         "depositAmount": DEPOSIT_AMOUNT,
         "parentTokenAddress": setup_state.parent_custom_token.address,
         "erc20Bridger": setup_state.admin_erc20_bridger,
@@ -66,9 +66,9 @@ async def test_deposit(setup_state):
     })
 
 
-@pytest.mark.asyncio
-async def test_withdraw_token(setup_state):
-    await withdraw_token({
+
+def test_withdraw_token(setup_state):
+    withdraw_token({
         **setup_state,
         "amount": WITHDRAWAL_AMOUNT,
         "gatewayType": GatewayType.CUSTOM,
@@ -81,9 +81,9 @@ async def test_withdraw_token(setup_state):
     })
 
 
-@pytest.mark.asyncio
-async def test_deposit_with_extra_eth(setup_state):
-    await deposit_token({
+
+def test_deposit_with_extra_eth(setup_state):
+    deposit_token({
         "depositAmount": DEPOSIT_AMOUNT,
         "ethDepositAmount": Web3.to_wei('0.0005', 'ether'),
         "parentTokenAddress": setup_state.parent_custom_token.address,
@@ -95,10 +95,10 @@ async def test_deposit_with_extra_eth(setup_state):
     })
 
 
-@pytest.mark.asyncio
-async def test_deposit_with_extra_eth_to_specific_address(setup_state):
+
+def test_deposit_with_extra_eth_to_specific_address(setup_state):
     random_address = Account.create().address
-    await deposit_token({
+    deposit_token({
         "depositAmount": DEPOSIT_AMOUNT,
         "ethDepositAmount": Web3.to_wei('0.0005', 'ether'),
         "parentTokenAddress": setup_state.parent_custom_token.address,
@@ -111,8 +111,8 @@ async def test_deposit_with_extra_eth_to_specific_address(setup_state):
     })
 
 
-@pytest.mark.asyncio
-async def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_bridger):
+
+def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_bridger):
     assert_arbitrum_network_has_token_bridge(child_chain)
 
     # Create custom token factories based on network type
@@ -131,7 +131,7 @@ async def register_custom_token(child_chain, parent_signer, child_signer, admin_
         ],
     )
 
-    # is_registered = await admin_erc20_bridger.is_registered({
+    # is_registered = admin_erc20_bridger.is_registered({
     #     "erc20ParentAddress": parent_custom_token.address,
     #     "parentProvider": parent_signer.provider,
     #     "childProvider": child_signer.provider,
@@ -195,39 +195,39 @@ async def register_custom_token(child_chain, parent_signer, child_signer, admin_
     # Test approve gas token if needed
     if is_arbitrum_network_with_custom_fee_token():
         try:
-            reg_tx_receipt = await admin_erc20_bridger.register_custom_token(
+            reg_tx_receipt = admin_erc20_bridger.register_custom_token(
                 parent_custom_token.address,
                 child_custom_token.address,
                 parent_signer,
                 child_signer.provider,
             )
-            await reg_tx_receipt.wait()
+            reg_tx_receipt.wait()
             raise AssertionError("Child custom token is not approved but got deployed")
         except Exception as err:
             assert "Insufficient allowance" in str(err)
 
-        await admin_erc20_bridger.approve_gas_token_for_custom_token_registration({
+        admin_erc20_bridger.approve_gas_token_for_custom_token_registration({
             "parentSigner": parent_signer,
             "erc20ParentAddress": parent_custom_token.address,
         })
 
     # Register token
-    reg_tx_receipt = await admin_erc20_bridger.register_custom_token(
+    reg_tx_receipt = admin_erc20_bridger.register_custom_token(
         parent_custom_token.address,
         child_custom_token.address,
         parent_signer,
         child_signer.provider,
     )
 
-    parent_to_child_messages = await reg_tx_receipt.get_parent_to_child_messages(
+    parent_to_child_messages = reg_tx_receipt.get_parent_to_child_messages(
         child_signer.provider
     )
     assert len(parent_to_child_messages) == 2
 
-    set_token_tx = await parent_to_child_messages[0].wait_for_status()
+    set_token_tx = parent_to_child_messages[0].wait_for_status()
     assert set_token_tx["status"] == ParentToChildMessageStatus.REDEEMED
 
-    set_gateway_tx = await parent_to_child_messages[1].wait_for_status()
+    set_gateway_tx = parent_to_child_messages[1].wait_for_status()
     assert set_gateway_tx["status"] == ParentToChildMessageStatus.REDEEMED
 
     # Check end conditions 
@@ -251,7 +251,7 @@ async def register_custom_token(child_chain, parent_signer, child_signer, admin_
     ).call()
     assert end_child_erc20_address == child_custom_token.address
 
-    is_registered = await admin_erc20_bridger.is_registered({
+    is_registered = admin_erc20_bridger.is_registered({
         "erc20ParentAddress": parent_custom_token.address, 
         "parentProvider": parent_signer.provider,
         "childProvider": child_signer.provider,

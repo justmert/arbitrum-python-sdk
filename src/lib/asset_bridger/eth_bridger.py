@@ -35,7 +35,7 @@ class EthBridger(AssetBridger):
         self.child_network = child_network
 
     @staticmethod
-    async def from_provider(child_provider) -> "EthBridger":
+    def from_provider(child_provider) -> "EthBridger":
         """
         Creates an EthBridger instance from a Web3 provider connected to the child chain.
         
@@ -94,7 +94,7 @@ class EthBridger(AssetBridger):
             "value": 0,
         }
 
-    async def approve_gas_token(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def approve_gas_token(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Approves the custom gas token to be spent by the Inbox on the parent network.
         If the network uses ETH natively, this is unnecessary and raises an error.
@@ -151,7 +151,7 @@ class EthBridger(AssetBridger):
         )
         return inbox.encodeABI(fn_name="depositEth", args=[])
 
-    async def get_deposit_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_deposit_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Creates a transaction request for depositing ETH or a custom gas token directly 
         into the child's 'inbox' contract. 
@@ -178,7 +178,7 @@ class EthBridger(AssetBridger):
             "isValid": lambda: True,
         }
 
-    async def deposit(self, params: Dict[str, Any]) -> ParentTransactionReceipt:
+    def deposit(self, params: Dict[str, Any]) -> ParentTransactionReceipt:
         """
         Performs a deposit of ETH or custom gas token from the Parent chain to the Child chain 
         *to the same user address*. 
@@ -188,13 +188,13 @@ class EthBridger(AssetBridger):
                        OR a ParentToChildTransactionRequest + "parentSigner" 
         :return: A ParentTransactionReceipt after the deposit is broadcast and mined on the parent chain.
         """
-        await self.check_parent_network(params["parentSigner"])
+        self.check_parent_network(params["parentSigner"])
 
         # If we have a ParentToChildTransactionRequest, skip building a deposit request
         if is_parent_to_child_transaction_request(params):
             eth_deposit = params
         else:
-            eth_deposit = await self.get_deposit_request(
+            eth_deposit = self.get_deposit_request(
                 {**params, "from": params["parentSigner"].account.address}
             )
 
@@ -210,7 +210,7 @@ class EthBridger(AssetBridger):
         # monkeyPatchEthDepositWait => extended functionality for final wait or data decode
         return ParentTransactionReceipt.monkey_patch_eth_deposit_wait(tx_receipt)
 
-    async def get_deposit_to_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_deposit_to_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Builds a transaction request for depositing ETH (or custom gas token) from the 
         parent chain to a *different* address on the child chain. 
@@ -226,7 +226,7 @@ class EthBridger(AssetBridger):
           }
         :return: A ParentToChildTransactionRequest with "txRequest" & "retryableData".
         """
-        decimals = await get_native_token_decimals(
+        decimals = get_native_token_decimals(
             parent_provider=params["parentProvider"],
             child_network=self.child_network)
         # Convert the deposit amount to 18 decimals for the child chain
@@ -248,14 +248,14 @@ class EthBridger(AssetBridger):
         # Optional GasOverrides
         gas_overrides = params.get("retryableGasOverrides", {})
 
-        return await ParentToChildMessageCreator.get_ticket_creation_request(
+        return ParentToChildMessageCreator.get_ticket_creation_request(
             request_params,
             params["parentProvider"],
             params["childProvider"],
             gas_overrides,
         )
 
-    async def deposit_to(self, params: Dict[str, Any]) -> ParentTransactionReceipt:
+    def deposit_to(self, params: Dict[str, Any]) -> ParentTransactionReceipt:
         """
         Executes a deposit from the parent chain to a *different* address on the child chain 
         using a retryable ticket. 
@@ -266,14 +266,14 @@ class EthBridger(AssetBridger):
           OR a prepared ParentToChildTransactionRequest with "childProvider" + "parentSigner"
         :return: A ParentTransactionReceipt after the deposit is confirmed on the parent chain.
         """
-        await self.check_parent_network(params["parentSigner"])
-        await self.check_child_network(params["childProvider"])
+        self.check_parent_network(params["parentSigner"])
+        self.check_child_network(params["childProvider"])
 
         # If it's already a ParentToChildTransactionRequest, skip
         if is_parent_to_child_transaction_request(params):
             retryable_ticket_request = params
         else:
-            retryable_ticket_request = await self.get_deposit_to_request(
+            retryable_ticket_request = self.get_deposit_to_request(
                 {
                     **params,
                     "from": params["parentSigner"].account.address,
@@ -282,14 +282,14 @@ class EthBridger(AssetBridger):
             )
 
         parent_to_child_msg_creator = ParentToChildMessageCreator(params["parentSigner"])
-        tx = await parent_to_child_msg_creator.createRetryableTicket(
+        tx = parent_to_child_msg_creator.createRetryableTicket(
             retryable_ticket_request,
             params["childProvider"],
         )
 
         return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx)
 
-    async def get_withdrawal_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_withdrawal_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Builds a transaction request for withdrawing ETH from the Child chain back to the Parent chain.
 
@@ -315,9 +315,9 @@ class EthBridger(AssetBridger):
             args=[params["destinationAddress"]],
         )
 
-        async def estimate_parent_gas_limit(parent_provider) -> int:
+        def estimate_parent_gas_limit(parent_provider) -> int:
             # For L3 scenario or if parent is actually an L2 chain
-            if await is_arbitrum_chain(parent_provider):
+            if is_arbitrum_chain(parent_provider):
                 return 4_000_000
             # Otherwise standard block on L1
             return 130000
@@ -332,7 +332,7 @@ class EthBridger(AssetBridger):
             "estimateParentGasLimit": estimate_parent_gas_limit,
         }
 
-    async def withdraw(self, params: Dict[str, Any]) -> ChildTransactionReceipt:
+    def withdraw(self, params: Dict[str, Any]) -> ChildTransactionReceipt:
         """
         Withdraws ETH from the child network back to the parent network. 
         If a transaction request isn't already provided, we build one via get_withdrawal_request().
@@ -346,13 +346,13 @@ class EthBridger(AssetBridger):
         if not SignerProviderUtils.signer_has_provider(params["childSigner"]):
             raise MissingProviderArbSdkError("childSigner")
 
-        await self.check_child_network(params["childSigner"])
+        self.check_child_network(params["childSigner"])
 
         # If we already have a ChildToParentTransactionRequest, skip building it
         if is_child_to_parent_transaction_request(params):
             request = params
         else:
-            request = await self.get_withdrawal_request(params)
+            request = self.get_withdrawal_request(params)
 
         tx = {
             **request["txRequest"],

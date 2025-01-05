@@ -34,7 +34,7 @@ class MultiCaller:
         self.address = address
 
     @staticmethod
-    async def from_provider(provider: Union[Web3, SignerOrProvider, ArbitrumProvider]) -> "MultiCaller":
+    def from_provider(provider: Union[Web3, SignerOrProvider, ArbitrumProvider]) -> "MultiCaller":
         """
         Creates a MultiCaller by looking up the Multicall2 address 
         for the chain to which `provider` is connected.
@@ -42,7 +42,7 @@ class MultiCaller:
         :param provider: A Web3, SignerOrProvider, or ArbitrumProvider
         :return: A new MultiCaller instance
         """
-        multicall_addr = await get_multicall_address(provider)
+        multicall_addr =  get_multicall_address(provider)
         return MultiCaller(provider, multicall_addr)
 
     def get_block_number_input(self) -> Dict[str, Any]:
@@ -84,7 +84,7 @@ class MultiCaller:
             "decoder": lambda return_data: contract.decode_function_input("getCurrentBlockTimestamp", return_data)[1],
         }
 
-    async def multi_call(self, params: List[Dict[str, Any]], require_success: bool = False) -> List[Any]:
+    def multi_call(self, params: List[Dict[str, Any]], require_success: bool = False) -> List[Any]:
         """
         Execute a batch of calls against the multicall contract. 
         Each item in 'params' should contain:
@@ -126,7 +126,7 @@ class MultiCaller:
                 decoded_results.append(None)
         return decoded_results
 
-    async def get_token_data(self, erc20_addresses: List[str], options: dict = None) -> List[dict]:
+    def get_token_data(self, erc20_addresses: List[str], options: dict = None) -> List[dict]:
         """
         Retrieves token info (balanceOf, allowance, symbol, decimals, name) 
         for each address in erc20_addresses, according to 'options'.
@@ -166,7 +166,7 @@ class MultiCaller:
             if options.get("name"):
                 inputs.append(self._make_call_input(contract, address, "name", []))
 
-        results = await self.multi_call(inputs)
+        results =  self.multi_call(inputs)
 
         # Re-chunk results by token
         token_info_list = []

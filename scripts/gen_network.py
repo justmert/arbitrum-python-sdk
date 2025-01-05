@@ -1,4 +1,4 @@
-import asyncio
+
 import json
 import os
 import subprocess
@@ -44,7 +44,7 @@ def get_local_networks_from_container(which: str) -> Dict[str, Any]:
         
     raise RuntimeError('nitro-testnode sequencer not found')
 
-async def patch_networks(
+def patch_networks(
     l2_network: Dict[str, Any],
     l3_network: Optional[Dict[str, Any]] = None,
     l2_provider: Optional[Web3] = None
@@ -81,7 +81,7 @@ async def patch_networks(
 
     return {"patchedL2Network": patched_l2_network}
 
-async def main():
+def main():
     # Remove existing file if present
     try:
         os.remove("localNetwork.json")
@@ -104,7 +104,7 @@ async def main():
 
         l2_provider = Web3(HTTPProvider(URI(arb_url)))
         
-        patched_networks = await patch_networks(
+        patched_networks =  patch_networks(
             l2_network=output['l2Network'],
             l3_network=l3_network,
             l2_provider=l2_provider
@@ -116,7 +116,7 @@ async def main():
         }
         
     else:
-        patched_networks = await patch_networks(
+        patched_networks =  patch_networks(
             l2_network=output['l2Network']
         )
         output['l2Network'] = patched_networks['patchedL2Network']
@@ -131,5 +131,5 @@ async def main():
     print("localNetwork.json updated")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
     print("Done.")

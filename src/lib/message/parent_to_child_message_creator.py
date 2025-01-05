@@ -30,7 +30,7 @@ class ParentToChildMessageCreator:
             raise MissingProviderArbSdkError("parentSigner")
 
     @staticmethod
-    async def get_ticket_estimate(
+    def get_ticket_estimate(
         params: dict,
         parent_provider,
         child_provider,
@@ -46,9 +46,9 @@ class ParentToChildMessageCreator:
         :param retryable_gas_overrides: Optional dict of GasOverrides
         :return: A dict with keys "maxSubmissionCost", "maxFeePerGas", "gasLimit", "deposit"
         """
-        base_fee = await get_base_fee(parent_provider)
+        base_fee =  get_base_fee(parent_provider)
         gas_estimator = ParentToChildMessageGasEstimator(child_provider)
-        return await gas_estimator.estimate_all(
+        return  gas_estimator.estimate_all(
             params,
             base_fee,
             parent_provider,
@@ -114,7 +114,7 @@ class ParentToChildMessageCreator:
         )
 
     @staticmethod
-    async def get_ticket_creation_request(
+    def get_ticket_creation_request(
         params: dict,
         parent_provider,
         child_provider,
@@ -131,7 +131,7 @@ class ParentToChildMessageCreator:
             {
               "txRequest": { "to", "data", "value", "from" },
               "retryableData": { ... },
-              "isValid": async fn() -> bool
+              "isValid": fn() -> bool
             }
         """
         if options is None:
@@ -148,7 +148,7 @@ class ParentToChildMessageCreator:
         }
 
         # Estimate relevant gas values
-        estimates = await ParentToChildMessageCreator.get_ticket_estimate(
+        estimates =  ParentToChildMessageCreator.get_ticket_estimate(
             parsed_params,
             parent_provider,
             child_provider,
@@ -190,14 +190,14 @@ class ParentToChildMessageCreator:
             "deposit": estimates["deposit"],
         }
 
-        async def is_valid():
-            re_estimates = await ParentToChildMessageCreator.get_ticket_estimate(
+        def is_valid():
+            re_estimates =  ParentToChildMessageCreator.get_ticket_estimate(
                 parsed_params,
                 parent_provider,
                 child_provider,
                 options
             )
-            return await ParentToChildMessageGasEstimator.is_valid(estimates, re_estimates)
+            return  ParentToChildMessageGasEstimator.is_valid(estimates, re_estimates)
 
         return {
             "txRequest": tx_request,
@@ -205,7 +205,7 @@ class ParentToChildMessageCreator:
             "isValid": is_valid,
         }
 
-    async def create_retryable_ticket(self, params: dict, child_provider, options=None):
+    def create_retryable_ticket(self, params: dict, child_provider, options=None):
         """
         Actually sends the transaction on the parent chain to create the retryable ticket.
 
@@ -220,7 +220,7 @@ class ParentToChildMessageCreator:
         if is_parent_to_child_transaction_request(params):
             create_request = params
         else:
-            create_request = await ParentToChildMessageCreator.get_ticket_creation_request(
+            create_request =  ParentToChildMessageCreator.get_ticket_creation_request(
                 params,
                 parent_provider,
                 child_provider,

@@ -23,8 +23,8 @@ WITHDRAWAL_AMOUNT = 10
 
 
 @pytest.fixture(scope="module")
-async def setup_state():
-    setup = await test_setup()
+def setup_state():
+    setup = test_setup()
 
     fund_l1(setup.l1_signer)
     fund_l2(setup.l2_signer)
@@ -44,15 +44,15 @@ async def setup_state():
 
 
 @pytest.fixture(scope="function", autouse=True)
-async def skip_if_mainnet(request, setup_state):
+def skip_if_mainnet(request, setup_state):
     chain_id = setup_state.l1_network.chain_id
     if chain_id == 1:
         pytest.skip("Skipping test on mainnet")
 
 
-@pytest.mark.asyncio
-async def test_deposit_erc20(setup_state):
-    await deposit_token(
+
+def test_deposit_erc20(setup_state):
+    deposit_token(
         deposit_amount=DEPOSIT_AMOUNT,
         l1_token_address=setup_state.l1_token.address,
         erc20_bridger=setup_state.erc20_bridger,
@@ -63,23 +63,23 @@ async def test_deposit_erc20(setup_state):
     )
 
 
-@pytest.mark.asyncio
-async def redeem_and_test(setup_state, message, expected_status, gas_limit=None):
-    manual_redeem = await message.redeem(overrides={"gasLimit": gas_limit})
-    retry_rec = await manual_redeem.wait_for_redeem()
-    redeem_rec = await manual_redeem.wait()
+
+def redeem_and_test(setup_state, message, expected_status, gas_limit=None):
+    manual_redeem = message.redeem(overrides={"gasLimit": gas_limit})
+    retry_rec = manual_redeem.wait_for_redeem()
+    redeem_rec = manual_redeem.wait()
     block_hash = redeem_rec.blockHash
     assert retry_rec.blockHash == block_hash, "redeemed in same block"
     assert retry_rec.to == setup_state["l2Network"]["tokenBridge"]["l2ERC20Gateway"], "redeemed in same block"
     assert retry_rec.status == expected_status, "tx didn't fail"
-    assert await message.status() == (
+    assert message.status() == (
         L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 if expected_status == 0 else L1ToL2MessageStatus.REDEEMED
     ), "message status"
 
 
-@pytest.mark.asyncio
-async def test_deposit_with_no_funds_manual_redeem(setup_state):
-    deposit_token_params = await deposit_token(
+
+def test_deposit_with_no_funds_manual_redeem(setup_state):
+    deposit_token_params = deposit_token(
         deposit_amount=DEPOSIT_AMOUNT,
         l1_token_address=setup_state.l1_token.address,
         erc20_bridger=setup_state.erc20_bridger,
@@ -90,12 +90,12 @@ async def test_deposit_with_no_funds_manual_redeem(setup_state):
         retryable_overrides={"gasLimit": {"base": 0}, "maxFeePerGas": {"base": 0}},
     )
     wait_res = deposit_token_params["waitRes"]
-    await redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
+    redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
 
 
-@pytest.mark.asyncio
-async def test_deposit_with_low_funds_manual_redeem(setup_state):
-    deposit_token_params = await deposit_token(
+
+def test_deposit_with_low_funds_manual_redeem(setup_state):
+    deposit_token_params = deposit_token(
         deposit_amount=DEPOSIT_AMOUNT,
         l1_token_address=setup_state.l1_token.address,
         erc20_bridger=setup_state.erc20_bridger,
@@ -106,12 +106,12 @@ async def test_deposit_with_low_funds_manual_redeem(setup_state):
         retryable_overrides={"gasLimit": {"base": 5}, "maxFeePerGas": {"base": 5}},
     )
     wait_res = deposit_token_params["waitRes"]
-    await redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
+    redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
 
 
-@pytest.mark.asyncio
-async def test_deposit_with_only_low_gas_limit_manual_redeem_success(setup_state):
-    deposit_token_params = await deposit_token(
+
+def test_deposit_with_only_low_gas_limit_manual_redeem_success(setup_state):
+    deposit_token_params = deposit_token(
         deposit_amount=DEPOSIT_AMOUNT,
         l1_token_address=setup_state.l1_token.address,
         erc20_bridger=setup_state.erc20_bridger,
@@ -123,25 +123,25 @@ async def test_deposit_with_only_low_gas_limit_manual_redeem_success(setup_state
     )
     wait_res = deposit_token_params["waitRes"]
 
-    retryable_creation = await wait_res["message"].get_retryable_creation_receipt()
+    retryable_creation = wait_res["message"].get_retryable_creation_receipt()
     if not is_defined(retryable_creation):
         raise ArbSdkError("Missing retryable creation.")
 
     l2_receipt = L2TransactionReceipt(retryable_creation)
     redeems_scheduled = l2_receipt.get_redeem_scheduled_events(provider=setup_state.l2_signer.provider)
     assert len(redeems_scheduled) == 1, "Unexpected redeem length"
-    retry_receipt = await get_transaction_receipt(
+    retry_receipt = get_transaction_receipt(
         tx_hash=redeems_scheduled[0]["retryTxHash"],
         provider=setup_state.l2_signer.provider,
     )
     assert retry_receipt is None, "Retry should not exist"
 
-    await redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
+    redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
 
 
-@pytest.mark.asyncio
-async def test_deposit_with_low_funds_fails_first_redeem_then_succeeds(setup_state):
-    deposit_token_params = await deposit_token(
+
+def test_deposit_with_low_funds_fails_first_redeem_then_succeeds(setup_state):
+    deposit_token_params = deposit_token(
         deposit_amount=DEPOSIT_AMOUNT,
         l1_token_address=setup_state.l1_token.address,
         erc20_bridger=setup_state.erc20_bridger,
@@ -175,19 +175,19 @@ async def test_deposit_with_low_funds_fails_first_redeem_then_succeeds(setup_sta
         arb_retryable_tx.address, False, redeem_function_data
     ).call()
 
-    await redeem_and_test(
+    redeem_and_test(
         setup_state,
         message=wait_res["message"],
         expected_status=0,
         gas_limit=gas_components[0] - 1000,
     )
 
-    await redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
+    redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
 
 
-@pytest.mark.asyncio
-async def test_withdraws_erc20(setup_state):
-    l2_token_addr = await setup_state.erc20_bridger.get_l2_erc20_address(
+
+def test_withdraws_erc20(setup_state):
+    l2_token_addr = setup_state.erc20_bridger.get_l2_erc20_address(
         setup_state.l1_token.address, setup_state.l1_signer.provider
     )
 
@@ -198,7 +198,7 @@ async def test_withdraws_erc20(setup_state):
 
     assert str(l2_balance_start) == str(start_balance), "Unexpected L2 balance"
 
-    await withdraw_token(
+    withdraw_token(
         {
             **setup_state,
             "amount": WITHDRAWAL_AMOUNT,

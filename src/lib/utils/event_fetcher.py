@@ -86,7 +86,7 @@ class EventFetcher:
         else:
             raise ArbSdkError("Invalid provider type for EventFetcher")
 
-    async def get_events(
+    def get_events(
         self,
         contract_factory: Union[str, Contract],
         event_name: str,

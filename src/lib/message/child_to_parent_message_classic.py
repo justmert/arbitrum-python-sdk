@@ -96,7 +96,7 @@ class ChildToParentMessageClassic:
             )
 
     @staticmethod
-    async def get_child_to_parent_events(
+    def get_child_to_parent_events(
         child_provider,
         filter_dict: dict,
         batch_number=None,
@@ -128,7 +128,7 @@ class ChildToParentMessageClassic:
 
         # The underlying event name on-chain is still "L2ToL1Transaction"
         events = []
-        raw_events = await event_fetcher.get_events(
+        raw_events = event_fetcher.get_events(
             contract_factory="ArbSys",
             event_name="L2ToL1Transaction",
             argument_filters=argument_filters,
@@ -172,7 +172,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
         self.outbox_address = None
         self.proof = None
 
-    async def get_outbox_address(self, child_provider, batch_number):
+    def get_outbox_address(self, child_provider, batch_number):
         """
         Classic had multiple outboxes; find the correct outbox by comparing the activation batch
         number of the next outbox. If the next outbox's activation batch is higher than the
@@ -209,11 +209,11 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
 
         return self.outbox_address
 
-    async def outbox_entry_exists(self, child_provider) -> bool:
+    def outbox_entry_exists(self, child_provider) -> bool:
         """
         Checks if the outbox entry for this batch_number has been created on the parent chain.
         """
-        outbox_address = await self.get_outbox_address(child_provider, self.batch_number)
+        outbox_address = self.get_outbox_address(child_provider, self.batch_number)
 
         outbox_contract = load_contract(
             provider=self.parent_provider,
@@ -225,7 +225,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
         return outbox_contract.functions.outboxEntryExists(self.batch_number).call()
 
     @staticmethod
-    async def try_get_proof_static(child_provider, batch_number, index_in_batch):
+    def try_get_proof_static(child_provider, batch_number, index_in_batch):
         """
         Fetches the Merkle proof (MessageBatchProofInfo) for the given message if it exists,
         otherwise returns None if the batch is not yet created.
@@ -245,12 +245,12 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
                 return None
             raise e
 
-    async def try_get_proof(self, child_provider) -> Optional[MessageBatchProofInfo]:
+    def try_get_proof(self, child_provider) -> Optional[MessageBatchProofInfo]:
         """
         Returns the proof for this message if it exists on-chain, otherwise None.
         """
         if not is_defined(self.proof):
-            raw = await ChildToParentMessageReaderClassic.try_get_proof_static(
+            raw = ChildToParentMessageReaderClassic.try_get_proof_static(
                 child_provider, self.batch_number, self.index_in_batch
             )
             if raw is not None:
@@ -267,15 +267,15 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
                 )
         return self.proof
 
-    async def has_executed(self, child_provider) -> bool:
+    def has_executed(self, child_provider) -> bool:
         """
         Checks whether this Child->Parent message has already been executed on the parent chain.
         """
-        proof_info = await self.try_get_proof(child_provider)
+        proof_info = self.try_get_proof(child_provider)
         if not is_defined(proof_info):
             return False
 
-        outbox_address = await self.get_outbox_address(child_provider, self.batch_number)
+        outbox_address = self.get_outbox_address(child_provider, self.batch_number)
 
         outbox_contract = load_contract(
             provider=self.parent_provider,
@@ -306,16 +306,16 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
                 return False
             raise e
 
-    async def status(self, child_provider) -> ChildToParentMessageStatus:
+    def status(self, child_provider) -> ChildToParentMessageStatus:
         """
         Get the status of this message: UNCONFIRMED, CONFIRMED, or EXECUTED.
         """
         try:
-            executed = await self.has_executed(child_provider)
+            executed = self.has_executed(child_provider)
             if executed:
                 return ChildToParentMessageStatus.EXECUTED
 
-            entry_exists = await self.outbox_entry_exists(child_provider)
+            entry_exists = self.outbox_entry_exists(child_provider)
             if entry_exists:
                 return ChildToParentMessageStatus.CONFIRMED
             else:
@@ -323,7 +323,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
         except Exception:
             return ChildToParentMessageStatus.UNCONFIRMED
 
-    async def wait_until_outbox_entry_created(
+    def wait_until_outbox_entry_created(
         self,
         child_provider,
         retry_delay_ms=500,
@@ -332,17 +332,17 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
         Waits (possibly a very long time) until the outbox entry has been created. 
         Once created, returns either CONFIRMED or EXECUTED (if it was executed meanwhile).
         """
-        entry_exists = await self.outbox_entry_exists(child_provider)
+        entry_exists = self.outbox_entry_exists(child_provider)
         if entry_exists:
             # Outbox entry is created. Check if it's executed or just confirmed
-            executed = await self.has_executed(child_provider)
+            executed = self.has_executed(child_provider)
             return ChildToParentMessageStatus.EXECUTED if executed else ChildToParentMessageStatus.CONFIRMED
         else:
             # Not created yet, wait a bit and re-check
-            await wait(retry_delay_ms)
-            return await self.wait_until_outbox_entry_created(child_provider, retry_delay_ms)
+            wait(retry_delay_ms)
+            return self.wait_until_outbox_entry_created(child_provider, retry_delay_ms)
 
-    async def get_first_executable_block(self, child_provider) -> Optional[BlockNumber]:
+    def get_first_executable_block(self, child_provider) -> Optional[BlockNumber]:
         """
         Classic outboxes can be executed in any block after the outbox entry is created,
         so we always return None for Classic.
@@ -375,25 +375,25 @@ class ChildToParentMessageWriterClassic(ChildToParentMessageReaderClassic):
         )
         self.parent_signer = parent_signer
 
-    async def execute(self, child_provider, overrides=None) -> TxReceipt:
+    def execute(self, child_provider, overrides=None) -> TxReceipt:
         """
         Executes the Child->Parent message on the parent chain if the outbox entry has been created.
         Raises an exception if the message is not yet CONFIRMED.
         """
-        current_status = await self.status(child_provider)
+        current_status = self.status(child_provider)
         if current_status != ChildToParentMessageStatus.CONFIRMED:
             raise ArbSdkError(
                 f"Cannot execute message. Status is: {current_status}, "
                 f"but must be {ChildToParentMessageStatus.CONFIRMED}."
             )
 
-        proof_info = await self.try_get_proof(child_provider)
+        proof_info = self.try_get_proof(child_provider)
         if not is_defined(proof_info):
             raise ArbSdkError(
                 f"Unexpected missing proof: batch {self.batch_number} index {self.index_in_batch}"
             )
 
-        outbox_address = await self.get_outbox_address(child_provider, self.batch_number)
+        outbox_address = self.get_outbox_address(child_provider, self.batch_number)
         outbox_contract = load_contract(
             provider=self.parent_provider,
             contract_name="Outbox",

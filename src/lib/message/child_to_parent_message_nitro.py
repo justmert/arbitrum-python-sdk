@@ -1,4 +1,4 @@
-import asyncio
+
 
 from web3 import Web3
 from eth_typing import BlockNumber
@@ -16,13 +16,16 @@ from src.lib.utils.lib import (
     is_arbitrum_chain,
 )
 from typing import List, Optional
+import threading
+import time
 
 # Same constants you had before, now referencing child->parent
 ASSERTION_CREATED_PADDING = 50
 ASSERTION_CONFIRMED_PADDING = 20
 
 child_block_range_cache = {}
-child_block_cache_lock = asyncio.Lock()
+child_block_cache_lock = threading.Lock()
+
 
 
 def get_child_block_range_cache_key(child_chain_id: int, l1_block_number: int) -> str:
@@ -35,7 +38,7 @@ def set_child_block_range_cache(key: str, value: List[Optional[int]]) -> None:
     child_block_range_cache[key] = value
 
 
-async def get_block_ranges_for_l1_block_with_cache(
+def get_block_ranges_for_l1_block_with_cache(
     parent_provider, child_provider, for_l1_block: int
 ):
     """
@@ -50,17 +53,18 @@ async def get_block_ranges_for_l1_block_with_cache(
         return child_block_range_cache[key]
 
     # Otherwise, lock so only one fetch is in-flight
-    async with child_block_cache_lock:
+    with child_block_cache_lock:
         # Maybe it got cached while we waited for the lock
         if key in child_block_range_cache:
             return child_block_range_cache[key]
 
         # Actually fetch
-        child_block_range = await get_block_ranges_for_l1_block(
+        child_block_range = get_block_ranges_for_l1_block(
             parent_provider, for_l1_block
         )
         set_child_block_range_cache(key, child_block_range)
         return child_block_range
+
 
 
 class ChildToParentMessageNitro:
@@ -75,7 +79,7 @@ class ChildToParentMessageNitro:
         self.event = event
 
     @classmethod
-    async def from_event(cls, parent_signer_or_provider, event, parent_provider=None):
+    def from_event(cls, parent_signer_or_provider, event, parent_provider=None):
         """
         Create either ChildToParentMessageReaderNitro or ChildToParentMessageWriterNitro
         depending on whether the passed-in object is a Signer or a Provider.
@@ -86,7 +90,7 @@ class ChildToParentMessageNitro:
             return ChildToParentMessageReaderNitro(parent_signer_or_provider, event)
 
     @staticmethod
-    async def get_child_to_parent_events(
+    def get_child_to_parent_events(
         child_provider,
         filter_dict: dict,
         position=None,
@@ -108,7 +112,7 @@ class ChildToParentMessageNitro:
             argument_filters["hash"] = hash
 
         # The underlying event name is still "L2ToL1Tx" on-chain, even though we've renamed the TypeScript interface.
-        events = await event_fetcher.get_events(
+        events = event_fetcher.get_events(
             contract_factory="ArbSys",
             event_name="L2ToL1Tx",
             argument_filters=argument_filters,
@@ -137,11 +141,11 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         self.outbox_address = None
         self.l1_batch_number = None
 
-    async def get_outbox_proof(self, child_provider):
+    def get_outbox_proof(self, child_provider):
         """
         Equivalent to getOutboxProof in the TS code. Constructs a proof to execute the message.
         """
-        send_props = await self.get_send_props(child_provider)
+        send_props = self.get_send_props(child_provider)
         send_root_size = send_props.get("sendRootSize", None)
 
         if not send_root_size:
@@ -166,7 +170,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         )
         return outbox_proof_params["proof"]
 
-    async def has_executed(self, child_provider) -> bool:
+    def has_executed(self, child_provider) -> bool:
         """
         Checks if the message is already executed by calling Outbox.isSpent(position).
         """
@@ -179,16 +183,16 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         )
         return outbox_contract.functions.isSpent(self.event["position"]).call()
 
-    async def status(self, child_provider) -> ChildToParentMessageStatus:
+    def status(self, child_provider) -> ChildToParentMessageStatus:
         """
         Returns the status of this message (UNCONFIRMED, CONFIRMED, or EXECUTED).
         """
-        send_props = await self.get_send_props(child_provider)
+        send_props = self.get_send_props(child_provider)
         if not send_props.get("sendRootConfirmed"):
             return ChildToParentMessageStatus.UNCONFIRMED
 
         # If the send root is confirmed, check if the message was executed
-        executed = await self.has_executed(child_provider)
+        executed = self.has_executed(child_provider)
         return ChildToParentMessageStatus.EXECUTED if executed else ChildToParentMessageStatus.CONFIRMED
 
     def parse_node_created_assertion(self, fetched_event):
@@ -224,7 +228,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         # We'll look for 'assertionHash' or 'challengeManager' or do a simpler check here:
         return "assertionHash" in fetched_event["event"]
 
-    async def get_block_from_assertion_log(self, child_provider, fetched_event=None):
+    def get_block_from_assertion_log(self, child_provider, fetched_event=None):
         """
         Merges logic from getBlockFromNodeLog + getBlockFromAssertionLog in TS.
         """
@@ -232,7 +236,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
 
         if not fetched_event:
             # If no logs found, default block 0
-            return await arbitrum_provider.get_block(0)
+            return arbitrum_provider.get_block(0)
 
         if self.is_assertion_created_log(fetched_event):
             parsed = self.parse_assertion_created_event(fetched_event)
@@ -242,18 +246,19 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         block_hash = parsed["afterState"]["blockHash"]
         send_root = parsed["afterState"]["sendRoot"]
 
-        child_block = await arbitrum_provider.get_block(block_hash)
+        child_block = arbitrum_provider.get_block(block_hash)
         if not child_block:
             raise ArbSdkError(f"Block not found. {block_hash}")
 
-        # child_block["sendRoot"] is likely a hex string
-        if Web3.to_hex(child_block["sendRoot"]) != Web3.to_hex(send_root):
+        print(f"Child block: {child_block}")
+        print(f"Send root: {send_root}")
+        if child_block["sendRoot"] != Web3.to_hex(send_root):
             raise ArbSdkError(
                 f"Child chain block send root doesn't match assertion log. {child_block['sendRoot']} {send_root}"
             )
         return child_block
 
-    async def get_block_from_assertion_id(self, rollup_contract, assertion_id, child_provider):
+    def get_block_from_assertion_id(self, rollup_contract, assertion_id, child_provider):
         """
         Merges getBlockFromNodeNum with the BoLD path using getAssertion.  
         In TS, we do rollup.getNode(...) vs rollup.getAssertion(...).
@@ -289,7 +294,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         created_to_block = created_at_block
 
         # If parent is Arbitrum, then child is Orbit. We try to find the child block range
-        if await is_arbitrum_chain(self.parent_provider):
+        if is_arbitrum_chain(self.parent_provider):
             # Some or all of these calls might fail, so we do a try-catch fallback:
             success = False
             # One approach: call nodeInterface.l2BlockRangeForL1() if available
@@ -311,7 +316,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             if not success:
                 try:
                     # fallback: do the binary search approach
-                    child_block_range = await get_block_ranges_for_l1_block_with_cache(
+                    child_block_range = get_block_ranges_for_l1_block_with_cache(
                         self.parent_provider, child_provider, created_at_block
                     )
                     start_block, end_block = child_block_range
@@ -329,7 +334,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
 
         if is_bold:
             # We're searching for AssertionCreated(assertionHash)
-            logs = await event_fetcher.get_events(
+            logs = event_fetcher.get_events(
                 contract_factory=rollup_contract,
                 event_name="AssertionCreated",
                 argument_filters={"assertionHash": assertion_id},
@@ -341,7 +346,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             )
         else:
             # Searching for NodeCreated(nodeNum)
-            logs = await event_fetcher.get_events(
+            logs = event_fetcher.get_events(
                 contract_factory=rollup_contract,
                 event_name="NodeCreated",
                 argument_filters={"nodeNum": assertion_id},
@@ -357,11 +362,11 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                 f"Unexpected number of AssertionCreated/NodeCreated events. Expected 0 or 1, got {len(logs)}."
             )
 
-        return await self.get_block_from_assertion_log(
+        return self.get_block_from_assertion_log(
             child_provider, logs[0] if logs else None
         )
 
-    async def get_batch_number(self, child_provider) -> Optional[int]:
+    def get_batch_number(self, child_provider) -> Optional[int]:
         """
         findBatchContainingBlock parallels TS logic, but might fail if the block doesn't exist yet.
         """
@@ -381,7 +386,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                 pass
         return self.l1_batch_number
 
-    async def get_send_props(self, child_provider):
+    def get_send_props(self, child_provider):
         """
         Merges logic from getSendProps in TS: checks whether the node is confirmed or not.
         If so, we store sendRootSize, sendRootHash, sendRootConfirmed, etc.
@@ -399,7 +404,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             latest_confirmed = rollup_contract.functions.latestConfirmed().call()
 
             # This merges classic or bold logic in a single path, see get_block_from_assertion_id
-            confirmed_block = await self.get_block_from_assertion_id(
+            confirmed_block = self.get_block_from_assertion_id(
                 rollup_contract, latest_confirmed, child_provider
             )
             send_root_size_confirmed = int(Web3.to_int(hexstr=confirmed_block["sendCount"]))
@@ -420,7 +425,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
 
                 # If there's a strictly larger node number / assertion ID
                 if latest_created > latest_confirmed:
-                    unconfirmed_block = await self.get_block_from_assertion_id(
+                    unconfirmed_block = self.get_block_from_assertion_id(
                         rollup_contract, latest_created, child_provider
                     )
                     send_root_size_unconfirmed = int(
@@ -435,7 +440,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             "sendRootConfirmed": self.send_root_confirmed,
         }
 
-    async def wait_until_ready_to_execute(
+    def wait_until_ready_to_execute(
         self,
         child_provider,
         retry_delay=1000,
@@ -444,16 +449,17 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         Wait repeatedly until the outbox entry (assertion) is confirmed, so the message can be executed.
         Like waitUntilReadyToExecute in TS code.
         """
-        current_status = await self.status(child_provider)
-        if current_status in (
-            ChildToParentMessageStatus.CONFIRMED,
-            ChildToParentMessageStatus.EXECUTED,
-        ):
-            return current_status
-        await asyncio.sleep(retry_delay / 1000.0)
-        return await self.wait_until_ready_to_execute(child_provider, retry_delay)
+        while True:
+            current_status = self.status(child_provider)
+            if current_status in (
+                ChildToParentMessageStatus.CONFIRMED,
+                ChildToParentMessageStatus.EXECUTED,
+            ):
+                return current_status
+                
+            time.sleep(retry_delay / 1000.0)  # Convert milliseconds to seconds
 
-    async def get_first_executable_block(self, child_provider) -> Optional[BlockNumber]:
+    def get_first_executable_block(self, child_provider) -> Optional[BlockNumber]:
         """
         getFirstExecutableBlock from the TS code:
         - If message can be or is already executed, return None
@@ -467,7 +473,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             
         )
 
-        current_status = await self.status(child_provider)
+        current_status = self.status(child_provider)
         if current_status in (
             ChildToParentMessageStatus.EXECUTED,
             ChildToParentMessageStatus.CONFIRMED,
@@ -483,7 +489,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         # We check either NodeCreated or AssertionCreated logs
         # For simplicity, we assume classic here (NodeCreated).
         # If bold, you'd search for AssertionCreated instead.
-        logs = await event_fetcher.get_events(
+        logs = event_fetcher.get_events(
             contract_factory=rollup_contract,
             event_name="NodeCreated",
             argument_filters={},
@@ -501,7 +507,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         logs.sort(key=lambda x: x["event"]["nodeNum"])
 
         # Get the last block from the last NodeCreated event
-        last_child_block = await self.get_block_from_assertion_log(
+        last_child_block = self.get_block_from_assertion_log(
             child_provider, logs[-1] if logs else None
         )
         last_send_count = int(last_child_block["sendCount"]) if last_child_block else 0
@@ -522,7 +528,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         while left <= right:
             mid = (left + right) // 2
             test_log = logs[mid]
-            child_block = await self.get_block_from_assertion_log(child_provider, test_log)
+            child_block = self.get_block_from_assertion_log(child_provider, test_log)
             send_count = int(child_block["sendCount"])
             if send_count > self.event["position"]:
                 found_log = test_log
@@ -558,18 +564,18 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
         )
         self.parent_signer = parent_signer
 
-    async def execute(self, child_provider, overrides=None):
+    def execute(self, child_provider, overrides=None):
         """
         Executes the Child->Parent message on the parent chain once the outbox entry is confirmed.
         Throws if message is not yet CONFIRMED.
         """
-        current_status = await self.status(child_provider)
+        current_status = self.status(child_provider)
         if current_status != ChildToParentMessageStatus.CONFIRMED:
             raise ArbSdkError(
                 f"Cannot execute message. Status is: {current_status} but must be {ChildToParentMessageStatus.CONFIRMED}."
             )
 
-        proof = await self.get_outbox_proof(child_provider)
+        proof = self.get_outbox_proof(child_provider)
         child_chain = get_arbitrum_network(child_provider)
         outbox_contract = load_contract(
             provider=self.parent_signer.provider,

@@ -4,33 +4,33 @@ import pytest
 from web3 import Web3
 from web3.exceptions import TransactionNotFound
 
-from src.lib.data_entities.networks import get_l2_network
+from src.lib.data_entities.networks import get_arbitrum_network
 from src.lib.inbox.inbox import InboxTools
 from src.lib.utils.helper import get_contract_address, parse_raw_tx
-from src.scripts.test_setup import test_setup
+from scripts.test_setup import test_setup
 
 
 @pytest.fixture(scope="module")
-async def test_state():
-    return await test_setup()
+def test_state():
+    return test_setup()
 
 
-async def send_signed_tx(test_state, info=None):
-    l1_deployer = test_state.l1_deployer
-    l2_deployer = test_state.l2_deployer
-    l2_network = get_l2_network(l2_deployer.provider.eth.chain_id)
-    inbox = InboxTools(l1_deployer, l2_network)
+def send_signed_tx(test_state, info=None):
+    parent_deployer = test_state.parent_deployer
+    child_deployer = test_state.child_deployer
+    child_chain = get_arbitrum_network(child_deployer.provider.eth.chain_id)
+    inbox = InboxTools(parent_deployer, child_chain)
 
     message = {
         **info,
         "value": Web3.to_wei(0, "ether"),
     }
-    signed_tx = await inbox.sign_l2_tx(message, l2_deployer)
+    signed_tx = inbox.sign_child_tx(message, child_deployer)
 
-    l1_tx = await inbox.send_l2_signed_tx(signed_tx)
+    parent_tx = inbox.send_child_signed_tx(signed_tx)
     return {
         "signedMsg": signed_tx,
-        "l1TransactionReceipt": l1_tx,
+        "parentTransactionReceipt": parent_tx,
     }
 
 
@@ -46,92 +46,97 @@ def read_greeter_contract():
     return abi, bytecode
 
 
-@pytest.mark.asyncio
-async def test_can_deploy_contract(test_state):
-    l2_deployer = test_state.l2_deployer
+def test_can_deploy_contract(test_state):
+    child_deployer = test_state.child_deployer
 
     abi, bytecode = read_greeter_contract()
-    GreeterContract = l2_deployer.provider.eth.contract(abi=abi, bytecode=bytecode)
+    GreeterContract = child_deployer.provider.eth.contract(abi=abi, bytecode=bytecode)
 
     construct_txn = GreeterContract.constructor().build_transaction(
         {
             "value": 0,
         }
     )
-    return_data = await send_signed_tx(test_state, construct_txn)
-    l1_transaction_receipt = return_data["l1TransactionReceipt"]
+    # TO-DO
+    return_data = send_signed_tx(test_state, construct_txn)
+    parent_transaction_receipt = return_data["parentTransactionReceipt"]
     signed_msg = return_data["signedMsg"]
 
-    assert l1_transaction_receipt["status"] == 1, "L1 transaction failed"
+    assert parent_transaction_receipt["status"] == 1, "Parent transaction failed"
 
-    l2Tx = parse_raw_tx(signed_msg.rawTransaction)
-    l2_tx_hash = l2Tx["hash"]
-    l2_tx_receipt = l2_deployer.provider.eth.wait_for_transaction_receipt(l2_tx_hash)
+    child_tx = parse_raw_tx(signed_msg.rawTransaction)
+    child_tx_hash = child_tx["hash"]
+    child_tx_receipt = child_deployer.provider.eth.wait_for_transaction_receipt(child_tx_hash)
 
-    assert l2_tx_receipt["status"] == 1, "L2 transaction failed"
+    assert child_tx_receipt["status"] == 1, "Child transaction failed"
 
-    sender_address = l2Tx["from"]
-    nonce = l2Tx["nonce"]
+    sender_address = child_tx["from"]
+    nonce = child_tx["nonce"]
 
     contract_address = get_contract_address(sender_address, nonce)
 
-    greeter = l2_deployer.provider.eth.contract(address=Web3.to_checksum_address(contract_address), abi=abi)
+    greeter = child_deployer.provider.eth.contract(
+        address=Web3.to_checksum_address(contract_address), 
+        abi=abi
+    )
     greet_result = greeter.functions.greet().call()
     assert greet_result == "hello world", "Contract returned unexpected value"
 
 
-@pytest.mark.asyncio
-async def test_should_confirm_same_tx_on_l2(test_state):
-    l2_deployer = test_state.l2_deployer
+def test_should_confirm_same_tx_on_child_chain(test_state):
+    child_deployer = test_state.child_deployer
 
     info = {
         "data": "0x12",
-        "to": l2_deployer.account.address,
+        "to": child_deployer.account.address,
     }
 
-    return_data = await send_signed_tx(test_state, info)
-    l1_transaction_receipt = return_data["l1TransactionReceipt"]
+    return_data = send_signed_tx(test_state, info)
+    parent_transaction_receipt = return_data["parentTransactionReceipt"]
     signed_msg = return_data["signedMsg"]
 
-    assert l1_transaction_receipt["status"] == 1, "L1 transaction failed"
+    assert parent_transaction_receipt["status"] == 1, "Parent transaction failed"
 
-    l2Tx = parse_raw_tx(signed_msg.rawTransaction)
-    l2_tx_hash = l2Tx["hash"]
-    l2_tx_receipt = l2_deployer.provider.eth.wait_for_transaction_receipt(l2_tx_hash)
+    child_tx = parse_raw_tx(signed_msg.rawTransaction)
+    child_tx_hash = child_tx["hash"]
+    child_tx_receipt = child_deployer.provider.eth.wait_for_transaction_receipt(child_tx_hash)
 
-    assert l2_tx_receipt["status"] == 1, "L2 transaction failed"
+    assert child_tx_receipt["status"] == 1, "Child transaction failed"
 
 
-@pytest.mark.asyncio
-async def test_send_two_tx_share_same_nonce(test_state):
-    l2_deployer = test_state.l2_deployer
-    current_nonce = l2_deployer.provider.eth.get_transaction_count(l2_deployer.account.address)
+def test_send_two_tx_share_same_nonce(test_state):
+    child_deployer = test_state.child_deployer
+    current_nonce = child_deployer.provider.eth.get_transaction_count(
+        child_deployer.account.address
+    )
 
     low_fee_info = {
         "data": "0x12",
         "nonce": current_nonce,
-        "to": l2_deployer.account.address,
-        "maxFeePerGas": 10000000,
-        "maxPriorityFeePerGas": 10000000,
+        "to": child_deployer.account.address,
+        "maxFeePerGas": 10000000,  # 0.01 gwei
+        "maxPriorityFeePerGas": 1000000,  # 0.001 gwei
     }
 
-    low_fee_tx_data = await send_signed_tx(test_state, low_fee_info)
-    assert low_fee_tx_data["l1TransactionReceipt"]["status"] == 1, "L1 transaction (low fee) failed"
+    low_fee_tx_data = send_signed_tx(test_state, low_fee_info)
+    assert low_fee_tx_data["parentTransactionReceipt"]["status"] == 1, "Parent transaction (low fee) failed"
 
     enough_fee_info = {
         "data": "0x12",
-        "to": l2_deployer.account.address,
+        "to": child_deployer.account.address,
         "nonce": current_nonce,
     }
 
-    enough_fee_tx_data = await send_signed_tx(test_state, enough_fee_info)
-    assert enough_fee_tx_data["l1TransactionReceipt"]["status"] == 1, "L1 transaction (enough fee) failed"
+    enough_fee_tx_data = send_signed_tx(test_state, enough_fee_info)
+    assert enough_fee_tx_data["parentTransactionReceipt"]["status"] == 1, "Parent transaction (enough fee) failed"
 
-    l2_low_fee_tx_hash = parse_raw_tx(low_fee_tx_data["signedMsg"].rawTransaction)["hash"]
-    l2_enough_fee_tx_hash = parse_raw_tx(enough_fee_tx_data["signedMsg"].rawTransaction)["hash"]
+    child_low_fee_tx_hash = parse_raw_tx(low_fee_tx_data["signedMsg"].rawTransaction)["hash"]
+    child_enough_fee_tx_hash = parse_raw_tx(enough_fee_tx_data["signedMsg"].rawTransaction)["hash"]
 
-    l2_enough_fee_receipt = l2_deployer.provider.eth.wait_for_transaction_receipt(l2_enough_fee_tx_hash)
-    assert l2_enough_fee_receipt["status"] == 1, "L2 transaction (enough fee) failed"
+    child_enough_fee_receipt = child_deployer.provider.eth.wait_for_transaction_receipt(
+        child_enough_fee_tx_hash
+    )
+    assert child_enough_fee_receipt["status"] == 1, "Child transaction (enough fee) failed"
 
     with pytest.raises(TransactionNotFound):
-        l2_deployer.provider.eth.get_transaction_receipt(l2_low_fee_tx_hash)
+        child_deployer.provider.eth.get_transaction_receipt(child_low_fee_tx_hash)

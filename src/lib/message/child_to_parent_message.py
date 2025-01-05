@@ -1,4 +1,3 @@
-import asyncio
 from typing import Optional
 
 from web3.providers import BaseProvider
@@ -23,7 +22,7 @@ class ChildToParentMessage:
             return ChildToParentMessageReader(parent_signer_or_provider, event)
 
     @staticmethod
-    async def get_child_to_parent_events(
+    def get_child_to_parent_events(
         child_provider,
         filter,
         position=None,
@@ -31,6 +30,7 @@ class ChildToParentMessage:
         hash=None,
         index_in_batch=None,
     ):
+        # Get synchronous versions of these calls
         child_chain = get_arbitrum_network(child_provider)
         child_nitro_genesis_block = get_nitro_genesis_block(child_chain)
 
@@ -64,26 +64,25 @@ class ChildToParentMessage:
             "toBlock": in_nitro_range(filter["toBlock"], child_nitro_genesis_block),
         }
 
-        log_queries = []
+        results = []
         if classic_filter["fromBlock"] != classic_filter["toBlock"]:
-            log_queries.append(
-                classic.ChildToParentMessageClassic.get_child_to_parent_events(
-                    child_provider,
-                    classic_filter,
-                    position,
-                    destination,
-                    hash,
-                    index_in_batch,
-                )
+            classic_events = classic.ChildToParentMessageClassic.get_child_to_parent_events(
+                child_provider,
+                classic_filter,
+                position,
+                destination,
+                hash,
+                index_in_batch,
             )
+            results.extend(classic_events)
 
         if nitro_filter["fromBlock"] != nitro_filter["toBlock"]:
-            log_queries.append(
-                nitro.ChildToParentMessageNitro.get_child_to_parent_events(child_provider, nitro_filter, position, destination, hash)
+            nitro_events = nitro.ChildToParentMessageNitro.get_child_to_parent_events(
+                child_provider, nitro_filter, position, destination, hash
             )
+            results.extend(nitro_events)
 
-        results = await asyncio.gather(*log_queries)
-        return [event for result in results for event in result]
+        return results
 
 
 class ChildToParentMessageReader(ChildToParentMessage):
@@ -98,29 +97,29 @@ class ChildToParentMessageReader(ChildToParentMessage):
             self.nitro_reader = nitro.ChildToParentMessageReaderNitro(parent_provider, event)
             self.classic_reader = None
 
-    async def get_outbox_proof(self, child_provider):
+    def get_outbox_proof(self, child_provider):
         if self.nitro_reader:
-            return await self.nitro_reader.get_outbox_proof(child_provider)
+            return self.nitro_reader.get_outbox_proof(child_provider)
         else:
-            return await self.classic_reader.try_get_proof(child_provider)
+            return self.classic_reader.try_get_proof(child_provider)
 
-    async def status(self, child_provider):
+    def status(self, child_provider):
         if self.nitro_reader:
-            return await self.nitro_reader.status(child_provider)
+            return self.nitro_reader.status(child_provider)
         else:
-            return await self.classic_reader.status(child_provider)
+            return self.classic_reader.status(child_provider)
 
-    async def wait_until_ready_to_execute(self, child_provider, retry_delay=500):
+    def wait_until_ready_to_execute(self, child_provider, retry_delay=500):
         if self.nitro_reader:
-            await self.nitro_reader.wait_until_ready_to_execute(child_provider, retry_delay)
+            self.nitro_reader.wait_until_ready_to_execute(child_provider, retry_delay)
         else:
-            await self.classic_reader.wait_until_outbox_entry_created(child_provider, retry_delay)
+            self.classic_reader.wait_until_outbox_entry_created(child_provider, retry_delay)
 
-    async def get_first_executable_block(self, child_provider):
+    def get_first_executable_block(self, child_provider):
         if self.nitro_reader:
-            return await self.nitro_reader.get_first_executable_block(child_provider)
+            return self.nitro_reader.get_first_executable_block(child_provider)
         else:
-            return await self.classic_reader.get_first_executable_block(child_provider)
+            return self.classic_reader.get_first_executable_block(child_provider)
 
 
 class ChildToParentMessageWriter(ChildToParentMessageReader):
@@ -135,8 +134,8 @@ class ChildToParentMessageWriter(ChildToParentMessageReader):
             self.nitro_writer = nitro.ChildToParentMessageWriterNitro(parent_signer, event, parent_provider)
             self.classic_writer = None
 
-    async def execute(self, child_provider, overrides=None):
+    def execute(self, child_provider, overrides=None):
         if self.nitro_writer:
-            return await self.nitro_writer.execute(child_provider, overrides)
+            return self.nitro_writer.execute(child_provider, overrides)
         else:
-            return await self.classic_writer.execute(child_provider, overrides)
+            return self.classic_writer.execute(child_provider, overrides)

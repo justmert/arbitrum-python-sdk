@@ -34,7 +34,7 @@ class AssetBridger(ABC):
         # which token is used as the native currency on this chain (ETH or an ERC-20).
         self.native_token = child_network.nativeToken
 
-    async def check_parent_network(self, sop):
+    def check_parent_network(self, sop):
         """
         Checks if the signer/provider matches the parent (L1) network by comparing chain IDs.
         Throws an exception if it does not match.
@@ -42,9 +42,9 @@ class AssetBridger(ABC):
         :param sop: SignerOrProvider instance for the parent chain
         :raises ArbSdkError: If the network does not match child_network.parent_chain_id
         """
-        await SignerProviderUtils.check_network_matches(sop, self.child_network.parentChainId)
+        SignerProviderUtils.check_network_matches(sop, self.child_network.parentChainId)
 
-    async def check_child_network(self, sop):
+    def check_child_network(self, sop):
         """
         Checks if the signer/provider matches the child (L2 or orbit) network by comparing chain IDs.
         Throws an exception if it does not match.
@@ -52,7 +52,7 @@ class AssetBridger(ABC):
         :param sop: SignerOrProvider instance for the child chain
         :raises ArbSdkError: If the network does not match child_network.chain_id
         """
-        await SignerProviderUtils.check_network_matches(sop, self.child_network.chainId)
+        SignerProviderUtils.check_network_matches(sop, self.child_network.chainId)
 
     @property
     def native_token_is_eth(self) -> bool:
@@ -65,7 +65,7 @@ class AssetBridger(ABC):
         return is_arbitrum_network_native_token_ether(self.child_network)
 
     @abstractmethod
-    async def deposit(self, params):
+    def deposit(self, params):
         """
         Transfer assets from the parent chain to the child chain.
 
@@ -76,7 +76,7 @@ class AssetBridger(ABC):
         pass
 
     @abstractmethod
-    async def withdraw(self, params):
+    def withdraw(self, params):
         """
         Transfer assets from the child chain back to the parent chain.
 

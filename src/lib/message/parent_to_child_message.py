@@ -176,9 +176,9 @@ class ParentToChildMessageReader(ParentToChildMessage):
         self.child_provider = child_provider
         self.retryable_creation_receipt = None
 
-    async def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
+    def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
         if not self.retryable_creation_receipt:
-            self.retryable_creation_receipt = await get_transaction_receipt(
+            self.retryable_creation_receipt =  get_transaction_receipt(
                 self.child_provider, 
                 self.retryable_creation_id, 
                 confirmations, 
@@ -186,8 +186,8 @@ class ParentToChildMessageReader(ParentToChildMessage):
             )
         return self.retryable_creation_receipt or None
 
-    async def get_auto_redeem_attempt(self):
-        creation_receipt = await self.get_retryable_creation_receipt()
+    def get_auto_redeem_attempt(self):
+        creation_receipt =  self.get_retryable_creation_receipt()
 
         if creation_receipt:
             child_receipt = ChildTransactionReceipt(creation_receipt)
@@ -205,10 +205,10 @@ class ParentToChildMessageReader(ParentToChildMessage):
 
         return None
 
-    async def get_successful_redeem(self):
+    def get_successful_redeem(self):
         chainNetwork = get_arbitrum_network(self.child_provider)
         event_fetcher = EventFetcher(self.child_provider)
-        creation_receipt = await self.get_retryable_creation_receipt()
+        creation_receipt =  self.get_retryable_creation_receipt()
 
         if not is_defined(creation_receipt):
             return {"status": ParentToChildMessageStatus.NOT_YET_CREATED}
@@ -216,14 +216,14 @@ class ParentToChildMessageReader(ParentToChildMessage):
         if creation_receipt.status == 0:
             return {"status": ParentToChildMessageStatus.CREATION_FAILED}
 
-        auto_redeem = await self.get_auto_redeem_attempt()
+        auto_redeem =  self.get_auto_redeem_attempt()
         if auto_redeem and auto_redeem.status == 1:
             return {
                 "childTxReceipt": auto_redeem, 
                 "status": ParentToChildMessageStatus.REDEEMED
             }
 
-        if await self.retryable_exists():
+        if  self.retryable_exists():
             return {"status": ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD}
 
         increment = 1000
@@ -239,7 +239,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
             outer_block_range = {"from": from_block.number, "to": to_block_number}
             queried_range.append(outer_block_range)
 
-            redeem_events = await event_fetcher.get_events(
+            redeem_events =  event_fetcher.get_events(
                 contract_factory="ArbRetryableTx",
                 event_name="RedeemScheduled",
                 argument_filters={"retryableCreationId": self.retryable_creation_id},
@@ -253,7 +253,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
 
             successful_redeems = []
             for e in redeem_events:
-                receipt = await get_transaction_receipt(self.child_provider, e["retryTxHash"])
+                receipt =  get_transaction_receipt(self.child_provider, e["retryTxHash"])
                 if receipt and receipt.status == 1:
                     successful_redeems.append(receipt)
 
@@ -271,7 +271,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
             if to_block.timestamp > timeout:
                 while queried_range:
                     block_range = queried_range.pop(0)
-                    keepalive_events = await event_fetcher.get_events(
+                    keepalive_events =  event_fetcher.get_events(
                         contract_factory="ArbRetryableTx",
                         event_name="LifetimeExtended",
                         argument_filters={"ticketId": self.retryable_creation_id},
@@ -300,27 +300,27 @@ class ParentToChildMessageReader(ParentToChildMessage):
 
         return {"status": ParentToChildMessageStatus.EXPIRED}
 
-    async def is_expired(self):
+    def is_expired(self):
         """@deprecated Will be removed in v3.0.0"""
-        return await self.retryable_exists()
+        return  self.retryable_exists()
 
-    async def retryable_exists(self):
+    def retryable_exists(self):
         current_timestamp = (self.child_provider.eth.get_block("latest")).timestamp
         try:
-            timeout_timestamp = await self.get_timeout()
+            timeout_timestamp =  self.get_timeout()
             return current_timestamp <= timeout_timestamp
         except ContractCustomError as err:
             if err.data == "0x80698456":  # NoTicketWithID error
                 return False
             raise err
 
-    async def status(self):
-        return (await self.get_successful_redeem())["status"]
+    def status(self):
+        return ( self.get_successful_redeem())["status"]
 
-    async def wait_for_status(self, confirmations=None, timeout=None):
+    def wait_for_status(self, confirmations=None, timeout=None):
         chosen_timeout = timeout if is_defined(timeout) else DEFAULT_DEPOSIT_TIMEOUT
 
-        _retryable_creation_receipt = await self.get_retryable_creation_receipt(
+        _retryable_creation_receipt =  self.get_retryable_creation_receipt(
             confirmations, chosen_timeout
         )
         if not _retryable_creation_receipt:
@@ -332,10 +332,10 @@ class ParentToChildMessageReader(ParentToChildMessage):
                 f"Retryable creation receipt not found {self.retryable_creation_id}."
             )
 
-        return await self.get_successful_redeem()
+        return  self.get_successful_redeem()
 
     @staticmethod
-    async def get_lifetime(child_provider):
+    def get_lifetime(child_provider):
         arb_retryable = load_contract(
             provider=child_provider,
             contract_name="ArbRetryableTx",
@@ -344,7 +344,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
         )
         return arb_retryable.functions.getLifetime().call()
 
-    async def get_timeout(self):
+    def get_timeout(self):
         arb_retryable = load_contract(
             provider=self.child_provider,
             contract_name="ArbRetryableTx",
@@ -414,7 +414,7 @@ class ParentToChildMessageReaderClassic:
         ])
         return Web3.keccak(data).hex()
 
-    async def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
+    def get_retryable_creation_receipt(self, confirmations=None, timeout=None):
         """
         Try to get the receipt for the retryable ticket creation.
         This is the Chain transaction that creates the retryable ticket.
@@ -424,7 +424,7 @@ class ParentToChildMessageReaderClassic:
             Null if retryable has not been created
         """
         if not self.retryable_creation_receipt:
-            self.retryable_creation_receipt = await get_transaction_receipt(
+            self.retryable_creation_receipt =  get_transaction_receipt(
                 self.child_provider, 
                 self.retryable_creation_id, 
                 confirmations, 
@@ -432,9 +432,9 @@ class ParentToChildMessageReaderClassic:
             )
         return self.retryable_creation_receipt
 
-    async def status(self):
+    def status(self):
         """Get the message status"""
-        creation_receipt = await self.get_retryable_creation_receipt()
+        creation_receipt =  self.get_retryable_creation_receipt()
 
         if not is_defined(creation_receipt):
             return ParentToChildMessageStatus.NOT_YET_CREATED
@@ -446,7 +446,7 @@ class ParentToChildMessageReaderClassic:
             self.retryable_creation_id
         )
 
-        chain_tx_receipt = await get_transaction_receipt(
+        chain_tx_receipt =  get_transaction_receipt(
             self.child_provider, 
             chain_derived_hash
         )
@@ -471,8 +471,8 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
         )
         self.chain_signer = chain_signer
 
-    async def redeem(self, overrides=None):
-        status = await self.status()
+    def redeem(self, overrides=None):
+        status =  self.status()
         if status == ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD:
             arb_retryable_tx = load_contract(
                 contract_name="ArbRetryableTx",
@@ -501,8 +501,8 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 f"{ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD.name}."
             )
 
-    async def cancel(self, overrides=None):
-        status = await self.status()
+    def cancel(self, overrides=None):
+        status =  self.status()
         if status == ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD:
             arb_retryable_tx = load_contract(
                 contract_name="ArbRetryableTx",
@@ -518,7 +518,7 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 overrides["from"] = self.chain_signer.account.address
 
             tx_hash = arb_retryable_tx.functions.cancel(self.retryable_creation_id).transact(overrides)
-            return await self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+            return  self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         else:
             raise ArbSdkError(
                 f"Cannot cancel as retryable does not exist. Message status: "
@@ -526,8 +526,8 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 f"{ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD.name}."
             )
 
-    async def keep_alive(self, overrides=None):
-        status = await self.status()
+    def keep_alive(self, overrides=None):
+        status =  self.status()
         if status == ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD:
             arb_retryable_tx = load_contract(
                 contract_name="ArbRetryableTx",
@@ -543,7 +543,7 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 overrides["from"] = self.chain_signer.account.address
 
             tx_hash = arb_retryable_tx.functions.keepalive(self.retryable_creation_id).transact(overrides)
-            return await self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+            return  self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         else:
             raise ArbSdkError(
                 f"Cannot keep alive as retryable does not exist. Message status: "
@@ -589,7 +589,7 @@ class EthDepositMessage:
         return tx_id.hex()
 
     @staticmethod
-    async def from_event_components(child_provider, message_number, sender_addr, inbox_message_event_data):
+    def from_event_components(child_provider, message_number, sender_addr, inbox_message_event_data):
         chain_id = child_provider.eth.chain_id
         parsed_data = EthDepositMessage.parse_eth_deposit_data(inbox_message_event_data)
         return EthDepositMessage(
@@ -617,19 +617,19 @@ class EthDepositMessage:
         value = int(value_hex, 16) if value_hex != "0" else 0
         return {"to": to_address, "value": value}
 
-    async def status(self):
-        receipt = await get_transaction_receipt(self.child_provider, self.child_tx_hash)
+    def status(self):
+        receipt =  get_transaction_receipt(self.child_provider, self.child_tx_hash)
         return (
             EthDepositMessageStatus.DEPOSITED 
             if receipt is not None 
             else EthDepositMessageStatus.PENDING
         )
 
-    async def wait(self, confirmations=None, timeout=None):
+    def wait(self, confirmations=None, timeout=None):
         chosen_timeout = timeout if is_defined(timeout) else DEFAULT_DEPOSIT_TIMEOUT
 
         if not self.child_tx_receipt:
-            self.child_tx_receipt = await get_transaction_receipt(
+            self.child_tx_receipt =  get_transaction_receipt(
                 self.child_provider,
                 self.child_tx_hash,
                 confirmations,

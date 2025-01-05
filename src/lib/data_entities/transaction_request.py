@@ -1,4 +1,4 @@
-from typing import Any, Dict, Callable, Awaitable, TypeVar, Union
+from typing import Any, Dict, Callable, TypeVar, Union
 from web3.types import Wei
 
 from src.lib.utils.lib import is_defined
@@ -44,12 +44,12 @@ class ParentToChildTransactionRequest:
         self.tx_request = tx_request
         self.retryable_data = retryable_data
 
-    async def is_valid(self) -> bool:
+    def is_valid(self) -> bool:
         """
         If this request were sent now, would it have enough margin to reliably succeed?
 
         In TS, 'isValid()' returns `Promise<boolean>`.
-        Here, we define it as async returning bool.
+        Here, we define it as returning bool.
         """
         # In actual usage, you'd implement checks on gas price, maxSubmissionCost, etc.
         return False
@@ -65,7 +65,7 @@ class ChildToParentTransactionRequest:
     def __init__(
         self,
         tx_request: Dict[str, Any],
-        estimate_parent_gas_limit: Callable[[Any], Awaitable[Wei]]
+        estimate_parent_gas_limit: Callable[[Any], Wei]
     ):
         """
         :param tx_request: 

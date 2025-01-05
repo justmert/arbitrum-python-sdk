@@ -30,7 +30,7 @@ def setup():
 
 class TestNetworks:
     class TestAddingNetworks:
-        async def test_adds_custom_l2_network(self):
+        def test_adds_custom_l2_network(self):
             arbitrum_one = get_arbitrum_network(ARBITRUM_ONE_CHAIN_ID)
 
             custom_arbitrum_network = {
@@ -49,7 +49,7 @@ class TestNetworks:
             arbitrum_network = get_arbitrum_network(custom_arbitrum_network["chainId"])
             assert arbitrum_network.parent_chain_id == ETHEREUM_MAINNET_CHAIN_ID
 
-        async def test_adds_custom_l3_network(self):
+        def test_adds_custom_l3_network(self):
             arbitrum_one = get_arbitrum_network(ARBITRUM_ONE_CHAIN_ID)
 
             custom_arbitrum_network = {
@@ -69,16 +69,16 @@ class TestNetworks:
             assert l3_network.parent_chain_id == ARBITRUM_ONE_CHAIN_ID
 
     class TestFetchingNetworks:
-        async def test_successfully_fetches_arbitrum_network(self):
+        def test_successfully_fetches_arbitrum_network(self):
             network = get_arbitrum_network(ARBITRUM_ONE_CHAIN_ID)
             assert network.chain_id == ARBITRUM_ONE_CHAIN_ID
 
-        async def test_fails_to_fetch_registered_l1_network(self):
+        def test_fails_to_fetch_registered_l1_network(self):
             with pytest.raises(ArbSdkError) as exc_info:
                 get_arbitrum_network(ETHEREUM_MAINNET_CHAIN_ID)
             assert str(exc_info.value) == f"Unrecognized network {ETHEREUM_MAINNET_CHAIN_ID}."
 
-        async def test_successfully_fetches_l3_chain(self):
+        def test_successfully_fetches_l3_chain(self):
             arbitrum_one = get_arbitrum_network(ARBITRUM_ONE_CHAIN_ID)
 
             custom_l3_network = {
@@ -95,7 +95,7 @@ class TestNetworks:
             assert l3_network.chain_id == MOCK_L3_CHAIN_ID
             assert l3_network.parent_chain_id == ARBITRUM_ONE_CHAIN_ID
 
-        async def test_fails_to_fetch_unrecognized_network(self):
+        def test_fails_to_fetch_unrecognized_network(self):
             chain_id = 9999
             with pytest.raises(ArbSdkError) as exc_info:
                 get_arbitrum_network(chain_id)
@@ -148,24 +148,24 @@ class TestNetworks:
             assert is_parent_network(421614) is False
 
     class TestGetMulticallAddress:
-        async def test_returns_correct_value_for_ethereum_mainnet(self):
-            multicall = await get_multicall_address(1)
+        def test_returns_correct_value_for_ethereum_mainnet(self):
+            multicall =  get_multicall_address(1)
             assert multicall == "0x5ba1e12693dc8f9c48aad8770482f4739beed696"
 
-        async def test_returns_correct_value_for_arbitrum_one(self):
-            multicall = await get_multicall_address(42161)
+        def test_returns_correct_value_for_arbitrum_one(self):
+            multicall =  get_multicall_address(42161)
             assert multicall == "0x842eC2c7D803033Edf55E478F461FC547Bc54EB2"
 
-        async def test_returns_correct_value_for_arbitrum_nova(self):
-            multicall = await get_multicall_address(42170)
+        def test_returns_correct_value_for_arbitrum_nova(self):
+            multicall =  get_multicall_address(42170)
             assert multicall == "0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86"
 
-        async def test_returns_correct_value_for_sepolia(self):
-            multicall = await get_multicall_address(11155111)
+        def test_returns_correct_value_for_sepolia(self):
+            multicall =  get_multicall_address(11155111)
             assert multicall == "0xded9AD2E65F3c4315745dD915Dbe0A4Df61b2320"
 
-        async def test_returns_correct_value_for_arbitrum_sepolia(self):
-            multicall = await get_multicall_address(421614)
+        def test_returns_correct_value_for_arbitrum_sepolia(self):
+            multicall =  get_multicall_address(421614)
             assert multicall == "0xA115146782b7143fAdB3065D86eACB54c169d092"
 
 

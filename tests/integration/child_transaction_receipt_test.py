@@ -1,7 +1,6 @@
-import asyncio
 from typing import Dict
-
-import pytest
+import time
+import threading
 from eth_account import Account
 from web3 import Web3
 from web3.exceptions import ContractLogicError
@@ -18,22 +17,13 @@ from tests.integration.test_helpers import (
 
 AMOUNT_TO_SEND = Web3.to_wei(0.000005, "ether")
 
-
-async def wait_for_l1_batch_confirmations(
+def wait_for_l1_batch_confirmations(
     arb_tx_receipt: ChildTransactionReceipt,
     l2_provider: Web3,
     timeout_ms: int
 ) -> int:
     """
     Wait for L1 batch confirmations with timeout
-    
-    Args:
-        arb_tx_receipt: Child transaction receipt
-        l2_provider: L2 web3 provider  
-        timeout_ms: Max time to wait in milliseconds
-        
-    Returns:
-        Number of L1 batch confirmations
     """
     polls = 0
     l1_batch_confirmations = 0
@@ -48,15 +38,14 @@ async def wait_for_l1_batch_confirmations(
 
         # Increment polls and wait
         polls += 1 
-        await wait(timeout_ms // MAX_POLLS)
+        wait(timeout_ms // MAX_POLLS)
 
     return l1_batch_confirmations
 
 
-@pytest.mark.asyncio
-async def test_find_l1_batch_info():
+def test_find_l1_batch_info():
     """Test finding L1 batch info for child chain transaction"""
-    setup_state = await test_setup()
+    setup_state = test_setup()
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer
     l2_provider = child_signer.provider
@@ -74,15 +63,18 @@ async def test_find_l1_batch_info():
     miner1 = SignerOrProvider(miner1_account, parent_signer.provider)
     miner2 = SignerOrProvider(miner2_account, child_signer.provider)
 
-    await fund_parent_signer(miner1, Web3.to_wei(0.1, "ether"))
-    await fund_child_signer(miner2, Web3.to_wei(0.1, "ether"))
+    fund_parent_signer(miner1, Web3.to_wei(0.1, "ether"))
+    fund_child_signer(miner2, Web3.to_wei(0.1, "ether"))
     
     state: Dict[str, bool] = {"mining": True}
 
-    miner1_task = asyncio.create_task(mine_until_stop(miner1, state))
-    miner2_task = asyncio.create_task(mine_until_stop(miner2, state))
+    miner1_thread = threading.Thread(target=mine_until_stop, args=(miner1, state))
+    miner2_thread = threading.Thread(target=mine_until_stop, args=(miner2, state))
+    
+    miner1_thread.start()
+    miner2_thread.start()
 
-    await fund_child_signer(child_signer)
+    fund_child_signer(child_signer)
 
     random_address = Account.create().address
 
@@ -93,9 +85,7 @@ async def test_find_l1_batch_info():
         "nonce": child_signer.provider.eth.get_transaction_count(child_signer.account.address),
         "gasPrice": child_signer.provider.eth.gas_price,
         "chainId": child_signer.provider.eth.chain_id,
-
     }   
-
 
     estimated_gas = child_signer.provider.eth.estimate_gas(tx)
     tx["gas"] = estimated_gas
@@ -106,21 +96,20 @@ async def test_find_l1_batch_info():
 
     # Wait for batch data
     while True:
-        await wait(300)
+        wait(300)
         arb_tx_receipt = ChildTransactionReceipt(rec)
         
         try:
-            l1_batch_number = await arb_tx_receipt.get_batch_number(l2_provider)
+            l1_batch_number = arb_tx_receipt.get_batch_number(l2_provider)
         except ContractLogicError:
             # findBatchContainingBlock errors if block number does not exist
             l1_batch_number = 0
 
         if l1_batch_number and l1_batch_number > 0:
-            l1_batch_confirmations = await wait_for_l1_batch_confirmations(
+            l1_batch_confirmations = wait_for_l1_batch_confirmations(
                 arb_tx_receipt,
                 l2_provider,
-                # For L3s, also wait for batch to land on L1
-                timeout_ms=60_000 
+                timeout_ms=60_000  # For L3s, also wait for batch to land on L1
             )
 
             assert l1_batch_confirmations > 0, "Missing confirmations"
@@ -129,5 +118,7 @@ async def test_find_l1_batch_info():
                 break
 
     state["mining"] = False
-    miner1_task.cancel()
-    miner2_task.cancel()
+    
+    # Wait for mining threads to finish
+    miner1_thread.join()
+    miner2_thread.join()

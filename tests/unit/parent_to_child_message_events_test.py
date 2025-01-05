@@ -5,8 +5,8 @@ from web3 import HTTPProvider, Web3
 from src.lib.message.parent_transaction import ParentTransactionReceipt
 
 
-@pytest.mark.asyncio
-async def test_does_call_for_nitro_events():
+
+def test_does_call_for_nitro_events():
     # Receipt from mainnet tx: 0x00000a61331187be51ab9ae792d74f601a5a21fb112f5b9ac5bccb23d4d5aaba
     receipt = {
         "to": HexBytes("0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef"),
@@ -152,7 +152,7 @@ async def test_does_call_for_nitro_events():
     tx_receipt = None
     try:
         # Try getting classic messages using a nitro tx
-        tx_receipt = await parent_txn_receipt.get_parent_to_child_messages_classic(arb_provider)
+        tx_receipt =  parent_txn_receipt.get_parent_to_child_messages_classic(arb_provider)
     except Exception as err:
         # This call should throw an error
         assert isinstance(err, Exception)
@@ -164,8 +164,8 @@ async def test_does_call_for_nitro_events():
         # Should not successfully get classic messages
         assert tx_receipt is None, "Classic method was successful using a nitro transaction."
 
-    is_classic = await parent_txn_receipt.is_classic(arb_provider)
-    msg = (await parent_txn_receipt.get_parent_to_child_messages(arb_provider))[0]
+    is_classic =  parent_txn_receipt.is_classic(arb_provider)
+    msg = ( parent_txn_receipt.get_parent_to_child_messages(arb_provider))[0]
 
     assert not is_classic, "incorrect tx type returned by isClassic call"
     assert msg.chain_id == 42161, "incorrect chain id"
@@ -195,8 +195,8 @@ async def test_does_call_for_nitro_events():
     ), "incorrect retryable creation id"
 
 
-@pytest.mark.asyncio
-async def test_does_call_for_classic_events():
+
+def test_does_call_for_classic_events():
     # Receipt from mainnet tx: 0xc80e0c4844bb502ed7d7e2db6f9e6b2d52e3d25688de216394f0227fc5dc814e
     receipt = {
         "to": HexBytes("0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f"),
@@ -260,7 +260,7 @@ async def test_does_call_for_classic_events():
     tx_receipt = None
     try:
         # Try getting nitro messages using a classic tx
-        tx_receipt = await parent_txn_receipt.get_parent_to_child_messages(arb_provider)
+        tx_receipt =  parent_txn_receipt.get_parent_to_child_messages(arb_provider)
     except Exception as err:
         # This call should throw an error
         assert isinstance(err, Exception)
@@ -272,9 +272,9 @@ async def test_does_call_for_classic_events():
         # Should not successfully get nitro messages
         assert tx_receipt is None, "Nitro method was successful using a classic transaction."
 
-    is_classic = await parent_txn_receipt.is_classic(arb_provider)
-    msg = (await parent_txn_receipt.get_parent_to_child_messages_classic(arb_provider))[0]
-    status = await msg.status()
+    is_classic =  parent_txn_receipt.is_classic(arb_provider)
+    msg = ( parent_txn_receipt.get_parent_to_child_messages_classic(arb_provider))[0]
+    status =  msg.status()
 
     assert is_classic, "incorrect tx type returned by isClassic call"
     assert status == 5, "invalid message status"

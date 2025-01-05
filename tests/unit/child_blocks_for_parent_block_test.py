@@ -1,4 +1,4 @@
-import asyncio
+
 import pytest
 from web3 import HTTPProvider, Web3
 
@@ -17,12 +17,19 @@ provider = Web3(HTTPProvider("https://arb1.arbitrum.io/rpc"))
 arb_provider = ArbitrumProvider(provider)
 
 
-@pytest.mark.asyncio
-async def validate_child_blocks(child_blocks, child_blocks_count, block_type="number"):
-    """Validate child blocks for parent block"""
+
+def validate_child_blocks(child_blocks, child_blocks_count, block_type="number"):
+    """
+    Validate child blocks for parent block
+    
+    :param child_blocks: List of child blocks to validate
+    :param child_blocks_count: Expected number of child blocks
+    :param block_type: Type of blocks ('number' or 'undefined')
+    """
     if len(child_blocks) != child_blocks_count:
         raise ValidationException(
-            f"Expected Child block range to have the array length of {child_blocks_count}, " f"got {len(child_blocks)}."
+            f"Expected Child block range to have the array length of {child_blocks_count}, "
+            f"got {len(child_blocks)}."
         )
 
     if block_type == "number" and not all(isinstance(block, int) or block is None for block in child_blocks):
@@ -34,20 +41,25 @@ async def validate_child_blocks(child_blocks, child_blocks_count, block_type="nu
     if block_type == "undefined":
         return
 
-    tasks = []
+    blocks = []
     for index, child_block in enumerate(child_blocks):
         if child_block is None:
             raise ValidationException("Child block is undefined.")
 
         is_start_block = index == 0
-        tasks.append(arb_provider.get_block(child_block))
-        # Search for previous or next block
-        tasks.append(arb_provider.get_block(child_block + (-1 if is_start_block else 1)))
+        
+        # Get current block
+        current_block = arb_provider.get_block(child_block)
+        blocks.append(current_block)
+        
+        # Get adjacent block (previous for start block, next for end block)
+        adjacent_block = arb_provider.get_block(child_block + (-1 if is_start_block else 1))
+        blocks.append(adjacent_block)
 
-    blocks = await asyncio.gather(*tasks)
-
+    # Validate blocks
     for i in range(0, len(blocks), 2):
-        current_block, adjacent_block = blocks[i], blocks[i + 1]
+        current_block = blocks[i]
+        adjacent_block = blocks[i + 1]
 
         if current_block is None or adjacent_block is None:
             continue
@@ -59,56 +71,59 @@ async def validate_child_blocks(child_blocks, child_blocks_count, block_type="nu
 
         if is_start_block:
             if not current_block_number > adjacent_block_number:
-                raise ValidationException("Child start block is not the first block in range for parent block.")
+                raise ValidationException(
+                    "Child start block is not the first block in range for parent block."
+                )
         else:
             if not current_block_number < adjacent_block_number:
-                raise ValidationException("Child end block is not the last block in range for parent block.")
+                raise ValidationException(
+                    "Child end block is not the last block in range for parent block."
+                )
 
 
-@pytest.mark.asyncio
-async def test_successfully_searches_for_child_block_range():
+def test_successfully_searches_for_child_block_range():
     """Test successful search for child block range"""
-    child_blocks = await get_block_ranges_for_l1_block(
+    child_blocks = get_block_ranges_for_l1_block(
             arbitrum_provider =  arb_provider,
             for_l1_block =  17926532,
             min_arbitrum_block =  121800000,
             max_arbitrum_block =  122000000,
         
     )
-    await validate_child_blocks(child_blocks, 2)
+    validate_child_blocks(child_blocks, 2)
 
 
-@pytest.mark.asyncio
-async def test_fails_to_search_for_child_block_range():
+
+def test_fails_to_search_for_child_block_range():
     """Test failed search for child block range"""
-    child_blocks = await get_block_ranges_for_l1_block(
+    child_blocks = get_block_ranges_for_l1_block(
             arbitrum_provider =  arb_provider,
             for_l1_block =  17926533,
             min_arbitrum_block =  121800000,
             max_arbitrum_block =  122000000,
     )
-    await validate_child_blocks(child_blocks, 2, "undefined")
+    validate_child_blocks(child_blocks, 2, "undefined")
 
 
-@pytest.mark.asyncio
-async def test_successfully_searches_for_first_child_block():
+
+def test_successfully_searches_for_first_child_block():
     """Test successful search for first child block"""
     child_blocks = [
-        await get_first_block_for_l1_block(
+        get_first_block_for_l1_block(
                 arbitrum_provider =  arb_provider,
                 for_l1_block =  17926532,
                 min_arbitrum_block =  121800000,
                 max_arbitrum_block =  122000000,
         )
     ]
-    await validate_child_blocks(child_blocks, 1)
+    validate_child_blocks(child_blocks, 1)
 
 
-@pytest.mark.asyncio
-async def test_fails_to_search_for_first_child_block_without_allow_greater():
+
+def test_fails_to_search_for_first_child_block_without_allow_greater():
     """Test failed search for first child block without allow_greater flag"""
     child_blocks = [
-        await get_first_block_for_l1_block(
+        get_first_block_for_l1_block(
                 arbitrum_provider = arb_provider,
                 for_l1_block = 17926533,
                 allow_greater = False,
@@ -116,14 +131,14 @@ async def test_fails_to_search_for_first_child_block_without_allow_greater():
                 max_arbitrum_block=122000000,
         )
     ]
-    await validate_child_blocks(child_blocks, 1, "undefined")
+    validate_child_blocks(child_blocks, 1, "undefined")
 
 
-@pytest.mark.asyncio
-async def test_successfully_searches_for_first_child_block_with_allow_greater():
+
+def test_successfully_searches_for_first_child_block_with_allow_greater():
     """Test successful search for first child block with allow_greater flag"""
     child_blocks = [
-        await get_first_block_for_l1_block(
+        get_first_block_for_l1_block(
                 arbitrum_provider =  arb_provider,
                 for_l1_block = 17926533,
                 allow_greater = True,
@@ -132,4 +147,4 @@ async def test_successfully_searches_for_first_child_block_with_allow_greater():
                 max_arbitrum_block=122000000,
         )
     ]
-    await validate_child_blocks(child_blocks, 1)
+    validate_child_blocks(child_blocks, 1)

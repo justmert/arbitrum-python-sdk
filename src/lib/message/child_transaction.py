@@ -15,11 +15,11 @@ class RedeemTransaction:
         self.transaction = transaction
         self.child_provider = child_provider
 
-    async def wait(self):
+    def wait(self):
         """Wait for transaction confirmation"""
         return self.transaction
 
-    async def wait_for_redeem(self):
+    def wait_for_redeem(self):
         """Wait for redeem completion"""
         child_receipt = ChildTransactionReceipt(self.transaction)
         redeem_scheduled_events = child_receipt.get_redeem_scheduled_events(
@@ -85,7 +85,7 @@ class ChildTransactionReceipt(CaseDict):
             event_name="RedeemScheduled"
         )
 
-    async def get_child_to_parent_messages(self, parent_signer_or_provider):
+    def get_child_to_parent_messages(self, parent_signer_or_provider):
         """Get child-to-parent messages"""
         provider = SignerProviderUtils.get_provider(parent_signer_or_provider)
         if not provider:
@@ -106,7 +106,7 @@ class ChildTransactionReceipt(CaseDict):
         )
         return node_interface.functions.getL1Confirmations(self.block_hash).call()
 
-    async def get_batch_number(self, child_provider) -> int:
+    def get_batch_number(self, child_provider) -> int:
         """Get the batch number containing this transaction"""
         arb_provider = ArbitrumProvider(child_provider)
         node_interface = load_contract(
@@ -115,7 +115,7 @@ class ChildTransactionReceipt(CaseDict):
             provider=arb_provider.provider, 
         )
 
-        receipt = await arb_provider.get_transaction_receipt(self.transaction_hash)
+        receipt =  arb_provider.get_transaction_receipt(self.transaction_hash)
         if receipt is None:
             raise ArbSdkError("No receipt available for current transaction")
 
@@ -123,7 +123,7 @@ class ChildTransactionReceipt(CaseDict):
             receipt.blockNumber
         ).call()
 
-    async def is_data_available(
+    def is_data_available(
         self, 
         child_provider,
         confirmations: int = 10
@@ -154,6 +154,6 @@ class ChildTransactionReceipt(CaseDict):
 
 class ChildContractTransaction:
     """Base class for child chain contract transactions"""
-    async def wait(self, confirmations: Optional[int] = None) -> ChildTransactionReceipt:
+    def wait(self, confirmations: Optional[int] = None) -> ChildTransactionReceipt:
         """Wait for transaction confirmation"""
         raise NotImplementedError()

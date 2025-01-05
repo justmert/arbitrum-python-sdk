@@ -299,7 +299,7 @@ def get_arbitrum_network_by_provider(provider: SignerOrProvider) -> ArbitrumNetw
     return get_arbitrum_network_by_chain_id(chain_id)
 
 
-async def get_native_token(bridge: str, provider: SignerOrProvider) -> str:
+def get_native_token(bridge: str, provider: SignerOrProvider) -> str:
     """
     Attempts to retrieve the 'nativeToken' address from the given bridge contract.
     If the contract doesn't define 'nativeToken()', returns AddressZero.
@@ -315,12 +315,12 @@ async def get_native_token(bridge: str, provider: SignerOrProvider) -> str:
             contract_name="IERC20Bridge",
             address=bridge,
         )
-        return await bridge_contract.functions.nativeToken().call()
+        return  bridge_contract.functions.nativeToken().call()
     except Exception:
         return ADDRESS_ZERO
 
 
-async def get_arbitrum_network_information_from_rollup(
+def get_arbitrum_network_information_from_rollup(
     rollup_address: str, parent_provider: SignerOrProvider
 ) -> Dict[str, Any]:
     """
@@ -344,11 +344,11 @@ async def get_arbitrum_network_information_from_rollup(
         address=rollup_address,
     )
     chain_id = parent_provider.eth.chain_id
-    bridge = await rollup.functions.bridge().call()
-    inbox = await rollup.functions.inbox().call()
-    sequencer_inbox = await rollup.functions.sequencerInbox().call()
-    outbox = await rollup.functions.outbox().call()
-    confirm_period_blocks = await rollup.functions.confirmPeriodBlocks().call()
+    bridge =  rollup.functions.bridge().call()
+    inbox =  rollup.functions.inbox().call()
+    sequencer_inbox =  rollup.functions.sequencerInbox().call()
+    outbox =  rollup.functions.outbox().call()
+    confirm_period_blocks =  rollup.functions.confirmPeriodBlocks().call()
 
     return {
         "parentChainId": chain_id,
@@ -360,7 +360,7 @@ async def get_arbitrum_network_information_from_rollup(
             "outbox": outbox,
             "rollup": rollup_address,
         },
-        "nativeToken": await get_native_token(bridge, parent_provider),
+        "nativeToken":  get_native_token(bridge, parent_provider),
     }
 
 
@@ -485,7 +485,7 @@ def get_nitro_genesis_block(arbitrum_chain_or_chain_id: Union[ArbitrumNetwork, i
     return ARB1_NITRO_GENESIS_L2_BLOCK if chain_id == 42161 else 0
 
 
-async def get_multicall_address(provider_or_chain_id: Union[SignerOrProvider, int]) -> str:
+def get_multicall_address(provider_or_chain_id: Union[SignerOrProvider, int]) -> str:
     """
     Returns the multicall contract address for a chain or for the chain
     indicated by the given provider.

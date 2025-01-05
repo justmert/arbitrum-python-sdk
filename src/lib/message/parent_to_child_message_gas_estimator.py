@@ -68,7 +68,7 @@ class ParentToChildMessageGasEstimator:
         min_gas_limit = gas_limit_defaults["min"] if gas_limit_defaults and "min" in gas_limit_defaults else 0
         return {"base": base, "percentIncrease": percent_increase, "min": min_gas_limit}
 
-    async def estimate_submission_fee(
+    def estimate_submission_fee(
         self,
         parent_provider,
         parent_base_fee: int,
@@ -96,7 +96,7 @@ class ParentToChildMessageGasEstimator:
 
         return self.percent_increase(base, defaulted_options["percentIncrease"])
 
-    async def estimate_retryable_ticket_gas_limit(self, retryable_data: dict, sender_deposit: int = None) -> int:
+    def estimate_retryable_ticket_gas_limit(self, retryable_data: dict, sender_deposit: int = None) -> int:
         """
         Estimate the child-chain gas required to create and execute a retryable transaction.
 
@@ -127,7 +127,7 @@ class ParentToChildMessageGasEstimator:
             retryable_data["data"],
         ).estimate_gas()
 
-    async def estimate_max_fee_per_gas(self, options=None) -> int:
+    def estimate_max_fee_per_gas(self, options=None) -> int:
         """
         Provides an estimate for the child chain maxFeePerGas, adding a margin for volatility.
         """
@@ -139,7 +139,7 @@ class ParentToChildMessageGasEstimator:
         return self.percent_increase(base, defaults["percentIncrease"])
 
     @staticmethod
-    async def is_valid(estimates: dict, re_estimates: dict) -> bool:
+    def is_valid(estimates: dict, re_estimates: dict) -> bool:
         """
         Validate that `estimates` remain safe if compared to fresh `re_estimates` from chain.
         We want to ensure maxFeePerGas & maxSubmissionCost are not underestimates.
@@ -149,7 +149,7 @@ class ParentToChildMessageGasEstimator:
             and estimates["maxSubmissionCost"] >= re_estimates["maxSubmissionCost"]
         )
 
-    async def estimate_all(
+    def estimate_all(
         self,
         retryable_estimate_data: dict,
         parent_base_fee: int,
@@ -167,8 +167,8 @@ class ParentToChildMessageGasEstimator:
 
         # Apply defaults
         gas_limit_defaults = self.apply_gas_limit_defaults(options.get("gasLimit", {}))
-        max_fee_per_gas_estimate = await self.estimate_max_fee_per_gas(options.get("maxFeePerGas", {}))
-        max_submission_fee_estimate = await self.estimate_submission_fee(
+        max_fee_per_gas_estimate =  self.estimate_max_fee_per_gas(options.get("maxFeePerGas", {}))
+        max_submission_fee_estimate =  self.estimate_submission_fee(
             parent_provider,
             parent_base_fee,
             len(data),
@@ -178,7 +178,7 @@ class ParentToChildMessageGasEstimator:
         # Estimate gas limit
         base = gas_limit_defaults.get("base")
         if base is None:
-            base = await self.estimate_retryable_ticket_gas_limit(
+            base =  self.estimate_retryable_ticket_gas_limit(
                 retryable_estimate_data, options.get("deposit", {}).get("base")
             )
 
@@ -188,7 +188,7 @@ class ParentToChildMessageGasEstimator:
         # Now figure out the deposit
         # The new code scales from 18 decimals to the child chain's native decimals if needed
         child_network = get_arbitrum_network(self.child_provider)
-        decimals = await get_native_token_decimals(
+        decimals =  get_native_token_decimals(
             parent_provider=parent_provider,
             child_network=child_network,
         )
@@ -206,7 +206,12 @@ class ParentToChildMessageGasEstimator:
             decimals=decimals,
             
             )
-
+        print('heyy', {
+            "gasLimit": gas_limit,
+            "maxFeePerGas": max_fee_per_gas_estimate,
+            "maxSubmissionCost": max_submission_fee_estimate,
+            "deposit": deposit,
+        })
         return {
             "gasLimit": gas_limit,
             "maxFeePerGas": max_fee_per_gas_estimate,
@@ -214,7 +219,7 @@ class ParentToChildMessageGasEstimator:
             "deposit": deposit,
         }
 
-    async def populate_function_params(self, data_func, parent_provider, gas_overrides=None):
+    def populate_function_params(self, data_func, parent_provider, gas_overrides=None):
         """
         Transactions that send a Parent->Child message use a two-call approach:
         1) Call with a "dummy" set of gas params to trigger an error containing the real RetryableData.
@@ -242,7 +247,7 @@ class ParentToChildMessageGasEstimator:
             "maxFeePerGas": RetryableDataTools.ErrorTriggeringParams["maxFeePerGas"],
             "maxSubmissionCost": 1,
         })
-
+        print('dummy_params', dummy_params)
         null_data_request = data_func(dummy_params)
         retryable = None
 
@@ -263,8 +268,8 @@ class ParentToChildMessageGasEstimator:
                 raise ArbSdkError(f"No retryable data found in error: {err}")
 
         # Now use that RetryableData to get real gas estimates
-        parent_base_fee = await get_base_fee(parent_provider)
-        estimates = await self.estimate_all(
+        parent_base_fee =  get_base_fee(parent_provider)
+        estimates =  self.estimate_all(
             {
                 "from": retryable["from"],
                 "to": retryable["to"],
@@ -285,7 +290,7 @@ class ParentToChildMessageGasEstimator:
             "maxSubmissionCost": estimates["maxSubmissionCost"],
         }
         tx_request_real = data_func(real_params)
-
+        print('tx_request_real', tx_request_real)
         return {
             "estimates": estimates,
             "retryable": retryable,

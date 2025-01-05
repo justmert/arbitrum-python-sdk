@@ -1,4 +1,4 @@
-import asyncio
+
 
 import pytest
 from eth_account import Account
@@ -13,9 +13,9 @@ from src.scripts.test_setup import test_setup
 from tests.integration.test_helpers import fund_l1, fund_l2, mine_until_stop
 
 
-@pytest.mark.asyncio
-async def test_transfers_ether_on_l2():
-    setup_state = await test_setup()
+
+def test_transfers_ether_on_l2():
+    setup_state =  test_setup()
     l2_signer = setup_state.l2_signer
 
     fund_l2(l2_signer)
@@ -49,9 +49,9 @@ async def test_transfers_ether_on_l2():
     assert balance_after == expected_balance_after, "L2 signer balance after should be correctly reduced"
 
 
-@pytest.mark.asyncio
-async def test_deposits_ether():
-    setup_state = await test_setup()
+
+def test_deposits_ether():
+    setup_state =  test_setup()
     eth_bridger = setup_state.eth_bridger
     l1_signer = setup_state.l1_signer
     l2_signer = setup_state.l2_signer
@@ -64,7 +64,7 @@ async def test_deposits_ether():
 
     eth_to_deposit = Web3.to_wei(0.0002, "ether")
 
-    rec = await eth_bridger.deposit(
+    rec =  eth_bridger.deposit(
         {
             "amount": eth_to_deposit,
             "l1Signer": l1_signer,
@@ -78,9 +78,9 @@ async def test_deposits_ether():
     # Also fails in TS implementation - https://github.com/OffchainLabs/arbitrum-sdk/pull/407
     # assert final_inbox_balance == initial_inbox_balance + eth_to_deposit, "Balance failed to update after ETH deposit"
 
-    wait_result = await rec.wait_for_l2(l2_signer.provider)
+    wait_result =  rec.wait_for_l2(l2_signer.provider)
 
-    l1_to_l2_messages = await rec.get_eth_deposits(l2_signer.provider)
+    l1_to_l2_messages =  rec.get_eth_deposits(l2_signer.provider)
 
     assert len(l1_to_l2_messages) == 1, "Failed to find 1 L1 to L2 message"
     l1_to_l2_message = l1_to_l2_messages[0]
@@ -100,9 +100,9 @@ async def test_deposits_ether():
     ), "Final balance incorrect"
 
 
-@pytest.mark.asyncio
-async def test_deposits_ether_to_specific_l2_address():
-    setup_state = await test_setup()
+
+def test_deposits_ether_to_specific_l2_address():
+    setup_state =  test_setup()
     eth_bridger = setup_state.eth_bridger
     l1_signer = setup_state.l1_signer
     l2_signer = setup_state.l2_signer
@@ -115,7 +115,7 @@ async def test_deposits_ether_to_specific_l2_address():
     dest_wallet = Account.create()
 
     eth_to_deposit = Web3.to_wei(0.0002, "ether")
-    rec = await eth_bridger.deposit_to(
+    rec =  eth_bridger.deposit_to(
         {
             "amount": eth_to_deposit,
             "l1Signer": l1_signer,
@@ -131,14 +131,14 @@ async def test_deposits_ether_to_specific_l2_address():
     # Also fails in TS implementation - https://github.com/OffchainLabs/arbitrum-sdk/pull/407
     # assert final_inbox_balance == initial_inbox_balance + eth_to_deposit, "Balance failed to update after ETH deposit"
 
-    l1_to_l2_messages = await rec.get_l1_to_l2_messages(l2_signer.provider)
+    l1_to_l2_messages =  rec.get_l1_to_l2_messages(l2_signer.provider)
     assert len(l1_to_l2_messages) == 1, "Failed to find 1 L1 to L2 message"
     l1_to_l2_message = l1_to_l2_messages[0]
 
     assert l1_to_l2_message.message_data["destAddress"] == dest_wallet.address, "Message destination address mismatch"
     assert l1_to_l2_message.message_data["l2CallValue"] == eth_to_deposit, "Message value mismatch"
 
-    retryable_ticket_result = await l1_to_l2_message.wait_for_status()
+    retryable_ticket_result =  l1_to_l2_message.wait_for_status()
     assert retryable_ticket_result["status"] == L1ToL2MessageStatus.REDEEMED, "Retryable ticket not redeemed"
 
     retryable_tx_receipt = l2_signer.provider.eth.get_transaction_receipt(l1_to_l2_message.retryable_creation_id)
@@ -154,9 +154,9 @@ async def test_deposits_ether_to_specific_l2_address():
     assert test_wallet_l2_eth_balance == eth_to_deposit, "Final balance mismatch"
 
 
-@pytest.mark.asyncio
-async def test_withdraw_ether_transaction_succeeds():
-    setup_state = await test_setup()
+
+def test_withdraw_ether_transaction_succeeds():
+    setup_state =  test_setup()
     l2_signer = setup_state.l2_signer
     l1_signer = setup_state.l1_signer
     eth_bridger = setup_state.eth_bridger
@@ -167,7 +167,7 @@ async def test_withdraw_ether_transaction_succeeds():
     eth_to_withdraw = Web3.to_wei(0.00000002, "ether")
     random_address = Account.create().address
 
-    request = await eth_bridger.get_withdrawal_request(
+    request =  eth_bridger.get_withdrawal_request(
         {
             "amount": eth_to_withdraw,
             "destinationAddress": random_address,
@@ -178,7 +178,7 @@ async def test_withdraw_ether_transaction_succeeds():
 
     l1_gas_estimate = request["estimateL1GasLimit"](l1_signer.provider)
 
-    withdraw_eth_rec = await eth_bridger.withdraw(
+    withdraw_eth_rec =  eth_bridger.withdraw(
         {
             "amount": eth_to_withdraw,
             "l2Signer": l2_signer,
@@ -189,16 +189,16 @@ async def test_withdraw_ether_transaction_succeeds():
 
     assert withdraw_eth_rec.status == 1, "Initiate ETH withdraw transaction failed"
 
-    withdraw_message = (await withdraw_eth_rec.get_l2_to_l1_messages(l1_signer))[0]
+    withdraw_message = ( withdraw_eth_rec.get_l2_to_l1_messages(l1_signer))[0]
 
     assert withdraw_message is not None, "ETH withdraw getWithdrawalsInL2Transaction query came back empty"
 
-    withdraw_events = await L2ToL1Message.get_l2_to_l1_events(
+    withdraw_events =  L2ToL1Message.get_l2_to_l1_events(
         l2_signer.provider, {"fromBlock": withdraw_eth_rec.block_number, "toBlock": "latest"}, None, random_address
     )
     assert len(withdraw_events) == 1, "ETH withdraw getL2ToL1EventData failed"
 
-    message_status = await withdraw_message.status(l2_signer.provider)
+    message_status =  withdraw_message.status(l2_signer.provider)
     assert message_status == L2ToL1MessageStatus.UNCONFIRMED, f"ETH withdraw status returned {message_status}"
 
     miner1_seed = Account.create()
@@ -223,20 +223,20 @@ async def test_withdraw_ether_transaction_succeeds():
         withdraw_message.wait_until_ready_to_execute(l2_signer.provider),
     ]
 
-    done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    done, _ =  asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
     state["mining"] = False
 
     assert (
-        await withdraw_message.status(l2_signer.provider) == L2ToL1MessageStatus.CONFIRMED
+         withdraw_message.status(l2_signer.provider) == L2ToL1MessageStatus.CONFIRMED
     ), "Message status should be confirmed"
 
-    exec_rec = await withdraw_message.execute(l2_signer.provider)
+    exec_rec =  withdraw_message.execute(l2_signer.provider)
 
     assert exec_rec.gasUsed < l1_gas_estimate, "Gas used greater than estimate"
 
     assert (
-        await withdraw_message.status(l2_signer.provider) == L2ToL1MessageStatus.EXECUTED
+         withdraw_message.status(l2_signer.provider) == L2ToL1MessageStatus.EXECUTED
     ), "Message status should be executed"
 
     final_random_balance = l1_signer.provider.eth.get_balance(random_address)

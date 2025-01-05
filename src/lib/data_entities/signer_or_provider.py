@@ -133,7 +133,7 @@ class SignerProviderUtils:
         return False
 
     @staticmethod
-    async def check_network_matches(
+    def check_network_matches(
         signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3],
         chain_id: int
     ) -> None:
