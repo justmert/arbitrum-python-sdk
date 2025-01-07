@@ -20,6 +20,7 @@ from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.inbox.inbox import InboxTools
 from src.lib.utils.helper import CaseDict
 from tests.integration.test_helpers import fund_parent_signer
+import pytest
 
 # Import shared config and utility functions
 from scripts.setup_common import config, get_local_networks_from_file, IS_TESTING_ORBIT_CHAINS, get_signer
@@ -31,8 +32,7 @@ from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
     is_arbitrum_network_with_custom_fee_token,
 )
 
-
-def test_setup():
+def setup_testing_env():
     """Setup test environment with bridgers and networks"""
     eth_provider = Web3(HTTPProvider(config["ethUrl"]))
     arb_provider = Web3(HTTPProvider(config["arbUrl"]))
@@ -43,13 +43,23 @@ def test_setup():
 
     parent_deployer = SignerOrProvider(get_signer(eth_provider, config["ethKey"]), eth_provider)
     child_deployer = SignerOrProvider(get_signer(arb_provider, config["arbKey"]), arb_provider)
-
+    
     seed = Account.create()
     signer_private_key = seed.key.hex()
     signer_account = Account.from_key(signer_private_key)
 
     eth_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
+    
     arb_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
+
+    # Add signing middleware
+    eth_provider.middleware_onion.add(
+        construct_sign_and_send_raw_middleware(config["ethKey"])
+    )
+    arb_provider.middleware_onion.add(
+        construct_sign_and_send_raw_middleware(config["arbKey"])
+    )
+
 
     parent_signer = SignerOrProvider(signer_account, eth_provider)
     child_signer = SignerOrProvider(signer_account, arb_provider)

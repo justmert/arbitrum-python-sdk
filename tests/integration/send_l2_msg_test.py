@@ -6,13 +6,13 @@ from web3.exceptions import TransactionNotFound
 
 from src.lib.data_entities.networks import get_arbitrum_network
 from src.lib.inbox.inbox import InboxTools
-from src.lib.utils.helper import get_contract_address, parse_raw_tx
-from scripts.test_setup import test_setup
+from src.lib.utils.helper import get_contract_address, normalize_contract_address, parse_raw_tx
+from scripts.test_setup import setup_testing_env
 
 
 @pytest.fixture(scope="module")
 def test_state():
-    return test_setup()
+    return setup_testing_env()
 
 
 def send_signed_tx(test_state, info=None):
@@ -57,14 +57,14 @@ def test_can_deploy_contract(test_state):
             "value": 0,
         }
     )
-    # TO-DO
+ 
     return_data = send_signed_tx(test_state, construct_txn)
     parent_transaction_receipt = return_data["parentTransactionReceipt"]
     signed_msg = return_data["signedMsg"]
 
     assert parent_transaction_receipt["status"] == 1, "Parent transaction failed"
 
-    child_tx = parse_raw_tx(signed_msg.rawTransaction)
+    child_tx = parse_raw_tx(signed_msg)
     child_tx_hash = child_tx["hash"]
     child_tx_receipt = child_deployer.provider.eth.wait_for_transaction_receipt(child_tx_hash)
 
@@ -73,7 +73,10 @@ def test_can_deploy_contract(test_state):
     sender_address = child_tx["from"]
     nonce = child_tx["nonce"]
 
-    contract_address = get_contract_address(sender_address, nonce)
+    contract_address = get_contract_address(
+        sender_address,
+        nonce
+        )
 
     greeter = child_deployer.provider.eth.contract(
         address=Web3.to_checksum_address(contract_address), 
@@ -97,7 +100,7 @@ def test_should_confirm_same_tx_on_child_chain(test_state):
 
     assert parent_transaction_receipt["status"] == 1, "Parent transaction failed"
 
-    child_tx = parse_raw_tx(signed_msg.rawTransaction)
+    child_tx = parse_raw_tx(signed_msg)
     child_tx_hash = child_tx["hash"]
     child_tx_receipt = child_deployer.provider.eth.wait_for_transaction_receipt(child_tx_hash)
 
@@ -130,8 +133,8 @@ def test_send_two_tx_share_same_nonce(test_state):
     enough_fee_tx_data = send_signed_tx(test_state, enough_fee_info)
     assert enough_fee_tx_data["parentTransactionReceipt"]["status"] == 1, "Parent transaction (enough fee) failed"
 
-    child_low_fee_tx_hash = parse_raw_tx(low_fee_tx_data["signedMsg"].rawTransaction)["hash"]
-    child_enough_fee_tx_hash = parse_raw_tx(enough_fee_tx_data["signedMsg"].rawTransaction)["hash"]
+    child_low_fee_tx_hash = parse_raw_tx(low_fee_tx_data["signedMsg"])["hash"]
+    child_enough_fee_tx_hash = parse_raw_tx(enough_fee_tx_data["signedMsg"])["hash"]
 
     child_enough_fee_receipt = child_deployer.provider.eth.wait_for_transaction_receipt(
         child_enough_fee_tx_hash

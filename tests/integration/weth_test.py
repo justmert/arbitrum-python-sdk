@@ -4,7 +4,7 @@ from web3 import Web3
 
 from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
 from src.lib.utils.helper import load_contract
-from scripts.test_setup import test_setup
+from scripts.test_setup import setup_testing_env
 from tests.integration.test_helpers import (
     GatewayType,
     deposit_token,
@@ -15,7 +15,7 @@ from tests.integration.test_helpers import (
 
 def test_deposit_weth():
     """Test depositing WETH from parent to child chain"""
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     child_chain = setup_state.child_chain
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer
@@ -88,7 +88,7 @@ def test_withdraw_weth():
     weth_to_wrap = Web3.to_wei(0.00001, "ether")
     weth_to_withdraw = Web3.to_wei(0.00000001, "ether")
 
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     child_chain = setup_state.child_chain
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer

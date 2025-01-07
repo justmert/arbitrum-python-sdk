@@ -216,6 +216,7 @@ class ParentEthDepositTransactionReceipt(ParentTransactionReceipt):
         confirmations=None,
         timeout=None,
     ):
+        
         """
         Wait for the funds to arrive on the child chain.
         

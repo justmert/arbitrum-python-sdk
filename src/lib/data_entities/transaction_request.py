@@ -86,9 +86,9 @@ def is_parent_to_child_transaction_request(
     Type guard / runtime check: is 'possible_request' a ParentToChildTransactionRequest?
 
     :param possible_request: The object to check.
-    :return: True if it has a 'tx_request' attribute, else False.
+    :return: True if it has a 'txRequest' attribute, else False.
     """
-    return is_defined(getattr(possible_request, "tx_request", None))
+    return is_defined(possible_request.get("txRequest", None))
 
 
 def is_child_to_parent_transaction_request(
@@ -98,6 +98,6 @@ def is_child_to_parent_transaction_request(
     Type guard / runtime check: is 'possible_request' a ChildToParentTransactionRequest?
 
     :param possible_request: The object to check.
-    :return: True if it has a 'tx_request' attribute, else False.
+    :return: True if it has a 'txRequest' attribute, else False.
     """
-    return is_defined(getattr(possible_request, "tx_request", None))
+    return is_defined(possible_request.get("txRequest", None))

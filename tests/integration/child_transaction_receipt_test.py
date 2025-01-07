@@ -5,7 +5,7 @@ from eth_account import Account
 from web3 import Web3
 from web3.exceptions import ContractLogicError
 
-from scripts.test_setup import test_setup
+from scripts.test_setup import setup_testing_env
 from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
 from src.lib.message.child_transaction import ChildTransactionReceipt
 from tests.integration.test_helpers import (
@@ -45,7 +45,7 @@ def wait_for_l1_batch_confirmations(
 
 def test_find_l1_batch_info():
     """Test finding L1 batch info for child chain transaction"""
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer
     l2_provider = child_signer.provider

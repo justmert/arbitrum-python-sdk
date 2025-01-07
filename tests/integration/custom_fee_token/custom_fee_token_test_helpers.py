@@ -38,7 +38,7 @@ def is_arbitrum_network_with_custom_fee_token() -> bool:
 
 def test_setup():
     """Extended test setup with native token contract"""
-    from scripts.test_setup import test_setup as _test_setup  # Deferred import
+    from scripts.test_setup import setup_testing_env as _test_setup  # Deferred import
 
     result = _test_setup()
     child_chain = result["childChain"]

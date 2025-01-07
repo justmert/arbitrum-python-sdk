@@ -2,14 +2,14 @@ import os
 import pytest
 
 from src.lib.utils.helper import load_contract
-from scripts.test_setup import test_setup
+from scripts.test_setup import setup_testing_env
 from tests.integration.custom_fee_token.mocha_extensions import it_only_when_eth
 
 def expect_ignore_case(expected, actual):
     assert expected.lower() == actual.lower()
 
 def test_standard_gateways_public_storage_vars_properly_set():
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer
     child_chain = setup_state.child_chain
@@ -46,7 +46,7 @@ def test_standard_gateways_public_storage_vars_properly_set():
     expect_ignore_case(child_router, child_chain.token_bridge.child_gateway_router)
 
 def test_custom_gateways_public_storage_vars_properly_set():
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer
     child_chain = setup_state.child_chain
@@ -76,7 +76,7 @@ def test_custom_gateways_public_storage_vars_properly_set():
 
 @it_only_when_eth
 def test_weth_gateways_gateways_public_storage_vars_properly_set():
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer
     child_chain = setup_state.child_chain
@@ -112,7 +112,7 @@ def test_weth_gateways_gateways_public_storage_vars_properly_set():
 
 @it_only_when_eth
 def test_ae_weth_public_vars_properly_set():
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     child_signer = setup_state.child_signer
     child_chain = setup_state.child_chain
 
@@ -130,7 +130,7 @@ def test_ae_weth_public_vars_properly_set():
 
 @it_only_when_eth
 def test_parent_gateway_router_points_to_right_weth_gateways():
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     admin_erc20_bridger = setup_state.admin_erc20_bridger
     parent_signer = setup_state.parent_signer
     child_chain = setup_state.child_chain
@@ -142,7 +142,7 @@ def test_parent_gateway_router_points_to_right_weth_gateways():
     assert gateway == child_chain.token_bridge.parent_weth_gateway
 
 def test_parent_and_child_implementations_of_calculate_child_erc20_address_match():
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer
     child_chain = setup_state.child_chain

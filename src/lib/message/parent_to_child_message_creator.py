@@ -217,6 +217,7 @@ class ParentToChildMessageCreator:
         parent_provider = SignerProviderUtils.get_provider_or_throw(self.parent_signer)
 
         # Distinguish if 'params' is already a ParentToChildTransactionRequest or not
+        print("nediyor:", is_parent_to_child_transaction_request(params))
         if is_parent_to_child_transaction_request(params):
             create_request = params
         else:

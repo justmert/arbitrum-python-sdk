@@ -65,12 +65,12 @@ def parse_raw_tx_pyevm(raw_tx):
     return TransactionBuilder().decode(raw_tx)
 
 
-# def get_contract_address(sender_address, nonce):
-#     """Compute the contract address like Ethereum does."""
-#     encoded_data = rlp.encode([bytes.fromhex(sender_address[2:]), nonce])
-#     hashed_data = Web3.solidity_keccak(["bytes"], [encoded_data])
-#     contract_address = hashed_data[-20:].hex()
-#     return contract_address
+def get_contract_address(sender_address, nonce):
+    """Compute the contract address like Ethereum does."""
+    encoded_data = rlp.encode([bytes.fromhex(sender_address[2:]), nonce])
+    hashed_data = Web3.solidity_keccak(["bytes"], [encoded_data])
+    contract_address = hashed_data[-20:].hex()
+    return contract_address
 
 
 def parse_raw_tx(raw_tx):
@@ -148,7 +148,7 @@ def load_contract_data(contract_name: str) -> Tuple[ABI, Optional[HexStr]]:
     return abi, bytecode
 
 
-def get_contract_address(address: Union[str, Contract, Address]) -> Address:
+def normalize_contract_address(address: Union[str, Contract, Address]) -> Address:
     """Convert various address formats to checksum address"""
     if isinstance(address, str):
         return Web3.to_checksum_address(address)
@@ -197,7 +197,7 @@ def load_contract(
     abi, bytecode = load_contract_data(contract_name)
 
     if address is not None:
-        contract_address = get_contract_address(address)
+        contract_address = normalize_contract_address(address)
         return provider.eth.contract(address=contract_address, abi=abi)
 
     return provider.eth.contract(abi=abi, bytecode=bytecode) if bytecode else provider.eth.contract(abi=abi)

@@ -162,7 +162,7 @@ class ParentToChildMessageGasEstimator:
         """
         if options is None:
             options = {}
-
+        
         data = retryable_estimate_data["data"]
 
         # Apply defaults
@@ -290,7 +290,6 @@ class ParentToChildMessageGasEstimator:
             "maxSubmissionCost": estimates["maxSubmissionCost"],
         }
         tx_request_real = data_func(real_params)
-        print('tx_request_real', tx_request_real)
         return {
             "estimates": estimates,
             "retryable": retryable,

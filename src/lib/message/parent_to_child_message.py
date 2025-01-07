@@ -242,7 +242,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
             redeem_events =  event_fetcher.get_events(
                 contract_factory="ArbRetryableTx",
                 event_name="RedeemScheduled",
-                argument_filters={"retryableCreationId": self.retryable_creation_id},
+                argument_filters={"ticketId": self.retryable_creation_id},
                 filter={
                     "fromBlock": outer_block_range["from"],
                     "toBlock": outer_block_range["to"],
@@ -253,7 +253,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
 
             successful_redeems = []
             for e in redeem_events:
-                receipt =  get_transaction_receipt(self.child_provider, e["retryTxHash"])
+                receipt =  get_transaction_receipt(self.child_provider, e.event["retryTxHash"])
                 if receipt and receipt.status == 1:
                     successful_redeems.append(receipt)
 
@@ -487,6 +487,11 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
             if "from" not in overrides:
                 overrides["from"] = self.chain_signer.account.address
 
+            if "gasLimit" in overrides:
+                overrides["gas"] = overrides.pop("gasLimit")
+                if not overrides["gas"]:
+                    del overrides["gas"]
+            print('overrides', overrides)   
             redeem_tx = arb_retryable_tx.functions.redeem(self.retryable_creation_id).transact(overrides)
             tx_receipt = self.chain_signer.provider.eth.wait_for_transaction_receipt(redeem_tx)
 
@@ -517,6 +522,12 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
             if "from" not in overrides:
                 overrides["from"] = self.chain_signer.account.address
 
+            if "gasLimit" in overrides:
+                overrides["gas"] = overrides.pop("gasLimit")
+                if not overrides["gas"]:
+                    del overrides["gas"]
+
+
             tx_hash = arb_retryable_tx.functions.cancel(self.retryable_creation_id).transact(overrides)
             return  self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         else:
@@ -542,6 +553,11 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
             if "from" not in overrides:
                 overrides["from"] = self.chain_signer.account.address
 
+            if "gasLimit" in overrides:
+                overrides["gas"] = overrides.pop("gasLimit")
+                if not overrides["gas"]:
+                    del overrides["gas"]
+
             tx_hash = arb_retryable_tx.functions.keepalive(self.retryable_creation_id).transact(overrides)
             return  self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         else:
@@ -558,7 +574,7 @@ class EthDepositMessage:
         self.child_chain_id = child_chain_id
         self.message_number = message_number
         self.from_address = from_address
-        self.to_address = to_address
+        self.to = to_address
         self.value = value
         self.child_tx_hash = self.calculate_deposit_tx_id(
             child_chain_id,

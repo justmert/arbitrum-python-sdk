@@ -10,7 +10,7 @@ from src.lib.data_entities.retryable_data import RetryableDataTools
 # from src.lib.message.parent_to_child_message import GasOverrides
 from src.lib.utils.helper import deploy_abi_contract, load_contract
 from src.lib.utils.lib import get_native_token_decimals, scale_from_18_decimals_to_native_token_decimals
-from scripts.test_setup import test_setup
+from scripts.test_setup import setup_testing_env
 from tests.integration.test_helpers import fund_parent_signer
 from tests.integration.custom_fee_token.custom_fee_token_test_helpers import is_arbitrum_network_with_custom_fee_token
 
@@ -21,7 +21,7 @@ def create_revert_params():
     l2_call_value = 137
     max_submission_cost = 1618
 
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     parent_provider = setup_state.parent_signer.provider
     child_chain = setup_state.child_chain
     decimals = get_native_token_decimals(
@@ -55,7 +55,7 @@ def create_revert_params():
 
 def retryable_data_parsing(func_name):
     """Test parsing of retryable data from errors"""
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     parent_signer = setup_state.parent_signer
     child_chain = setup_state.child_chain
 
@@ -147,7 +147,7 @@ def test_does_parse_from_call_static():
     retryable_data_parsing("callStatic")
 
 def test_erc20_deposit_comparison():
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     parent_signer = setup_state.parent_signer
     child_signer = setup_state.child_signer
     erc20_bridger = setup_state.erc20_bridger

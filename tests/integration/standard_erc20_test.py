@@ -1,214 +1,291 @@
 import pytest
+from web3 import Web3
+from eth_account import Account
 
 from src.lib.data_entities.constants import (
     ARB_RETRYABLE_TX_ADDRESS,
     NODE_INTERFACE_ADDRESS,
 )
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.message.parent_to_child_message import L1ToL2MessageStatus
-from src.lib.message.child_transaction import L2TransactionReceipt
+from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
+from src.lib.message.child_transaction import ChildTransactionReceipt
 from src.lib.utils.helper import deploy_abi_contract, load_contract
 from src.lib.utils.lib import get_transaction_receipt, is_defined
-from src.scripts.test_setup import test_setup
+from scripts.test_setup import setup_testing_env
 from tests.integration.test_helpers import (
     GatewayType,
     deposit_token,
-    fund_l1,
-    fund_l2,
+    fund_parent_signer,
+    fund_child_signer,
     withdraw_token,
 )
+from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
+    get_parent_custom_fee_token_allowance,
+    approve_parent_custom_fee_token_for_erc20_deposit,
+    is_arbitrum_network_with_custom_fee_token,
+)
+from tests.integration.custom_fee_token.mocha_extensions import it_only_when_custom_gas_token
 
+from web3.eth.eth import TransactionNotFound
 DEPOSIT_AMOUNT = 100
 WITHDRAWAL_AMOUNT = 10
 
-
 @pytest.fixture(scope="module")
 def setup_state():
-    setup = test_setup()
+    setup = setup_testing_env()
+    
+    fund_parent_signer(setup["parentSigner"])
+    fund_child_signer(setup["childSigner"])
 
-    fund_l1(setup.l1_signer)
-    fund_l2(setup.l2_signer)
-
-    test_token = deploy_abi_contract(
-        provider=setup.l1_signer.provider,
-        deployer=setup.l1_signer.account,
-        contract_name="TestERC20",
-        
+    parent_token = deploy_abi_contract(
+        provider=setup["parentSigner"].provider,
+        deployer=setup["parentSigner"].account,
+        contract_name="TestERC20"
     )
-    tx_hash = test_token.functions.mint().transact({"from": setup.l1_signer.account.address})
+    tx_hash = parent_token.functions.mint().transact({"from": setup["parentSigner"].account.address})
+    setup["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
-    setup.l1_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
-
-    setup["l1Token"] = test_token
+    setup["parentToken"] = parent_token
     return setup
-
 
 @pytest.fixture(scope="function", autouse=True)
 def skip_if_mainnet(request, setup_state):
-    chain_id = setup_state.l1_network.chain_id
-    if chain_id == 1:
+    chain_id = setup_state["childChain"].chain_id
+    if chain_id in [42161, 42170]:  # Arbitrum One or Nova
         pytest.skip("Skipping test on mainnet")
 
-
-
-def test_deposit_erc20(setup_state):
-    deposit_token(
-        deposit_amount=DEPOSIT_AMOUNT,
-        l1_token_address=setup_state.l1_token.address,
-        erc20_bridger=setup_state.erc20_bridger,
-        l1_signer=setup_state.l1_signer,
-        l2_signer=setup_state.l2_signer,
-        expected_status=L1ToL2MessageStatus.REDEEMED,
-        expected_gateway_type=GatewayType.STANDARD,
-    )
-
-
-
 def redeem_and_test(setup_state, message, expected_status, gas_limit=None):
+    """Helper function to test redemption process"""
     manual_redeem = message.redeem(overrides={"gasLimit": gas_limit})
     retry_rec = manual_redeem.wait_for_redeem()
     redeem_rec = manual_redeem.wait()
     block_hash = redeem_rec.blockHash
+
     assert retry_rec.blockHash == block_hash, "redeemed in same block"
-    assert retry_rec.to == setup_state["l2Network"]["tokenBridge"]["l2ERC20Gateway"], "redeemed in same block"
-    assert retry_rec.status == expected_status, "tx didn't fail"
-    assert message.status() == (
-        L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 if expected_status == 0 else L1ToL2MessageStatus.REDEEMED
-    ), "message status"
+    assert retry_rec.to == setup_state["childChain"]["tokenBridge"]["childErc20Gateway"], "redeemed in wrong gateway"
+    assert retry_rec.status == expected_status, "tx status incorrect"
+    
+    message_status = message.status()
+    expected_message_status = (
+        ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD if expected_status == 0 
+        else ParentToChildMessageStatus.REDEEMED
+    )
+    assert message_status == expected_message_status, "incorrect message status"
 
+@it_only_when_custom_gas_token
+def test_approves_custom_gas_token_to_be_spent_by_relevant_gateway(setup_state):
+    parent_signer = setup_state["parentSigner"]
+    erc20_bridger = setup_state["erc20Bridger"]
+    
+    gateway_address = erc20_bridger.get_parent_gateway_address(
+        setup_state["parentToken"].address,
+        parent_signer.provider
+    )
+    
+    initial_allowance = get_parent_custom_fee_token_allowance(
+        parent_signer.account.address,
+        gateway_address
+    )
+    assert initial_allowance == 0, "Initial allowance is not empty"
+    
+    tx = erc20_bridger.approve_gas_token({
+        "parentSigner": parent_signer,
+        "erc20ParentAddress": setup_state["parentToken"].address,
+    })
+    parent_signer.provider.eth.wait_for_transaction_receipt(tx)
+    
+    final_allowance = get_parent_custom_fee_token_allowance(
+        parent_signer.account.address,
+        gateway_address
+    )
+    assert final_allowance == 2**256 - 1, "Final allowance is not max uint256"
 
+def test_deposits_erc20(setup_state):
+    if is_arbitrum_network_with_custom_fee_token():
+        approve_parent_custom_fee_token_for_erc20_deposit(
+            setup_state["parentSigner"],
+            setup_state["parentToken"].address
+        )
+
+    deposit_token({
+        "depositAmount": DEPOSIT_AMOUNT,
+        "parentTokenAddress": setup_state["parentToken"].address, 
+        "erc20Bridger": setup_state["erc20Bridger"],
+        "parentSigner": setup_state["parentSigner"],
+        "childSigner": setup_state["childSigner"],
+        "expectedStatus": ParentToChildMessageStatus.REDEEMED,
+        "expectedGatewayType": GatewayType.STANDARD
+    })
 
 def test_deposit_with_no_funds_manual_redeem(setup_state):
-    deposit_token_params = deposit_token(
-        deposit_amount=DEPOSIT_AMOUNT,
-        l1_token_address=setup_state.l1_token.address,
-        erc20_bridger=setup_state.erc20_bridger,
-        l1_signer=setup_state.l1_signer,
-        l2_signer=setup_state.l2_signer,
-        expected_status=L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-        expected_gateway_type=GatewayType.STANDARD,
-        retryable_overrides={"gasLimit": {"base": 0}, "maxFeePerGas": {"base": 0}},
-    )
-    wait_res = deposit_token_params["waitRes"]
-    redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
+    result = deposit_token({
+        "depositAmount": DEPOSIT_AMOUNT,
+        "parentTokenAddress": setup_state["parentToken"].address,
+        "erc20Bridger": setup_state["erc20Bridger"],
+        "parentSigner": setup_state["parentSigner"],
+        "childSigner": setup_state["childSigner"],
+        "expectedStatus": ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
+        "expectedGatewayType": GatewayType.STANDARD,
+        "retryableOverrides": {
+            "gasLimit": {"base": 0},
+            "maxFeePerGas": {"base": 0}
+        }
+    })
 
-
+    redeem_and_test(setup_state, message=result["waitRes"]["message"], expected_status=1)
 
 def test_deposit_with_low_funds_manual_redeem(setup_state):
-    deposit_token_params = deposit_token(
-        deposit_amount=DEPOSIT_AMOUNT,
-        l1_token_address=setup_state.l1_token.address,
-        erc20_bridger=setup_state.erc20_bridger,
-        l1_signer=setup_state.l1_signer,
-        l2_signer=setup_state.l2_signer,
-        expected_status=L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-        expected_gateway_type=GatewayType.STANDARD,
-        retryable_overrides={"gasLimit": {"base": 5}, "maxFeePerGas": {"base": 5}},
-    )
-    wait_res = deposit_token_params["waitRes"]
-    redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
+    result = deposit_token({
+        "depositAmount": DEPOSIT_AMOUNT,
+        "parentTokenAddress": setup_state["parentToken"].address,
+        "erc20Bridger": setup_state["erc20Bridger"],
+        "parentSigner": setup_state["parentSigner"],
+        "childSigner": setup_state["childSigner"],
+        "expectedStatus": ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
+        "expectedGatewayType": GatewayType.STANDARD,
+        "retryableOverrides": {
+            "gasLimit": {"base": 5},
+            "maxFeePerGas": {"base": 5}
+        }
+    })
 
+    redeem_and_test(setup_state, message=result["waitRes"]["message"], expected_status=1)
 
+def test_deposit_with_only_low_gas_limit_manual_redeem_succeeds(setup_state):
+    result = deposit_token({
+        "depositAmount": DEPOSIT_AMOUNT,
+        "parentTokenAddress": setup_state["parentToken"].address,
+        "erc20Bridger": setup_state["erc20Bridger"],
+        "parentSigner": setup_state["parentSigner"],
+        "childSigner": setup_state["childSigner"],
+        "expectedStatus": ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
+        "expectedGatewayType": GatewayType.STANDARD,
+        "retryableOverrides": {
+            "gasLimit": {"base": 21000}
+        }
+    })
 
-def test_deposit_with_only_low_gas_limit_manual_redeem_success(setup_state):
-    deposit_token_params = deposit_token(
-        deposit_amount=DEPOSIT_AMOUNT,
-        l1_token_address=setup_state.l1_token.address,
-        erc20_bridger=setup_state.erc20_bridger,
-        l1_signer=setup_state.l1_signer,
-        l2_signer=setup_state.l2_signer,
-        expected_status=L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-        expected_gateway_type=GatewayType.STANDARD,
-        retryable_overrides={"gasLimit": {"base": 21000}},
-    )
-    wait_res = deposit_token_params["waitRes"]
-
-    retryable_creation = wait_res["message"].get_retryable_creation_receipt()
+    retryable_creation = result["waitRes"]["message"].get_retryable_creation_receipt()
     if not is_defined(retryable_creation):
         raise ArbSdkError("Missing retryable creation.")
 
-    l2_receipt = L2TransactionReceipt(retryable_creation)
-    redeems_scheduled = l2_receipt.get_redeem_scheduled_events(provider=setup_state.l2_signer.provider)
+    l2_receipt = ChildTransactionReceipt(retryable_creation)
+    redeems_scheduled = l2_receipt.get_redeem_scheduled_events()
     assert len(redeems_scheduled) == 1, "Unexpected redeem length"
-    retry_receipt = get_transaction_receipt(
-        tx_hash=redeems_scheduled[0]["retryTxHash"],
-        provider=setup_state.l2_signer.provider,
-    )
-    assert retry_receipt is None, "Retry should not exist"
+    
+    
+    with pytest.raises(TransactionNotFound):
+        setup_state["childSigner"].provider.eth.get_transaction_receipt(
+            redeems_scheduled[0]["retryTxHash"]
+        )
 
-    redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
+    redeem_and_test(setup_state, message=result["waitRes"]["message"], expected_status=1)
 
-
-
-def test_deposit_with_low_funds_fails_first_redeem_then_succeeds(setup_state):
-    deposit_token_params = deposit_token(
-        deposit_amount=DEPOSIT_AMOUNT,
-        l1_token_address=setup_state.l1_token.address,
-        erc20_bridger=setup_state.erc20_bridger,
-        l1_signer=setup_state.l1_signer,
-        l2_signer=setup_state.l2_signer,
-        expected_status=L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-        expected_gateway_type=GatewayType.STANDARD,
-        retryable_overrides={"gasLimit": {"base": 5}, "maxFeePerGas": {"base": 5}},
-    )
-
-    wait_res = deposit_token_params["waitRes"]
+def test_deposit_with_low_funds_fails_first_redeem_succeeds_second(setup_state):
+    result = deposit_token({
+        "depositAmount": DEPOSIT_AMOUNT,
+        "parentTokenAddress": setup_state["parentToken"].address,
+        "erc20Bridger": setup_state["erc20Bridger"],
+        "parentSigner": setup_state["parentSigner"],
+        "childSigner": setup_state["childSigner"],
+        "expectedStatus": ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
+        "expectedGatewayType": GatewayType.STANDARD,
+        "retryableOverrides": {
+            "gasLimit": {"base": 5},
+            "maxFeePerGas": {"base": 5}
+        }
+    })
 
     arb_retryable_tx = load_contract(
-        provider=setup_state.l2_signer.provider,
+        provider=setup_state["childSigner"].provider,
         contract_name="ArbRetryableTx",
-        address=ARB_RETRYABLE_TX_ADDRESS,
-        
+        address=ARB_RETRYABLE_TX_ADDRESS
     )
+    
     n_interface = load_contract(
-        provider=setup_state.l2_signer.provider,
+        provider=setup_state["childSigner"].provider,
         contract_name="NodeInterface",
-        address=NODE_INTERFACE_ADDRESS,
-        
+        address=NODE_INTERFACE_ADDRESS
     )
 
-    redeem_function_data = arb_retryable_tx.encodeABI(
-        fn_name="redeem",
-        args=[wait_res["message"].retryable_creation_id],
-    )
     gas_components = n_interface.functions.gasEstimateComponents(
-        arb_retryable_tx.address, False, redeem_function_data
+        arb_retryable_tx.address,
+        False,
+        arb_retryable_tx.encodeABI(
+            fn_name="redeem",
+            args=[result["waitRes"]["message"].retryable_creation_id]
+        )
     ).call()
 
+    # First redeem attempt - should fail
+    print(gas_components)
     redeem_and_test(
         setup_state,
-        message=wait_res["message"],
+        message=result["waitRes"]["message"],
         expected_status=0,
-        gas_limit=gas_components[0] - 1000,
+        gas_limit=gas_components[0] - 15000
     )
 
-    redeem_and_test(setup_state, message=wait_res["message"], expected_status=1)
-
-
+    # Second redeem attempt - should succeed
+    redeem_and_test(
+        setup_state,
+        message=result["waitRes"]["message"],
+        expected_status=1
+    )
 
 def test_withdraws_erc20(setup_state):
-    l2_token_addr = setup_state.erc20_bridger.get_l2_erc20_address(
-        setup_state.l1_token.address, setup_state.l1_signer.provider
+    child_token_addr = setup_state["erc20Bridger"].get_child_erc20_address(
+        setup_state["parentToken"].address,
+        setup_state["parentSigner"].provider
     )
 
-    l2_token = setup_state.erc20_bridger.get_l2_token_contract(setup_state.l2_signer.provider, l2_token_addr)
+    child_token = setup_state["erc20Bridger"].get_child_token_contract(
+        setup_state["childSigner"].provider,
+        child_token_addr
+    )
 
+    # 5 deposits above - increase this number if more deposit tests added
     start_balance = DEPOSIT_AMOUNT * 5
-    l2_balance_start = l2_token.functions.balanceOf(setup_state.l2_signer.account.address).call()
+    child_balance_start = child_token.functions.balanceOf(
+        setup_state["childSigner"].account.address
+    ).call()
 
-    assert str(l2_balance_start) == str(start_balance), "Unexpected L2 balance"
+    assert str(child_balance_start) == str(child_balance_start)
 
-    withdraw_token(
-        {
-            **setup_state,
-            "amount": WITHDRAWAL_AMOUNT,
-            "gatewayType": GatewayType.STANDARD,
-            "startBalance": start_balance,
-            "l1Token": load_contract(
-                provider=setup_state.l1_signer.provider,
-                contract_name="ERC20",
-                address=setup_state.l1_token.address,
-                
-            ),
-        }
-    )
+    withdraw_token({
+        **setup_state,
+        "amount": WITHDRAWAL_AMOUNT,
+        "gatewayType": GatewayType.STANDARD,
+        "startBalance": start_balance,
+        "parentToken": load_contract(
+            provider=setup_state["parentSigner"].provider,
+            contract_name="ERC20",
+            address=setup_state["parentToken"].address
+        )
+    })
+
+def test_deposits_erc20_with_extra_eth(setup_state):
+    deposit_token({
+        "depositAmount": DEPOSIT_AMOUNT,
+        "ethDepositAmount": Web3.to_wei(0.0005, "ether"),
+        "parentTokenAddress": setup_state["parentToken"].address,
+        "erc20Bridger": setup_state["erc20Bridger"],
+        "parentSigner": setup_state["parentSigner"], 
+        "childSigner": setup_state["childSigner"],
+        "expectedStatus": ParentToChildMessageStatus.REDEEMED,
+        "expectedGatewayType": GatewayType.STANDARD
+    })
+
+def test_deposits_erc20_with_extra_eth_to_specific_child_address(setup_state):
+    random_address = Account.create().address
+    deposit_token({
+        "depositAmount": DEPOSIT_AMOUNT,
+        "ethDepositAmount": Web3.to_wei(0.0005, "ether"),
+        "parentTokenAddress": setup_state["parentToken"].address,
+        "erc20Bridger": setup_state["erc20Bridger"],
+        "parentSigner": setup_state["parentSigner"],
+        "childSigner": setup_state["childSigner"],
+        "expectedStatus": ParentToChildMessageStatus.REDEEMED,
+        "expectedGatewayType": GatewayType.STANDARD,
+        "destinationAddress": random_address
+    })

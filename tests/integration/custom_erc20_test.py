@@ -1,11 +1,10 @@
 import pytest
 from eth_account import Account
 from web3 import Web3, constants
-from src.lib.data_entities.errors import ArbSdkError
 from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
 from src.lib.data_entities.networks import assert_arbitrum_network_has_token_bridge
-from src.lib.utils.helper import deploy_abi_contract, is_contract_deployed, load_contract
-from scripts.test_setup import test_setup
+from src.lib.utils.helper import deploy_abi_contract, load_contract
+from scripts.test_setup import setup_testing_env
 from tests.integration.test_helpers import (
     GatewayType,
     deposit_token,
@@ -23,7 +22,7 @@ WITHDRAWAL_AMOUNT = 10
 
 @pytest.fixture(scope="module")
 def setup_state():
-    setup_state = test_setup()
+    setup_state = setup_testing_env()
     fund_parent_signer(setup_state.parent_signer)
     fund_child_signer(setup_state.child_signer)
     return setup_state
@@ -38,7 +37,6 @@ def skip_if_mainnet(request, setup_state):
 
 
 def test_register_custom_token(setup_state):
-    print('here', setup_state)
     parent_token, child_token = register_custom_token(
         setup_state.child_chain,
         setup_state.parent_signer,

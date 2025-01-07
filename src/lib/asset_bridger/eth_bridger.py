@@ -193,6 +193,7 @@ class EthBridger(AssetBridger):
         # If we have a ParentToChildTransactionRequest, skip building a deposit request
         if is_parent_to_child_transaction_request(params):
             eth_deposit = params
+            print('birinci')
         else:
             eth_deposit = self.get_deposit_request(
                 {**params, "from": params["parentSigner"].account.address}
@@ -203,10 +204,11 @@ class EthBridger(AssetBridger):
             **params.get("overrides", {}),
             "from": params["parentSigner"].account.address,
         }
+        print("this transaction will be sent: ", tx)
 
         tx_hash = params["parentSigner"].provider.eth.send_transaction(tx)
         tx_receipt = params["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
-
+        print(tx_receipt)
         # monkeyPatchEthDepositWait => extended functionality for final wait or data decode
         return ParentTransactionReceipt.monkey_patch_eth_deposit_wait(tx_receipt)
 
@@ -268,11 +270,14 @@ class EthBridger(AssetBridger):
         """
         self.check_parent_network(params["parentSigner"])
         self.check_child_network(params["childProvider"])
-
+        print('************')
+        print('paramsss: ', params)
         # If it's already a ParentToChildTransactionRequest, skip
         if is_parent_to_child_transaction_request(params):
             retryable_ticket_request = params
+            print('burayaaaa')
         else:
+            print('burayaaaa22')
             retryable_ticket_request = self.get_deposit_to_request(
                 {
                     **params,
@@ -280,9 +285,9 @@ class EthBridger(AssetBridger):
                     "parentProvider": params["parentSigner"].provider,
                 }
             )
-
         parent_to_child_msg_creator = ParentToChildMessageCreator(params["parentSigner"])
-        tx = parent_to_child_msg_creator.createRetryableTicket(
+        print('BURDAKIITX:', retryable_ticket_request)
+        tx = parent_to_child_msg_creator.create_retryable_ticket(
             retryable_ticket_request,
             params["childProvider"],
         )
