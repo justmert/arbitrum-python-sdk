@@ -1,17 +1,17 @@
-import pytest
 from eth_account import Account
 from web3 import Web3
-
+import pytest
+from scripts.test_setup import setup_testing_env
 from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
 from src.lib.utils.helper import load_contract
-from scripts.test_setup import setup_testing_env
 from tests.integration.test_helpers import (
     GatewayType,
     deposit_token,
-    fund_parent_signer,
     fund_child_signer,
+    fund_parent_signer,
     withdraw_token,
 )
+
 
 def test_deposit_weth():
     """Test depositing WETH from parent to child chain"""
@@ -29,59 +29,44 @@ def test_deposit_weth():
     fund_parent_signer(parent_signer, Web3.to_wei(1, "ether"))
 
     child_WETH = load_contract(
-        provider=child_signer.provider, 
-        address=child_chain.token_bridge.child_weth, 
-        contract_name="AeWETH"
+        provider=child_signer.provider, address=child_chain.token_bridge.child_weth, contract_name="AeWETH"
     )
     assert (child_WETH.functions.balanceOf(child_signer.account.address).call()) == 0
 
-    parent_WETH = load_contract(
-        provider=parent_signer.provider, 
-        address=parent_weth_address, 
-        contract_name="AeWETH"
-    )
+    parent_WETH = load_contract(provider=parent_signer.provider, address=parent_weth_address, contract_name="AeWETH")
 
     tx = parent_WETH.functions.deposit().transact({"from": parent_signer.account.address, "value": weth_to_wrap})
     parent_signer.provider.eth.wait_for_transaction_receipt(tx)
 
-    deposit_token({
-        "depositAmount": weth_to_deposit,
-        "parentTokenAddress": parent_weth_address,
-        "erc20Bridger": erc20_bridger,
-        "parentSigner": parent_signer,
-        "childSigner": child_signer,
-        "expectedStatus": ParentToChildMessageStatus.REDEEMED,
-        "expectedGatewayType": GatewayType.WETH
-    })
-
-    child_weth_gateway = erc20_bridger.get_child_gateway_address(
-        parent_weth_address, 
-        child_signer.provider
+    deposit_token(
+        {
+            "depositAmount": weth_to_deposit,
+            "parentTokenAddress": parent_weth_address,
+            "erc20Bridger": erc20_bridger,
+            "parentSigner": parent_signer,
+            "childSigner": child_signer,
+            "expectedStatus": ParentToChildMessageStatus.REDEEMED,
+            "expectedGatewayType": GatewayType.WETH,
+        }
     )
+
+    child_weth_gateway = erc20_bridger.get_child_gateway_address(parent_weth_address, child_signer.provider)
     assert child_weth_gateway == child_chain.token_bridge.child_weth_gateway
 
-    child_token = erc20_bridger.get_child_token_contract(
-        child_signer.provider, 
-        child_chain.token_bridge.child_weth
-    )
+    child_token = erc20_bridger.get_child_token_contract(child_signer.provider, child_chain.token_bridge.child_weth)
     assert child_token.address == child_chain.token_bridge.child_weth
 
     fund_child_signer(child_signer)
 
-    child_weth = load_contract(
-        provider=child_signer.provider, 
-        address=child_token.address, 
-        contract_name="AeWETH"
-    )
+    child_weth = load_contract(provider=child_signer.provider, address=child_token.address, contract_name="AeWETH")
 
     random_addr = Account.create().address
-    tx = child_weth.functions.withdrawTo(random_addr, weth_to_deposit).transact(
-        {"from": child_signer.account.address}
-    )
+    tx = child_weth.functions.withdrawTo(random_addr, weth_to_deposit).transact({"from": child_signer.account.address})
 
     child_signer.provider.eth.wait_for_transaction_receipt(tx)
     after_balance = child_signer.provider.eth.get_balance(random_addr)
     assert str(after_balance) == str(weth_to_deposit)
+
 
 def test_withdraw_weth():
     """Test withdrawing WETH from child to parent chain"""
@@ -98,28 +83,24 @@ def test_withdraw_weth():
     fund_child_signer(child_signer)
 
     child_weth = load_contract(
-        provider=child_signer.provider, 
-        address=child_chain.token_bridge.child_weth, 
-        contract_name="AeWETH"
+        provider=child_signer.provider, address=child_chain.token_bridge.child_weth, contract_name="AeWETH"
     )
 
-    tx = child_weth.functions.deposit().transact(
-        {"from": child_signer.account.address, "value": weth_to_wrap}
-    )
+    tx = child_weth.functions.deposit().transact({"from": child_signer.account.address, "value": weth_to_wrap})
 
     rec = child_signer.provider.eth.wait_for_transaction_receipt(tx)
     assert rec.status == 1, "deposit txn failed"
 
-    withdraw_token({
-        "amount": weth_to_withdraw,
-        "erc20Bridger": erc20_bridger,
-        "gatewayType": GatewayType.WETH,
-        "parentSigner": parent_signer,
-        "parentToken": load_contract(
-            provider=parent_signer.provider,
-            address=child_chain.token_bridge.parent_weth,
-            contract_name="ERC20"
-        ),
-        "childSigner": child_signer,
-        "startBalance": weth_to_wrap
-    })
+    withdraw_token(
+        {
+            "amount": weth_to_withdraw,
+            "erc20Bridger": erc20_bridger,
+            "gatewayType": GatewayType.WETH,
+            "parentSigner": parent_signer,
+            "parentToken": load_contract(
+                provider=parent_signer.provider, address=child_chain.token_bridge.parent_weth, contract_name="ERC20"
+            ),
+            "childSigner": child_signer,
+            "startBalance": weth_to_wrap,
+        }
+    )

@@ -1,19 +1,20 @@
 import pytest
 from eth_account import Account
 from web3 import Web3, constants
-from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
-from src.lib.data_entities.networks import assert_arbitrum_network_has_token_bridge
-from src.lib.utils.helper import deploy_abi_contract, load_contract
+
 from scripts.test_setup import setup_testing_env
+from src.lib.data_entities.networks import assert_arbitrum_network_has_token_bridge
+from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
+from src.lib.utils.helper import deploy_abi_contract, load_contract
+from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
+    is_arbitrum_network_with_custom_fee_token,
+)
 from tests.integration.test_helpers import (
     GatewayType,
     deposit_token,
-    fund_parent_signer,
     fund_child_signer,
+    fund_parent_signer,
     withdraw_token,
-)
-from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
-    is_arbitrum_network_with_custom_fee_token,
 )
 
 DEPOSIT_AMOUNT = 100
@@ -35,16 +36,11 @@ def skip_if_mainnet(request, setup_state):
         pytest.skip("Skipping test on mainnet")
 
 
-
 def test_register_custom_token(setup_state):
     parent_token, child_token = register_custom_token(
-        setup_state.child_chain,
-        setup_state.parent_signer,
-        setup_state.child_signer,
-        setup_state.admin_erc20_bridger
+        setup_state.child_chain, setup_state.parent_signer, setup_state.child_signer, setup_state.admin_erc20_bridger
     )
     setup_state.parent_custom_token = parent_token
-
 
 
 def test_deposit(setup_state):
@@ -53,61 +49,65 @@ def test_deposit(setup_state):
     )
     setup_state.parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
-    deposit_token({
-        "depositAmount": DEPOSIT_AMOUNT,
-        "parentTokenAddress": setup_state.parent_custom_token.address,
-        "erc20Bridger": setup_state.admin_erc20_bridger,
-        "parentSigner": setup_state.parent_signer,
-        "childSigner": setup_state.child_signer,
-        "expectedStatus": ParentToChildMessageStatus.REDEEMED,
-        "expectedGatewayType": GatewayType.CUSTOM,
-    })
-
+    deposit_token(
+        {
+            "depositAmount": DEPOSIT_AMOUNT,
+            "parentTokenAddress": setup_state.parent_custom_token.address,
+            "erc20Bridger": setup_state.admin_erc20_bridger,
+            "parentSigner": setup_state.parent_signer,
+            "childSigner": setup_state.child_signer,
+            "expectedStatus": ParentToChildMessageStatus.REDEEMED,
+            "expectedGatewayType": GatewayType.CUSTOM,
+        }
+    )
 
 
 def test_withdraw_token(setup_state):
-    withdraw_token({
-        **setup_state,
-        "amount": WITHDRAWAL_AMOUNT,
-        "gatewayType": GatewayType.CUSTOM,
-        "startBalance": DEPOSIT_AMOUNT,
-        "parentToken": load_contract(
-            provider=setup_state.parent_signer.provider,
-            contract_name="ERC20",
-            address=setup_state.parent_custom_token.address,
-        ),
-    })
-
+    withdraw_token(
+        {
+            **setup_state,
+            "amount": WITHDRAWAL_AMOUNT,
+            "gatewayType": GatewayType.CUSTOM,
+            "startBalance": DEPOSIT_AMOUNT,
+            "parentToken": load_contract(
+                provider=setup_state.parent_signer.provider,
+                contract_name="ERC20",
+                address=setup_state.parent_custom_token.address,
+            ),
+        }
+    )
 
 
 def test_deposit_with_extra_eth(setup_state):
-    deposit_token({
-        "depositAmount": DEPOSIT_AMOUNT,
-        "ethDepositAmount": Web3.to_wei('0.0005', 'ether'),
-        "parentTokenAddress": setup_state.parent_custom_token.address,
-        "erc20Bridger": setup_state.admin_erc20_bridger,
-        "parentSigner": setup_state.parent_signer,
-        "childSigner": setup_state.child_signer,
-        "expectedStatus": ParentToChildMessageStatus.REDEEMED,
-        "expectedGatewayType": GatewayType.CUSTOM,
-    })
-
+    deposit_token(
+        {
+            "depositAmount": DEPOSIT_AMOUNT,
+            "ethDepositAmount": Web3.to_wei("0.0005", "ether"),
+            "parentTokenAddress": setup_state.parent_custom_token.address,
+            "erc20Bridger": setup_state.admin_erc20_bridger,
+            "parentSigner": setup_state.parent_signer,
+            "childSigner": setup_state.child_signer,
+            "expectedStatus": ParentToChildMessageStatus.REDEEMED,
+            "expectedGatewayType": GatewayType.CUSTOM,
+        }
+    )
 
 
 def test_deposit_with_extra_eth_to_specific_address(setup_state):
     random_address = Account.create().address
-    deposit_token({
-        "depositAmount": DEPOSIT_AMOUNT,
-        "ethDepositAmount": Web3.to_wei('0.0005', 'ether'),
-        "parentTokenAddress": setup_state.parent_custom_token.address,
-        "erc20Bridger": setup_state.admin_erc20_bridger,
-        "parentSigner": setup_state.parent_signer,
-        "childSigner": setup_state.child_signer,
-        "expectedStatus": ParentToChildMessageStatus.REDEEMED,
-        "expectedGatewayType": GatewayType.CUSTOM,
-        "destinationAddress": random_address,
-    })
-
+    deposit_token(
+        {
+            "depositAmount": DEPOSIT_AMOUNT,
+            "ethDepositAmount": Web3.to_wei("0.0005", "ether"),
+            "parentTokenAddress": setup_state.parent_custom_token.address,
+            "erc20Bridger": setup_state.admin_erc20_bridger,
+            "parentSigner": setup_state.parent_signer,
+            "childSigner": setup_state.child_signer,
+            "expectedStatus": ParentToChildMessageStatus.REDEEMED,
+            "expectedGatewayType": GatewayType.CUSTOM,
+            "destinationAddress": random_address,
+        }
+    )
 
 
 def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_bridger):
@@ -125,7 +125,7 @@ def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_
         deployer=parent_signer.account,
         constructor_args=[
             child_chain.token_bridge.parent_custom_gateway,
-            child_chain.token_bridge.parent_gateway_router
+            child_chain.token_bridge.parent_gateway_router,
         ],
     )
 
@@ -134,17 +134,14 @@ def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_
     #     "parentProvider": parent_signer.provider,
     #     "childProvider": child_signer.provider,
     # })
-    # print(is_registered)
+    #
     # assert not is_registered, "Expected token not to be registered"
 
     child_custom_token = deploy_abi_contract(
         provider=child_signer.provider,
         contract_name="TestArbCustomToken",
         deployer=child_signer.account,
-        constructor_args=[
-            child_chain.token_bridge.child_custom_gateway,
-            parent_custom_token.address
-        ],
+        constructor_args=[child_chain.token_bridge.child_custom_gateway, parent_custom_token.address],
     )
 
     # Load gateway contracts
@@ -160,7 +157,7 @@ def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_
     )
     parent_custom_gateway = load_contract(
         provider=parent_signer.provider,
-        contract_name="L1CustomGateway", 
+        contract_name="L1CustomGateway",
         address=child_chain.token_bridge.parent_custom_gateway,
     )
     child_custom_gateway = load_contract(
@@ -170,24 +167,16 @@ def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_
     )
 
     # Check starting conditions
-    start_parent_gateway_address = parent_gateway_router.functions.l1TokenToGateway(
-        parent_custom_token.address
-    ).call()
+    start_parent_gateway_address = parent_gateway_router.functions.l1TokenToGateway(parent_custom_token.address).call()
     assert start_parent_gateway_address == constants.ADDRESS_ZERO
 
-    start_child_gateway_address = child_gateway_router.functions.l1TokenToGateway(
-        parent_custom_token.address
-    ).call()
+    start_child_gateway_address = child_gateway_router.functions.l1TokenToGateway(parent_custom_token.address).call()
     assert start_child_gateway_address == constants.ADDRESS_ZERO
 
-    start_parent_erc20_address = parent_custom_gateway.functions.l1ToL2Token(
-        parent_custom_token.address
-    ).call()
+    start_parent_erc20_address = parent_custom_gateway.functions.l1ToL2Token(parent_custom_token.address).call()
     assert start_parent_erc20_address == constants.ADDRESS_ZERO
 
-    start_child_erc20_address = child_custom_gateway.functions.l1ToL2Token(
-        parent_custom_token.address
-    ).call()
+    start_child_erc20_address = child_custom_gateway.functions.l1ToL2Token(parent_custom_token.address).call()
     assert start_child_erc20_address == constants.ADDRESS_ZERO
 
     # Test approve gas token if needed
@@ -204,10 +193,12 @@ def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_
         except Exception as err:
             assert "Insufficient allowance" in str(err)
 
-        admin_erc20_bridger.approve_gas_token_for_custom_token_registration({
-            "parentSigner": parent_signer,
-            "erc20ParentAddress": parent_custom_token.address,
-        })
+        admin_erc20_bridger.approve_gas_token_for_custom_token_registration(
+            {
+                "parentSigner": parent_signer,
+                "erc20ParentAddress": parent_custom_token.address,
+            }
+        )
 
     # Register token
     reg_tx_receipt = admin_erc20_bridger.register_custom_token(
@@ -217,9 +208,7 @@ def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_
         child_signer.provider,
     )
 
-    parent_to_child_messages = reg_tx_receipt.get_parent_to_child_messages(
-        child_signer.provider
-    )
+    parent_to_child_messages = reg_tx_receipt.get_parent_to_child_messages(child_signer.provider)
     assert len(parent_to_child_messages) == 2
 
     set_token_tx = parent_to_child_messages[0].wait_for_status()
@@ -228,32 +217,26 @@ def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_
     set_gateway_tx = parent_to_child_messages[1].wait_for_status()
     assert set_gateway_tx["status"] == ParentToChildMessageStatus.REDEEMED
 
-    # Check end conditions 
-    end_parent_gateway_address = parent_gateway_router.functions.l1TokenToGateway(
-        parent_custom_token.address
-    ).call()
+    # Check end conditions
+    end_parent_gateway_address = parent_gateway_router.functions.l1TokenToGateway(parent_custom_token.address).call()
     assert end_parent_gateway_address == child_chain.token_bridge.parent_custom_gateway
 
-    end_child_gateway_address = child_gateway_router.functions.l1TokenToGateway(
-        parent_custom_token.address
-    ).call() 
+    end_child_gateway_address = child_gateway_router.functions.l1TokenToGateway(parent_custom_token.address).call()
     assert end_child_gateway_address == child_chain.token_bridge.child_custom_gateway
 
-    end_parent_erc20_address = parent_custom_gateway.functions.l1ToL2Token(
-        parent_custom_token.address
-    ).call()
+    end_parent_erc20_address = parent_custom_gateway.functions.l1ToL2Token(parent_custom_token.address).call()
     assert end_parent_erc20_address == child_custom_token.address
 
-    end_child_erc20_address = child_custom_gateway.functions.l1ToL2Token(
-        parent_custom_token.address
-    ).call()
+    end_child_erc20_address = child_custom_gateway.functions.l1ToL2Token(parent_custom_token.address).call()
     assert end_child_erc20_address == child_custom_token.address
 
-    is_registered = admin_erc20_bridger.is_registered({
-        "erc20ParentAddress": parent_custom_token.address, 
-        "parentProvider": parent_signer.provider,
-        "childProvider": child_signer.provider,
-    })
+    is_registered = admin_erc20_bridger.is_registered(
+        {
+            "erc20ParentAddress": parent_custom_token.address,
+            "parentProvider": parent_signer.provider,
+            "childProvider": child_signer.provider,
+        }
+    )
     assert is_registered, "Expected token to be registered"
 
     return parent_custom_token, child_custom_token

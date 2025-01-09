@@ -9,13 +9,13 @@ from src.lib.data_entities.signer_or_provider import SignerOrProvider
 class ArbFormatter:
     """
     A Python equivalent of the Arbitrum-specific Formatter in TypeScript.
-    Provides methods for formatting blocks and receipts to include 
+    Provides methods for formatting blocks and receipts to include
     Arbitrum-specific fields (e.g. sendRoot, sendCount, l1BlockNumber).
     """
 
     def receipt(self, value: dict) -> ArbTransactionReceipt:
         """
-        Convert a raw transaction receipt dict into an ArbTransactionReceipt with 
+        Convert a raw transaction receipt dict into an ArbTransactionReceipt with
         extra Arbitrum fields (l1BlockNumber, gasUsedForL1).
 
         :param value: Raw receipt data from a node
@@ -30,7 +30,7 @@ class ArbFormatter:
 
     def block(self, block: dict) -> ArbBlock:
         """
-        Convert a raw block dict into an ArbBlock including 
+        Convert a raw block dict into an ArbBlock including
         Arbitrum fields (sendRoot, sendCount, l1BlockNumber).
 
         :param block: Raw block data
@@ -64,7 +64,7 @@ class ArbFormatter:
 class ArbitrumProvider:
     """
     Python equivalent of the TypeScript `ArbitrumProvider extends Web3Provider`.
-    This class wraps a standard Web3 provider but returns Arbitrum-formatted 
+    This class wraps a standard Web3 provider but returns Arbitrum-formatted
     blocks and receipts (ArbBlock, ArbTransactionReceipt, etc.).
     """
 
@@ -84,11 +84,10 @@ class ArbitrumProvider:
     @property
     def provider(self):
         return self._provider
-    
 
     def get_transaction_receipt(self, transaction_hash: str) -> ArbTransactionReceipt:
         """
-        Get a transaction receipt from the underlying provider, 
+        Get a transaction receipt from the underlying provider,
         then format it to an ArbTransactionReceipt.
 
         :param transaction_hash: The tx hash to fetch
@@ -105,9 +104,7 @@ class ArbitrumProvider:
         :param block_identifier: e.g. 'latest', a block number, or a block hash
         :return: ArbBlockWithTransactions including Arbitrum fields
         """
-        block = self._provider.eth.get_block(
-            block_identifier, full_transactions=True
-        )
+        block = self._provider.eth.get_block(block_identifier, full_transactions=True)
         return self.formatter.block_with_transactions(block)
 
     def get_block(self, block_identifier) -> ArbBlock:

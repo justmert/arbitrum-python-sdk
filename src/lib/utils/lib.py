@@ -1,4 +1,4 @@
-
+import time
 from typing import Optional, Tuple, Union
 
 from eth_typing import HexStr
@@ -6,12 +6,12 @@ from web3 import Web3
 from web3.exceptions import TimeExhausted, TransactionNotFound
 from web3.types import TxReceipt
 
-from src.lib.data_entities.constants import ARB_SYS_ADDRESS, ADDRESS_ZERO
+from src.lib.data_entities.constants import ADDRESS_ZERO, ARB_SYS_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import ArbitrumNetwork, get_nitro_genesis_block
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import load_contract
-import time
+
 
 def wait(ms: int):
     """
@@ -25,7 +25,7 @@ def wait(ms: int):
 def get_base_fee(provider: Web3) -> int:
     """
     Retrieves the base fee per gas from the latest block.
-    
+
     :param provider: A Web3 provider connected to an EIP-1559 chain.
     :return: The base fee (integer).
     :raises ArbSdkError: If baseFeePerGas is not found (e.g., non-EIP1559 chain).
@@ -33,24 +33,19 @@ def get_base_fee(provider: Web3) -> int:
     latest_block = provider.eth.get_block("latest")
     base_fee = latest_block.get("baseFeePerGas")
     if base_fee is None:
-        raise ArbSdkError(
-            "Latest block did not contain base fee. Ensure provider is on EIP-1559-compatible chain."
-        )
+        raise ArbSdkError("Latest block did not contain base fee. Ensure provider is on EIP-1559-compatible chain.")
     return base_fee
 
 
 def get_transaction_receipt(
-    provider: Web3,
-    tx_hash: HexStr,
-    confirmations: Optional[int] = None,
-    timeout: Optional[int] = None
+    provider: Web3, tx_hash: HexStr, confirmations: Optional[int] = None, timeout: Optional[int] = None
 ) -> Optional[TxReceipt]:
     """
     Retrieve a transaction receipt with optional confirmation count or timeout.
 
     :param provider: A Web3 provider instance.
     :param tx_hash: The transaction hash to fetch.
-    :param confirmations: If provided, we only consider the tx as confirmed if the chain 
+    :param confirmations: If provided, we only consider the tx as confirmed if the chain
                           is that many blocks ahead of the tx's block.
     :param timeout: If provided, the maximum time in milliseconds to wait for confirmation.
     :return: The TxReceipt if found/confirmed, or None if it times out or not yet confirmed.
@@ -60,9 +55,7 @@ def get_transaction_receipt(
             # Convert timeout from ms to seconds if provided
             actual_timeout_seconds = (timeout / 1000) if timeout else None
 
-            receipt = provider.eth.wait_for_transaction_receipt(
-                tx_hash, timeout=actual_timeout_seconds
-            )
+            receipt = provider.eth.wait_for_transaction_receipt(tx_hash, timeout=actual_timeout_seconds)
             if confirmations:
                 latest_block_num = provider.eth.block_number
                 if latest_block_num - receipt.blockNumber < confirmations:
@@ -104,7 +97,6 @@ def is_arbitrum_chain(provider: Web3) -> bool:
         provider=provider,
         contract_name="ArbSys",
         address=ARB_SYS_ADDRESS,
-        
     )
     try:
         arb_sys_contract.functions.arbOSVersion().call()
@@ -118,12 +110,12 @@ def get_first_block_for_l1_block(
     for_l1_block: int,
     allow_greater: bool = False,
     min_arbitrum_block: Optional[int] = None,
-    max_arbitrum_block: Union[int, str] = "latest"
+    max_arbitrum_block: Union[int, str] = "latest",
 ) -> Optional[int]:
     """
-    Performs a binary search on the Arbitrum chain to find the first L2 block 
-    that corresponds to the given L1 block number. 
-    If `allow_greater` is True, then if we can't find an exact match, we can accept a block 
+    Performs a binary search on the Arbitrum chain to find the first L2 block
+    that corresponds to the given L1 block number.
+    If `allow_greater` is True, then if we can't find an exact match, we can accept a block
     with L1 blockNumber > for_l1_block.
 
     :param arbitrum_provider: Arbitrum chain provider (Web3).
@@ -144,7 +136,7 @@ def get_first_block_for_l1_block(
 
     def get_l1_block_number(l2_block_num: int) -> int:
         block = arb_provider.get_block(l2_block_num)
-        return int(block['l1BlockNumber'], 16)
+        return int(block["l1BlockNumber"], 16)
 
     if min_arbitrum_block is None:
         min_arbitrum_block = nitro_genesis_block
@@ -187,7 +179,7 @@ def get_block_ranges_for_l1_block(
     for_l1_block: int,
     allow_greater: bool = False,
     min_arbitrum_block: Optional[int] = None,
-    max_arbitrum_block: Union[int, str] = "latest"
+    max_arbitrum_block: Union[int, str] = "latest",
 ) -> Tuple[Optional[int], Optional[int]]:
     """
     Returns a [startBlock, endBlock] range in the Arbitrum chain for the given L1 block.
@@ -250,7 +242,6 @@ def get_native_token_decimals(parent_provider: Web3, child_network: ArbitrumNetw
         provider=parent_provider,
         contract_name="ERC20",
         address=native_token_address,
-        
     )
     try:
         return token_contract.functions.decimals().call()

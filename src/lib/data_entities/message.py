@@ -4,7 +4,7 @@ from enum import Enum
 class RetryableMessageParams:
     """
     The components of a submit retryable message (Arbitrum).
-    Typically parsed from the events emitted by the Inbox contract 
+    Typically parsed from the events emitted by the Inbox contract
     on the parent chain when creating a retryable ticket.
     """
 
@@ -23,7 +23,7 @@ class RetryableMessageParams:
         """
         :param dest_address: Destination address for the L2 message
         :param l2_call_value: The call value in the L2 message
-        :param l1_value: The total value sent at L1 
+        :param l1_value: The total value sent at L1
                          (usually covers max_submission_fee + execution cost + l2_call_value if ETH-based)
         :param max_submission_fee: The maximum cost to cover the base submission fee on L2
         :param excess_fee_refund_address: The L2 address to credit leftover fees after execution
@@ -48,6 +48,7 @@ class InboxMessageKind(Enum):
     The message kind for L1<->L2 messages as defined in Arbitrum's
     nitro/contracts/src/libraries/MessageTypes.sol
     """
+
     L1MessageType_submitRetryableTx = 9
     L1MessageType_ethDeposit = 12
     L2MessageType_signedTx = 4
@@ -60,6 +61,7 @@ class ChildToParentMessageStatus(Enum):
     CONFIRMED: assertion confirmed, message not yet executed
     EXECUTED: message has been executed (terminal state)
     """
+
     UNCONFIRMED = 1
     CONFIRMED = 2
     EXECUTED = 3

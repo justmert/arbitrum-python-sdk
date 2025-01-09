@@ -3,9 +3,10 @@ from web3 import Web3
 from src.lib.data_entities.constants import ADDRESS_ALIAS_OFFSET
 from src.lib.data_entities.errors import ArbSdkError
 
+
 class Address:
     """
-    Represents an Ethereum/Arbitrum address, with support for applying 
+    Represents an Ethereum/Arbitrum address, with support for applying
     and undoing the L1 <-> L2 alias offset used on Arbitrum.
     """
 
@@ -29,7 +30,7 @@ class Address:
         Under the hood, we ensure the result fits in 160 bits.
 
         :param address: A valid checksummed or hex Ethereum address as a string (no '0x' prefix stripped).
-        :param forward: If True, add the alias offset (computing L1->L2 alias). 
+        :param forward: If True, add the alias offset (computing L1->L2 alias).
                         If False, subtract it (computing L2->L1).
         :return: The checksummed aliased address as a string.
         """
@@ -39,7 +40,7 @@ class Address:
         else:
             offset_int = address_int - self.ADDRESS_ALIAS_OFFSET_BIG_INT
 
-        # Restrict to 160 bits. 
+        # Restrict to 160 bits.
         # (1 << 160) - 1 is a bitmask with 160 ones in binary.
         mod_address_int = offset_int & ((1 << self.ADDRESS_BIT_LENGTH) - 1)
 

@@ -1,5 +1,7 @@
+import dataclasses
 from dataclasses import dataclass
-from typing import Optional, Dict, List, Union, Any
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+
 from eth_typing import HexAddress
 from web3.constants import ADDRESS_ZERO
 
@@ -8,14 +10,12 @@ from src.lib.data_entities.constants import (
     SEVEN_DAYS_IN_SECONDS,
 )
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
-from src.lib.utils.helper import load_contract
-from src.lib.utils.helper import CaseDict
-from dataclasses import fields, is_dataclass
-from web3 import Web3
-from typing import Optional, Dict, List, Union, Any, Type, TypeVar, get_origin, get_args
-import dataclasses
-# from src.lib.utils.helper import snake_to_camel, CaseDict, camel_to_snake
+from src.lib.data_entities.signer_or_provider import (
+    SignerOrProvider,
+    SignerProviderUtils,
+)
+from src.lib.utils.helper import CaseDict, load_contract
+
 
 T = TypeVar("T")
 
@@ -294,7 +294,7 @@ def get_arbitrum_network_by_provider(provider: SignerOrProvider) -> ArbitrumNetw
     :param provider: A SignerOrProvider with a connected chain.
     :return: The matching ArbitrumNetwork.
     """
-    provider =  SignerProviderUtils.get_provider_or_throw(provider)
+    provider = SignerProviderUtils.get_provider_or_throw(provider)
     chain_id = provider.eth.chain_id
     return get_arbitrum_network_by_chain_id(chain_id)
 
@@ -315,7 +315,7 @@ def get_native_token(bridge: str, provider: SignerOrProvider) -> str:
             contract_name="IERC20Bridge",
             address=bridge,
         )
-        return  bridge_contract.functions.nativeToken().call()
+        return bridge_contract.functions.nativeToken().call()
     except Exception:
         return ADDRESS_ZERO
 
@@ -344,11 +344,11 @@ def get_arbitrum_network_information_from_rollup(
         address=rollup_address,
     )
     chain_id = parent_provider.eth.chain_id
-    bridge =  rollup.functions.bridge().call()
-    inbox =  rollup.functions.inbox().call()
-    sequencer_inbox =  rollup.functions.sequencerInbox().call()
-    outbox =  rollup.functions.outbox().call()
-    confirm_period_blocks =  rollup.functions.confirmPeriodBlocks().call()
+    bridge = rollup.functions.bridge().call()
+    inbox = rollup.functions.inbox().call()
+    sequencer_inbox = rollup.functions.sequencerInbox().call()
+    outbox = rollup.functions.outbox().call()
+    confirm_period_blocks = rollup.functions.confirmPeriodBlocks().call()
 
     return {
         "parentChainId": chain_id,
@@ -360,7 +360,7 @@ def get_arbitrum_network_information_from_rollup(
             "outbox": outbox,
             "rollup": rollup_address,
         },
-        "nativeToken":  get_native_token(bridge, parent_provider),
+        "nativeToken": get_native_token(bridge, parent_provider),
     }
 
 
@@ -379,6 +379,7 @@ def register_custom_arbitrum_network(
     throw_if_already_registered = options.get("throwIfAlreadyRegistered", False) if options else False
 
     # If the input is a dictionary, convert it to an ArbitrumNetwork instance
+
     if isinstance(network, dict):
         network = dict_to_arbitrum_network_instance(network)
 
@@ -392,7 +393,6 @@ def register_custom_arbitrum_network(
         message = f"Network {network.chainId} already included"
         if throw_if_already_registered:
             raise ArbSdkError(message)
-        
 
     networks[network.chainId] = network
     return network
@@ -497,7 +497,11 @@ def get_multicall_address(provider_or_chain_id: Union[SignerOrProvider, int]) ->
     :return: The multicall address (string).
     :raises ValueError if chain not recognized
     """
-    chain_id = provider_or_chain_id if isinstance(provider_or_chain_id, int) else SignerProviderUtils.get_provider_or_throw(provider_or_chain_id).eth.chain_id
+    chain_id = (
+        provider_or_chain_id
+        if isinstance(provider_or_chain_id, int)
+        else SignerProviderUtils.get_provider_or_throw(provider_or_chain_id).eth.chain_id
+    )
 
     # If the chain is recognized in 'networks'
     chain = next((c for c in get_arbitrum_networks() if c.chainId == chain_id), None)

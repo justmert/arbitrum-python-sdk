@@ -1,14 +1,10 @@
-# utils/calldata.py
-
 from typing import Any, Dict
-from web3 import Web3
-from web3.exceptions import BadFunctionCallOutput, ContractLogicError
+
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.utils.helper import create_contract_instance
 
-def get_erc20_parent_address_from_parent_to_child_tx_request(
-    tx_req: Dict[str, Any]
-) -> str:
+
+def get_erc20_parent_address_from_parent_to_child_tx_request(tx_req: Dict[str, Any]) -> str:
     """
     Extracts the ERC20 parent token address from a ParentToChildTxReqAndSigner transaction request.
 
@@ -29,8 +25,8 @@ def get_erc20_parent_address_from_parent_to_child_tx_request(
     try:
         # Attempt to decode using 'outboundTransfer' function
         function, arguments = l1_gateway_router.decode_function_input(data)
-        if function.fn_name == 'outboundTransfer':
-            return arguments['_token']
+        if function.fn_name == "outboundTransfer":
+            return arguments["_token"]
         else:
             raise ArbSdkError("Decoded function name does not match 'outboundTransfer'")
     except Exception as e:
@@ -40,8 +36,8 @@ def get_erc20_parent_address_from_parent_to_child_tx_request(
     try:
         # Attempt to decode using 'outboundTransferCustomRefund' function
         function, arguments = l1_gateway_router.decode_function_input(data)
-        if function.fn_name == 'outboundTransferCustomRefund':
-            return arguments['_token']
+        if function.fn_name == "outboundTransferCustomRefund":
+            return arguments["_token"]
         else:
             raise ArbSdkError("Decoded function name does not match 'outboundTransferCustomRefund'")
     except Exception as e:
@@ -49,4 +45,4 @@ def get_erc20_parent_address_from_parent_to_child_tx_request(
         pass
 
     # If neither decoding attempt was successful, raise an error
-    raise ArbSdkError('data signature not matching deposits methods')
+    raise ArbSdkError("data signature not matching deposits methods")

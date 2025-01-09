@@ -1,4 +1,5 @@
 from typing import Any, List
+
 from eth_utils import int_to_big_endian
 from web3 import Web3
 
@@ -6,8 +7,8 @@ from src.lib.data_entities.constants import ARB_ADDRESS_TABLE_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.utils.helper import load_contract
 
-# Cache for previously looked-up addresses -> index
 address_to_index_memo = {}
+
 
 def get_address_index(address: str, provider) -> int:
     """
@@ -25,33 +26,34 @@ def get_address_index(address: str, provider) -> int:
         provider=provider,
         contract_name="ArbAddressTable",
         address=ARB_ADDRESS_TABLE_ADDRESS,
-        
     )
 
-    is_registered =  arb_address_table.functions.addressExists(address).call()
+    is_registered = arb_address_table.functions.addressExists(address).call()
 
     if is_registered:
-        index =  arb_address_table.functions.lookup(address).call()
+        index = arb_address_table.functions.lookup(address).call()
         address_to_index_memo[address] = index
         return index
     else:
         return -1
 
+
 def arg_serializer_constructor(provider):
     """
-    Creates a function that can serialize parameters by 
-    looking up each address in the Arbitrum address table 
+    Creates a function that can serialize parameters by
+    looking up each address in the Arbitrum address table
     to see if it is registered.
 
     :param provider: Web3 provider or wrapper
-    :return: A function that takes a list of primitive or array-of-primitive items 
+    :return: A function that takes a list of primitive or array-of-primitive items
              and returns a serialized byte array
     """
+
     def serialize_params_with_index(params: List[Any]) -> bytes:
         def address_to_index(address: str) -> int:
-            return  get_address_index(address, provider)
+            return get_address_index(address, provider)
 
-        return  serialize_params(params, address_to_index)
+        return serialize_params(params, address_to_index)
 
     return serialize_params_with_index
 
@@ -80,16 +82,16 @@ def format_primitive(value: Any) -> bytes:
     (In TS, we used `BigNumber` or Ethers serialization.)
     """
     if is_address_type(value):
-        # In TS code we might store the actual address, or do partial checks. 
+        # In TS code we might store the actual address, or do partial checks.
         # Here we just hex-encode an address or do a 32-byte numeric
-        # We'll do an "address as 20 bytes" or as a 32-byte for the numeric type, 
+        # We'll do an "address as 20 bytes" or as a 32-byte for the numeric type,
         # but the original code uses 32 for everything except for the specialized address approach.
-        # We'll mimic "address is returned as 20 bytes" or a 32-later approach. 
+        # We'll mimic "address is returned as 20 bytes" or a 32-later approach.
         # For simplicity, let's store it as a 32 byte with the leading 20 bytes as the actual address.
-        # But TS code just calls 'formatPrimative(...) -> toUint(value, 32)' if numeric. 
+        # But TS code just calls 'formatPrimative(...) -> toUint(value, 32)' if numeric.
         # For addresses it directly returns the address as string in many places.
         # We'll store the address as a 32 byte hex: 12 leading 0 bytes + 20 bytes of address
-        # or just return the checksummed address. 
+        # or just return the checksummed address.
         # The original TS code actually calls 'formatPrimative' -> but the 'address' path is separate.
         # We'll do a fallback approach: raise error or return the raw address?
         return Web3.to_bytes(hexstr=value)  # raw 20 bytes
@@ -105,8 +107,8 @@ def serialize_params(
     address_to_index=lambda addr: -1,
 ) -> bytes:
     """
-    Recursively parse a list of primitive or array-of-primitive items 
-    and return a concatenated byte array according to the 
+    Recursively parse a list of primitive or array-of-primitive items
+    and return a concatenated byte array according to the
     Arbitrum "byte serialization" schema.
 
     :param params: The list of items to serialize (can be nested lists)
@@ -126,7 +128,7 @@ def serialize_params(
             if array_length > 0 and is_address_type(param[0]):
                 indices = []
                 for addr in param:
-                    idx =  address_to_index(addr)
+                    idx = address_to_index(addr)
                     indices.append(idx)
 
                 if all(i > -1 for i in indices):
@@ -148,7 +150,7 @@ def serialize_params(
             # single item
             if is_address_type(param):
                 # check if registered
-                idx =  address_to_index(param)
+                idx = address_to_index(param)
                 if idx > -1:
                     # 1 + 4 bytes
                     formatted_parts.append(to_uint(1, 1))

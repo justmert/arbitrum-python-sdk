@@ -1,10 +1,11 @@
-from typing import Union, Optional, Dict, Any, List
 import os
+from typing import Any, Dict, List, Optional, Union
 
+from eth_utils import keccak
 from web3 import Web3
 from web3.exceptions import ContractLogicError
-from eth_utils import keccak
 
+from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import (
     ArbitrumNetwork,
@@ -15,12 +16,6 @@ from src.lib.data_entities.signer_or_provider import (
     SignerOrProvider,
     SignerProviderUtils,
 )
-from src.lib.message.parent_transaction import (
-    ParentContractCallTransaction,
-    ParentContractCallTransactionReceipt,
-    ParentEthDepositTransactionReceipt,
-    ParentTransactionReceipt,
-)
 from src.lib.message.parent_to_child_message import (
     ParentToChildMessageReader,
     ParentToChildMessageStatus,
@@ -29,12 +24,22 @@ from src.lib.message.parent_to_child_message_creator import ParentToChildMessage
 from src.lib.message.parent_to_child_message_gas_estimator import (
     ParentToChildMessageGasEstimator,
 )
-from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
-from src.lib.utils.helper import create_contract_instance, load_contract, get_address
+from src.lib.message.parent_transaction import (
+    ParentContractCallTransaction,
+    ParentContractCallTransactionReceipt,
+    ParentEthDepositTransactionReceipt,
+    ParentTransactionReceipt,
+)
+from src.lib.utils.helper import (
+    create_contract_instance,
+    load_contract,
+    to_checksum_address,
+)
 
 # ------------------------------------------------------------------------------------
 # Data structures and “type” equivalents
 # ------------------------------------------------------------------------------------
+
 
 class TeleportationType:
     """
@@ -44,6 +49,7 @@ class TeleportationType:
       - OnlyGasToken: Teleporting the fee token to a custom-fee L3
       - NonGasTokenToCustomGas: Teleporting a non-fee token to a custom-fee L3
     """
+
     Standard = 0
     OnlyGasToken = 1
     NonGasTokenToCustomGas = 2
@@ -58,6 +64,7 @@ class RetryableGasValues:
       }
     Treated here as simple integers.
     """
+
     def __init__(self, gas_limit: int, max_submission_fee: int):
         self.gasLimit = gas_limit
         self.maxSubmissionFee = max_submission_fee
@@ -71,6 +78,7 @@ class TeleporterRetryableGasOverride:
         maxSubmissionFee?: PercentIncrease
       }
     """
+
     def __init__(
         self,
         gas_limit: Optional[Dict[str, Any]] = None,
@@ -88,6 +96,7 @@ class TokenApproveParams:
         amount?: BigNumber
       }
     """
+
     def __init__(self, erc20_l1_address: str, amount: Optional[int] = None):
         self.erc20L1Address = erc20_l1_address
         self.amount = amount
@@ -102,12 +111,8 @@ class TxRequestParams:
         overrides?: PayableOverrides
       }
     """
-    def __init__(
-        self,
-        tx_request: Dict[str, Any],
-        l1_signer: Any,
-        overrides: Optional[Dict[str, Any]] = None
-    ):
+
+    def __init__(self, tx_request: Dict[str, Any], l1_signer: Any, overrides: Optional[Dict[str, Any]] = None):
         self.txRequest = tx_request
         self.l1Signer = l1_signer
         self.overrides = overrides
@@ -121,6 +126,7 @@ class DepositRequestResult:
         gasTokenAmount: BigNumber
       }
     """
+
     def __init__(self, tx_request: Dict[str, Any], gas_token_amount: int):
         self.txRequest = tx_request
         self.gasTokenAmount = gas_token_amount
@@ -139,6 +145,7 @@ class Erc20L1L3DepositRequestRetryableOverrides:
         l2l3TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
       }
     """
+
     def __init__(
         self,
         l1GasPrice: Optional[Dict[str, Any]] = None,
@@ -171,6 +178,7 @@ class Erc20L1L3DepositRequestParams:
         retryableOverrides?: Erc20L1L3DepositRequestRetryableOverrides
       }
     """
+
     def __init__(
         self,
         erc20L1Address: str,
@@ -195,11 +203,12 @@ class TxReference:
     Pythonic approach to represent 'TxReference' from TS:
       type TxReference = { txHash: string } | { tx: ... } | { txReceipt: ... }
     """
+
     def __init__(
         self,
         txHash: Optional[str] = None,
         tx: Optional[ParentContractCallTransaction] = None,
-        txReceipt: Optional[ParentContractCallTransactionReceipt] = None
+        txReceipt: Optional[ParentContractCallTransactionReceipt] = None,
     ):
         self.txHash = txHash
         self.tx = tx
@@ -211,6 +220,7 @@ class GetL1L3DepositStatusParams(TxReference):
     Python representation of:
       export type GetL1L3DepositStatusParams = { l1Provider: Provider; l2Provider: Provider; l3Provider: Provider } & TxReference
     """
+
     def __init__(
         self,
         l1Provider: Web3,
@@ -218,7 +228,7 @@ class GetL1L3DepositStatusParams(TxReference):
         l3Provider: Web3,
         txHash: Optional[str] = None,
         tx: Optional[ParentContractCallTransaction] = None,
-        txReceipt: Optional[ParentContractCallTransactionReceipt] = None
+        txReceipt: Optional[ParentContractCallTransactionReceipt] = None,
     ):
         super().__init__(txHash, tx, txReceipt)
         self.l1Provider = l1Provider
@@ -238,6 +248,7 @@ class Erc20L1L3DepositStatus:
         completed: boolean
       }
     """
+
     def __init__(
         self,
         l1l2TokenBridgeRetryable: ParentToChildMessageReader,
@@ -268,6 +279,7 @@ class EthL1L3DepositRequestParams:
         l3TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
       }
     """
+
     def __init__(
         self,
         amount: int,
@@ -296,11 +308,12 @@ class EthL1L3DepositStatus:
         completed: boolean
       }
     """
+
     def __init__(
         self,
         l2Retryable: ParentToChildMessageReader,
         completed: bool,
-        l3Retryable: Optional[ParentToChildMessageReader] = None
+        l3Retryable: Optional[ParentToChildMessageReader] = None,
     ):
         self.l2Retryable = l2Retryable
         self.l3Retryable = l3Retryable
@@ -310,6 +323,7 @@ class EthL1L3DepositStatus:
 # ------------------------------------------------------------------------------------
 # Base class: BaseL1L3Bridger
 # ------------------------------------------------------------------------------------
+
 
 class BaseL1L3Bridger:
     """
@@ -329,9 +343,7 @@ class BaseL1L3Bridger:
                 break
 
         if not potential_l2:
-            raise ArbSdkError(
-                f"Unknown Arbitrum network chain id: {l3_network.parentChainId}"
-            )
+            raise ArbSdkError(f"Unknown Arbitrum network chain id: {l3_network.parentChainId}")
 
         # Keep references:
         self.l2Network = potential_l2
@@ -345,25 +357,19 @@ class BaseL1L3Bridger:
         """
         Ensure the signer/provider is on the expected L1 chainId.
         """
-        SignerProviderUtils.check_network_matches(
-            sop, self.l1Network["chainId"]
-        )
+        SignerProviderUtils.check_network_matches(sop, self.l1Network["chainId"])
 
     def _check_l2_network(self, sop: SignerOrProvider):
         """
         Ensure the signer/provider is on the expected L2 chainId.
         """
-        SignerProviderUtils.check_network_matches(
-            sop, self.l2Network.chainId
-        )
+        SignerProviderUtils.check_network_matches(sop, self.l2Network.chainId)
 
     def _check_l3_network(self, sop: SignerOrProvider):
         """
         Ensure the signer/provider is on the expected L3 chainId.
         """
-        SignerProviderUtils.check_network_matches(
-            sop, self.l3Network.chainId
-        )
+        SignerProviderUtils.check_network_matches(sop, self.l3Network.chainId)
 
     def _percent_increase(self, num: int, increase: int) -> int:
         """
@@ -384,12 +390,10 @@ class BaseL1L3Bridger:
             return tx_ref["txReceipt"].transactionHash
 
     def _get_tx_from_tx_ref(
-        self,
-        tx_ref: Union[Dict[str, Any], "TxReference"],
-        provider: Web3
+        self, tx_ref: Union[Dict[str, Any], "TxReference"], provider: Web3
     ) -> ParentContractCallTransaction:
         """
-        If 'tx' key is present, return that. 
+        If 'tx' key is present, return that.
         Otherwise fetch from chain and monkey-patch.
         """
         if "tx" in tx_ref:
@@ -397,12 +401,11 @@ class BaseL1L3Bridger:
 
         tx_hash = self._get_tx_hash_from_tx_ref(tx_ref)
         raw_tx = provider.eth.get_transaction(tx_hash)
+
         return ParentTransactionReceipt.monkey_patch_contract_call_wait(raw_tx)
 
     def _get_tx_receipt_from_tx_ref(
-        self,
-        tx_ref: Union[Dict[str, Any], "TxReference"],
-        provider: Web3
+        self, tx_ref: Union[Dict[str, Any], "TxReference"], provider: Web3
     ) -> ParentContractCallTransactionReceipt:
         """
         If 'txReceipt' key is present, return that.
@@ -420,6 +423,7 @@ class BaseL1L3Bridger:
 # Erc20L1L3Bridger
 # ------------------------------------------------------------------------------------
 
+
 class Erc20L1L3Bridger(BaseL1L3Bridger):
     """
     Python version of the Erc20L1L3Bridger from l1l3Bridger.ts
@@ -429,9 +433,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         super().__init__(l3_network)
 
         if not self.l2Network.teleporter:
-            raise ArbSdkError(
-                f"L2 network {self.l2Network.name} does not have teleporter contracts"
-            )
+            raise ArbSdkError(f"L2 network {self.l2Network.name} does not have teleporter contracts")
 
         # Hardcode default gas limit
         self.l2ForwarderFactoryDefaultGasLimit = 1_000_000
@@ -439,13 +441,10 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         # Replicate skipL1GasTokenMagic: keccak("SKIP_FEE_TOKEN")[0..20]
         hashed = keccak(text="SKIP_FEE_TOKEN")
         raw_20 = hashed[:20]
-        self.skipL1GasTokenMagic = Web3.toChecksumAddress("0x" + raw_20.hex())
+        self.skipL1GasTokenMagic = Web3.to_checksum_address("0x" + raw_20.hex())
 
         # If L3 uses a custom fee token:
-        if (
-            self.l3Network.nativeToken
-            and self.l3Network.nativeToken != "0x0000000000000000000000000000000000000000"
-        ):
+        if self.l3Network.nativeToken and self.l3Network.nativeToken != "0x0000000000000000000000000000000000000000":
             self.l2GasTokenAddress: Optional[str] = self.l3Network.nativeToken
         else:
             self.l2GasTokenAddress = None
@@ -474,10 +473,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         l1_fee_token_address: Optional[str] = None
 
         try:
-            l1_fee_token_address = self.l2Erc20Bridger.get_parent_erc20_address(
-                self.l2GasTokenAddress,
-                l2_provider
-            )
+            l1_fee_token_address = self.l2Erc20Bridger.get_parent_erc20_address(self.l2GasTokenAddress, l2_provider)
         except ContractLogicError as e:
             # If not a call exception, re-raise
             if e.args and "CALL_EXCEPTION" not in str(e):
@@ -487,62 +483,47 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             raise ArbSdkError("L1 gas token not found. Use skipGasToken when depositing")
 
         # Check decimals = 18 on L1
-        l1_contract = load_contract(l1_provider, "ERC20", address=l1_fee_token_address)
+        l1_contract = load_contract(provider=l1_provider, contract_name="ERC20", address=l1_fee_token_address)
         decimals_l1 = l1_contract.functions.decimals().call()
         if decimals_l1 != 18:
             raise ArbSdkError("L1 gas token has incorrect decimals. Use skipGasToken when depositing")
 
         # Check decimals = 18 on L2
-        l2_contract = load_contract(l2_provider, "ERC20", address=self.l2GasTokenAddress)
+        l2_contract = load_contract(provider=l2_provider, contract_name="ERC20", address=self.l2GasTokenAddress)
         decimals_l2 = l2_contract.functions.decimals().call()
         if decimals_l2 != 18:
             raise ArbSdkError("L2 gas token has incorrect decimals. Use skipGasToken when depositing")
 
         if self.l1_token_is_disabled(l1_fee_token_address, l1_provider):
-            raise ArbSdkError(
-                "L1 gas token is disabled on the L1->L2 token bridge. Use skipGasToken when depositing"
-            )
+            raise ArbSdkError("L1 gas token is disabled on the L1->L2 token bridge. Use skipGasToken when depositing")
         if self.l2_token_is_disabled(self.l2GasTokenAddress, l2_provider):
-            raise ArbSdkError(
-                "L2 gas token is disabled on the L2->L3 token bridge. Use skipGasToken when depositing"
-            )
+            raise ArbSdkError("L2 gas token is disabled on the L2->L3 token bridge. Use skipGasToken when depositing")
 
         self._l1FeeTokenAddress = l1_fee_token_address
         return self._l1FeeTokenAddress
 
-    def get_l2_erc20_address(
-        self, erc20_l1_address: str, l1_provider: Web3
-    ) -> str:
-        return self.l2Erc20Bridger.get_child_erc20_address(
-            erc20_l1_address,
-            l1_provider
-        )
+    def get_l2_erc20_address(self, erc20_l1_address: str, l1_provider: Web3) -> str:
+        return self.l2Erc20Bridger.get_child_erc20_address(erc20_l1_address, l1_provider)
 
-    def get_l3_erc20_address(
-        self, erc20_l1_address: str, l1_provider: Web3, l2_provider: Web3
-    ) -> str:
+    def get_l3_erc20_address(self, erc20_l1_address: str, l1_provider: Web3, l2_provider: Web3) -> str:
         l2_token = self.get_l2_erc20_address(erc20_l1_address, l1_provider)
         return self.l3Erc20Bridger.get_child_erc20_address(l2_token, l2_provider)
 
-    def get_l1_l2_gateway_address(self, erc20_l1_address: str, l1_provider: Web3) -> str:
-        return self.l2Erc20Bridger.get_parent_gateway_address(
-            erc20_l1_address, l1_provider
-        )
+    def get_l1l2_gateway_address(self, erc20_l1_address: str, l1_provider: Web3) -> str:
+        return self.l2Erc20Bridger.get_parent_gateway_address(erc20_l1_address, l1_provider)
 
-    def get_l2_l3_gateway_address(
-        self, erc20_l1_address: str, l1_provider: Web3, l2_provider: Web3
-    ) -> str:
+    def get_l2l3_gateway_address(self, erc20_l1_address: str, l1_provider: Web3, l2_provider: Web3) -> str:
         l2_token = self.get_l2_erc20_address(erc20_l1_address, l1_provider)
         return self.l3Erc20Bridger.get_parent_gateway_address(l2_token, l2_provider)
 
     def get_l1_token_contract(self, l1_token_addr: str, l1_provider: Web3):
-        return load_contract(l1_provider, "ERC20", address=l1_token_addr)
+        return load_contract(provider=l1_provider, contract_name="ERC20", address=l1_token_addr)
 
     def get_l2_token_contract(self, l2_token_addr: str, l2_provider: Web3):
-        return load_contract(l2_provider, "L2GatewayToken", address=l2_token_addr)
+        return load_contract(provider=l2_provider, contract_name="L2GatewayToken", address=l2_token_addr)
 
     def get_l3_token_contract(self, l3_token_addr: str, l3_provider: Web3):
-        return load_contract(l3_provider, "L2GatewayToken", address=l3_token_addr)
+        return load_contract(provider=l3_provider, contract_name="L2GatewayToken", address=l3_token_addr)
 
     def l1_token_is_disabled(self, l1_token_address: str, l1_provider: Web3) -> bool:
         return self.l2Erc20Bridger.is_deposit_disabled(l1_token_address, l1_provider)
@@ -551,11 +532,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         return self.l3Erc20Bridger.is_deposit_disabled(l2_token_address, l2_provider)
 
     def l2_forwarder_address(
-        self,
-        owner: str,
-        router_or_inbox: str,
-        destination_address: str,
-        l1_or_l2_provider: Web3
+        self, owner: str, router_or_inbox: str, destination_address: str, l1_or_l2_provider: Web3
     ) -> str:
         chain_id = l1_or_l2_provider.eth.chain_id
         if chain_id == self.l1Network["chainId"]:
@@ -566,15 +543,9 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             raise ArbSdkError(f"Unknown chain id: {chain_id}")
 
         predictor_contract = load_contract(
-            l1_or_l2_provider,
-            "IL2ForwarderPredictor",
-            address=predictor
+            provider=l1_or_l2_provider, contract_name="IL2ForwarderPredictor", address=predictor
         )
-        return predictor_contract.functions.l2ForwarderAddress(
-            owner,
-            router_or_inbox,
-            destination_address
-        ).call()
+        return predictor_contract.functions.l2ForwarderAddress(owner, router_or_inbox, destination_address).call()
 
     def get_approve_token_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -590,16 +561,9 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             contract_name="IERC20",
             # address=erc20_address
         )
-        data = erc20_contract.encodeABI(
-            fn_name="approve",
-            args=[self.teleporter.l1Teleporter, amount]
-        )
+        data = erc20_contract.encodeABI(fn_name="approve", args=[self.teleporter.l1Teleporter, amount])
 
-        return {
-            "to": erc20_address,
-            "data": data,
-            "value": 0
-        }
+        return {"to": erc20_address, "data": data, "value": 0}
 
     def approve_token(self, params: Dict[str, Any]):
         l1_signer = params["l1Signer"]
@@ -611,7 +575,12 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             approve_request = self.get_approve_token_request(params)
 
         overrides = params.get("overrides", {})
-        return l1_signer.send_transaction({**approve_request, **overrides})
+        tx = {**approve_request, **overrides}
+
+        if "from" not in params:
+            tx["from"] = l1_signer.get_address()
+
+        return l1_signer.send_transaction(tx)
 
     def get_approve_gas_token_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -619,10 +588,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         """
         amount = params.get("amount")
         fee_token_l1 = self.get_gas_token_on_l1(params["l1Provider"], params["l2Provider"])
-        return self.get_approve_token_request({
-            "erc20L1Address": fee_token_l1,
-            "amount": amount
-        })
+        return self.get_approve_token_request({"erc20L1Address": fee_token_l1, "amount": amount})
 
     def approve_gas_token(self, params: Dict[str, Any]):
         l1_signer = params["l1Signer"]
@@ -631,16 +597,18 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         if "txRequest" in params:
             approve_request = params["txRequest"]
         else:
-            built = self.get_approve_gas_token_request({
-                "l1Provider": l1_signer.provider,
-                "l2Provider": params["l2Provider"],
-                "amount": params.get("amount")
-            })
+            built = self.get_approve_gas_token_request(
+                {"l1Provider": l1_signer.provider, "l2Provider": params["l2Provider"], "amount": params.get("amount")}
+            )
             approve_request = built
 
         overrides = params.get("overrides", {})
-        return l1_signer.send_transaction({**approve_request, **overrides})
+        tx = {**approve_request, **overrides}
 
+        if "from" not in params:
+            tx["from"] = l1_signer.get_address()
+
+        return l1_signer.send_transaction(tx)
 
     # ---------------------------------------------------------------------------
     # The bridging / deposit flow
@@ -679,11 +647,10 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             "l1Token": params["erc20L1Address"],
             "l3FeeTokenL1Addr": l1_fee_token,
             "l1l2Router": self.l2Network.tokenBridge.parentGatewayRouter,
-            "l2l3RouterOrInbox":
-                l1_fee_token
-                and get_address(params["erc20L1Address"]) == get_address(l1_fee_token)
-                and self.l3Network.ethBridge.inbox
-                or self.l3Network.tokenBridge.parentGatewayRouter,
+            "l2l3RouterOrInbox": l1_fee_token
+            and to_checksum_address(params["erc20L1Address"]) == to_checksum_address(l1_fee_token)
+            and self.l3Network.ethBridge.inbox
+            or self.l3Network.tokenBridge.parentGatewayRouter,
             "to": params.get("destinationAddress", from_addr),
             "amount": params["amount"],
         }
@@ -691,32 +658,26 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         retryable_overrides = params.get("retryableOverrides", {})
 
         filled = self._fill_partial_teleport_params(
-            partial_teleport_params,
-            retryable_overrides,
-            l1_provider,
-            params["l2Provider"],
-            params["l3Provider"]
+            partial_teleport_params, retryable_overrides, l1_provider, params["l2Provider"], params["l3Provider"]
         )
         teleport_params = filled["teleportParams"]
         costs = filled["costs"]
 
         teleporter_contract = create_contract_instance(
-            # l1_provider,
             "IL1Teleporter",
-            # address=self.teleporter.l1Teleporter
         )
-        data = teleporter_contract.encodeABI(
-            fn_name="teleport",
-            args=[teleport_params]
-        )
+        data = teleporter_contract.encodeABI(fn_name="teleport", args=[teleport_params])
+
+        costs_mapping = {
+            "ethAmount": costs[0],
+            "feeTokenAmount": costs[1],
+            "teleportationType": costs[2],
+            "costs": costs[3],
+        }
 
         return {
-            "txRequest": {
-                "to": self.teleporter.l1Teleporter,
-                "data": data,
-                "value": costs["ethAmount"]
-            },
-            "gasTokenAmount": costs["feeTokenAmount"]
+            "txRequest": {"to": self.teleporter.l1Teleporter, "data": data, "value": costs_mapping["ethAmount"]},
+            "gasTokenAmount": costs_mapping["feeTokenAmount"],
         }
 
     def deposit(self, params: Dict[str, Any]) -> ParentContractCallTransaction:
@@ -729,8 +690,16 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             deposit_request = dr["txRequest"]
 
         overrides = params.get("overrides", {})
-        tx = params["l1Signer"].sendTransaction({**deposit_request, **overrides})
-        return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx)
+        tx = {**deposit_request, **overrides}
+
+        if "from" not in params:
+            tx["from"] = params["l1Signer"].get_address()
+
+        tx_hash = params["l1Signer"].send_transaction(tx)
+
+        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
+
+        return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
     def get_deposit_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
         self._check_l1_network(params["l1Provider"])
@@ -742,14 +711,14 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         l1l2_messages = self._get_l1_to_l2_messages(tx_receipt, params["l2Provider"])
 
         l2_forwarder_params = self._decode_call_forwarder_calldata(
-            l1l2_messages["l2ForwarderFactoryRetryable"]["messageData"]["data"]
+            l1l2_messages["l2ForwarderFactoryRetryable"].message_data["data"]
         )
 
         l2_forwarder_address = self.l2_forwarder_address(
             l2_forwarder_params["owner"],
             l2_forwarder_params["routerOrInbox"],
             l2_forwarder_params["to"],
-            params["l2Provider"]
+            params["l2Provider"],
         )
 
         teleport_params = self._decode_teleport_calldata(tx.data)
@@ -757,7 +726,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         return {
             "teleportParams": teleport_params,
             "l2ForwarderParams": l2_forwarder_params,
-            "l2ForwarderAddress": l2_forwarder_address
+            "l2ForwarderAddress": l2_forwarder_address,
         }
 
     def get_deposit_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -766,13 +735,15 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         self._check_l3_network(params["l3Provider"])
 
         l1_tx_receipt = self._get_tx_receipt_from_tx_ref(params, params["l1Provider"])
+
         partial_result = self._get_l1_to_l2_messages(l1_tx_receipt, params["l2Provider"])
 
         factory_redeem = partial_result["l2ForwarderFactoryRetryable"].get_successful_redeem()
 
         if factory_redeem["status"] == ParentToChildMessageStatus.REDEEMED:
             child_ptx_receipt = ParentTransactionReceipt(factory_redeem["childTxReceipt"])
-            l2l3_messages = child_ptx_receipt.getParentToChildMessages(params["l3Provider"])
+            l2l3_messages = child_ptx_receipt.get_parent_to_child_messages(params["l3Provider"])
+
             l2l3_message = l2l3_messages[0] if l2l3_messages else None
         else:
             l2l3_message = None
@@ -784,16 +755,19 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             l1l2_token_bridge_status == ParentToChildMessageStatus.REDEEMED
             and factory_redeem["status"] == ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
         ):
+
             decoded_factory_call = self._decode_call_forwarder_calldata(
-                partial_result["l2ForwarderFactoryRetryable"]["messageData"]["data"]
+                partial_result["l2ForwarderFactoryRetryable"].message_data["data"]
             )
             forwarder_addr = self.l2_forwarder_address(
                 decoded_factory_call["owner"],
                 decoded_factory_call["routerOrInbox"],
                 decoded_factory_call["to"],
-                params["l2Provider"]
+                params["l2Provider"],
             )
-            l2_token_contract = load_contract(params["l2Provider"], "IERC20", address=decoded_factory_call["l2Token"])
+            l2_token_contract = load_contract(
+                provider=params["l2Provider"], contract_name="IERC20", address=decoded_factory_call["l2Token"]
+            )
             balance = l2_token_contract.functions.balanceOf(forwarder_addr).call()
             if balance == 0:
                 l2_forwarder_factory_retryable_front_ran = True
@@ -807,31 +781,35 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         ret["l2l3TokenBridgeRetryable"] = l2l3_message
         ret["l2ForwarderFactoryRetryableFrontRan"] = l2_forwarder_factory_retryable_front_ran
         ret["completed"] = completed
+
         return ret
 
     def teleportation_type(self, partial_teleport_params: Dict[str, Any]) -> int:
         if partial_teleport_params["l3FeeTokenL1Addr"] == "0x0000000000000000000000000000000000000000":
             return TeleportationType.Standard
-        elif get_address(partial_teleport_params["l1Token"]) == get_address(partial_teleport_params["l3FeeTokenL1Addr"]):
+        elif to_checksum_address(partial_teleport_params["l1Token"]) == to_checksum_address(
+            partial_teleport_params["l3FeeTokenL1Addr"]
+        ):
             return TeleportationType.OnlyGasToken
         else:
             return TeleportationType.NonGasTokenToCustomGas
 
     def _get_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
         parent_gateway = load_contract(
-            params["parentProvider"],
-            "L1GatewayRouter",  # or your gateway router name
-            address=params["parentGatewayAddress"]
+            provider=params["parentProvider"],
+            contract_name="L1GatewayRouter",  # or your gateway router name
+            address=params["parentGatewayAddress"],
         )
+
         outbound_calldata = parent_gateway.functions.getOutboundCalldata(
-            params["parentErc20Address"],
-            params["from"],
-            params["to"],
+            to_checksum_address(params["parentErc20Address"]),
+            to_checksum_address(params["from"]),
+            to_checksum_address(params["to"]),
             params["amount"],
-            "0x"
+            "0x",
         ).call()
 
-        estimates = ParentToChildMessageGasEstimator(params["childProvider"]).estimateAll(
+        estimates = ParentToChildMessageGasEstimator(params["childProvider"]).estimate_all(
             {
                 "to": parent_gateway.functions.counterpartGateway().call(),
                 "data": outbound_calldata,
@@ -841,33 +819,30 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                 "callValueRefundAddress": params["from"],
             },
             params["parentGasPrice"],
-            params["parentProvider"]
+            params["parentProvider"],
         )
 
-        return {
-            "gasLimit": estimates["gasLimit"],
-            "maxSubmissionFee": estimates["maxSubmissionCost"]
-        }
+        return {"gasLimit": estimates["gasLimit"], "maxSubmissionFee": estimates["maxSubmissionCost"]}
 
     def _get_l1_l2_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
         assert_arbitrum_network_has_token_bridge(self.l2Network)
-        parent_gateway_address = self.get_l1_l2_gateway_address(
-            params["l1Token"], params["l1Provider"]
+        parent_gateway_address = self.get_l1l2_gateway_address(params["l1Token"], params["l1Provider"])
+        return self._get_token_bridge_gas_estimates(
+            {
+                "parentProvider": params["l1Provider"],
+                "childProvider": params["l2Provider"],
+                "parentGasPrice": params["l1GasPrice"],
+                "parentErc20Address": params["l1Token"],
+                "parentGatewayAddress": parent_gateway_address,
+                "from": self.teleporter.l1Teleporter,
+                "to": params["l2ForwarderAddress"],
+                "amount": params["amount"],
+                "isWeth": (
+                    to_checksum_address(parent_gateway_address)
+                    == to_checksum_address(self.l2Network.tokenBridge["parentWethGateway"])
+                ),
+            }
         )
-        return self._get_token_bridge_gas_estimates({
-            "parentProvider": params["l1Provider"],
-            "childProvider": params["l2Provider"],
-            "parentGasPrice": params["l1GasPrice"],
-            "parentErc20Address": params["l1Token"],
-            "parentGatewayAddress": parent_gateway_address,
-            "from": self.teleporter.l1Teleporter,
-            "to": params["l2ForwarderAddress"],
-            "amount": params["amount"],
-            "isWeth": (
-                get_address(parent_gateway_address)
-                == get_address(self.l2Network.tokenBridge["parentWethGateway"])
-            ),
-        })
 
     def _get_l1_l2_fee_token_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
         assert_arbitrum_network_has_token_bridge(self.l2Network)
@@ -875,47 +850,42 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         if params["l3FeeTokenL1Addr"] == self.skipL1GasTokenMagic:
             return {"gasLimit": 0, "maxSubmissionFee": 0}
 
-        parent_gateway_address = self.get_l1_l2_gateway_address(
-            params["l3FeeTokenL1Addr"], params["l1Provider"]
+        parent_gateway_address = self.get_l1l2_gateway_address(params["l3FeeTokenL1Addr"], params["l1Provider"])
+        return self._get_token_bridge_gas_estimates(
+            {
+                "parentProvider": params["l1Provider"],
+                "childProvider": params["l2Provider"],
+                "parentGasPrice": params["l1GasPrice"],
+                "parentErc20Address": params["l3FeeTokenL1Addr"],
+                "parentGatewayAddress": parent_gateway_address,
+                "from": self.teleporter.l1Teleporter,
+                "to": params["l2ForwarderAddress"],
+                "amount": params["feeTokenAmount"],
+                "isWeth": (
+                    to_checksum_address(parent_gateway_address)
+                    == to_checksum_address(self.l2Network.tokenBridge["parentWethGateway"])
+                ),
+            }
         )
-        return self._get_token_bridge_gas_estimates({
-            "parentProvider": params["l1Provider"],
-            "childProvider": params["l2Provider"],
-            "parentGasPrice": params["l1GasPrice"],
-            "parentErc20Address": params["l3FeeTokenL1Addr"],
-            "parentGatewayAddress": parent_gateway_address,
-            "from": self.teleporter.l1Teleporter,
-            "to": params["l2ForwarderAddress"],
-            "amount": params["feeTokenAmount"],
-            "isWeth": (
-                get_address(parent_gateway_address)
-                == get_address(self.l2Network.tokenBridge["parentWethGateway"])
-            ),
-        })
 
     def _get_l2_forwarder_factory_gas_estimates(self, l1_gas_price: int, l1_provider: Web3) -> Dict[str, int]:
-        inbox = load_contract(
-            l1_provider,
-            "IInbox",
-            address=self.l2Network.ethBridge["inbox"]
-        )
+        inbox = load_contract(provider=l1_provider, contract_name="IInbox", address=self.l2Network.ethBridge["inbox"])
         size = self._l2_forwarder_factory_calldata_size()
         max_submission_fee = inbox.functions.calculateRetryableSubmissionFee(size, l1_gas_price).call()
-        return {
-            "gasLimit": self.l2ForwarderFactoryDefaultGasLimit,
-            "maxSubmissionFee": max_submission_fee
-        }
+        return {"gasLimit": self.l2ForwarderFactoryDefaultGasLimit, "maxSubmissionFee": max_submission_fee}
 
     def _get_l2_l3_bridge_gas_estimates(self, params: Dict[str, Any]) -> Dict[str, int]:
         assert_arbitrum_network_has_token_bridge(self.l3Network)
 
         t_type = self.teleportation_type(params["partialTeleportParams"])
-        if t_type == TeleportationType.NonGasTokenToCustomGas and \
-           params["partialTeleportParams"]["l3FeeTokenL1Addr"] == self.skipL1GasTokenMagic:
+        if (
+            t_type == TeleportationType.NonGasTokenToCustomGas
+            and params["partialTeleportParams"]["l3FeeTokenL1Addr"] == self.skipL1GasTokenMagic
+        ):
             return {"gasLimit": 0, "maxSubmissionFee": 0}
         elif t_type == TeleportationType.OnlyGasToken:
             partial = params["partialTeleportParams"]
-            estimate = ParentToChildMessageGasEstimator(params["l3Provider"]).estimateAll(
+            estimate = ParentToChildMessageGasEstimator(params["l3Provider"]).estimate_all(
                 {
                     "to": partial["to"],
                     "data": "0x",
@@ -925,37 +895,30 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                     "callValueRefundAddress": partial["to"],
                 },
                 params["l2GasPrice"],
-                params["l2Provider"]
+                params["l2Provider"],
             )
-            return {
-                "gasLimit": estimate["gasLimit"],
-                "maxSubmissionFee": estimate["maxSubmissionCost"]
-            }
+            return {"gasLimit": estimate["gasLimit"], "maxSubmissionFee": estimate["maxSubmissionCost"]}
         else:
-            parent_gateway_address = self.get_l2_l3_gateway_address(
-                params["partialTeleportParams"]["l1Token"],
-                params["l1Provider"],
-                params["l2Provider"]
+            parent_gateway_address = self.get_l2l3_gateway_address(
+                params["partialTeleportParams"]["l1Token"], params["l1Provider"], params["l2Provider"]
             )
-            l2_token_addr = self.get_l2_erc20_address(
-                params["partialTeleportParams"]["l1Token"],
-                params["l1Provider"]
+            l2_token_addr = self.get_l2_erc20_address(params["partialTeleportParams"]["l1Token"], params["l1Provider"])
+            is_weth = to_checksum_address(parent_gateway_address) == to_checksum_address(
+                self.l3Network.tokenBridge["parentWethGateway"]
             )
-            is_weth = (
-                get_address(parent_gateway_address)
-                == get_address(self.l3Network.tokenBridge["parentWethGateway"])
+            return self._get_token_bridge_gas_estimates(
+                {
+                    "parentProvider": params["l2Provider"],
+                    "childProvider": params["l3Provider"],
+                    "parentGasPrice": params["l2GasPrice"],
+                    "parentErc20Address": l2_token_addr,
+                    "parentGatewayAddress": parent_gateway_address,
+                    "from": params["l2ForwarderAddress"],
+                    "to": params["partialTeleportParams"]["to"],
+                    "amount": params["partialTeleportParams"]["amount"],
+                    "isWeth": is_weth,
+                }
             )
-            return self._get_token_bridge_gas_estimates({
-                "parentProvider": params["l2Provider"],
-                "childProvider": params["l3Provider"],
-                "parentGasPrice": params["l2GasPrice"],
-                "parentErc20Address": l2_token_addr,
-                "parentGatewayAddress": parent_gateway_address,
-                "from": params["l2ForwarderAddress"],
-                "to": params["partialTeleportParams"]["to"],
-                "amount": params["partialTeleportParams"]["amount"],
-                "isWeth": is_weth
-            })
 
     def _fill_partial_teleport_params(
         self,
@@ -963,24 +926,36 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         retryable_overrides: Dict[str, Any],
         l1_provider: Web3,
         l2_provider: Web3,
-        l3_provider: Web3
+        l3_provider: Web3,
     ) -> Dict[str, Any]:
-
         def get_retryable_gas_values_with_overrides(
-            overrides: Optional[Dict[str, Any]],
-            get_estimates
+            overrides: Optional[Dict[str, Any]], get_estimates
         ) -> Dict[str, int]:
-            if overrides and \
-               "gasLimit" in overrides and "maxSubmissionFee" in overrides and \
-               "base" in overrides["gasLimit"] and "base" in overrides["maxSubmissionFee"]:
+            if (
+                overrides
+                and "gasLimit" in overrides
+                and "maxSubmissionFee" in overrides
+                and "base" in overrides["gasLimit"]
+                and "base" in overrides["maxSubmissionFee"]
+            ):
                 base_gas_limit = overrides["gasLimit"]["base"]
                 base_max_submission_fee = overrides["maxSubmissionFee"]["base"]
             else:
                 calc = get_estimates()
-                base_gas_limit = overrides.get("gasLimit", {}).get("base", calc["gasLimit"]) if overrides else calc["gasLimit"]
-                base_max_submission_fee = overrides.get("maxSubmissionFee", {}).get("base", calc["maxSubmissionFee"]) if overrides else calc["maxSubmissionFee"]
+                base_gas_limit = (
+                    overrides.get("gasLimit", {}).get("base", calc["gasLimit"]) if overrides else calc["gasLimit"]
+                )
+                base_max_submission_fee = (
+                    overrides.get("maxSubmissionFee", {}).get("base", calc["maxSubmissionFee"])
+                    if overrides
+                    else calc["maxSubmissionFee"]
+                )
 
-            gas_limit_increase = overrides.get("gasLimit", {}).get("percentIncrease", self.defaultGasLimitPercentIncrease) if overrides else self.defaultGasLimitPercentIncrease
+            gas_limit_increase = (
+                overrides.get("gasLimit", {}).get("percentIncrease", self.defaultGasLimitPercentIncrease)
+                if overrides
+                else self.defaultGasLimitPercentIncrease
+            )
             sub_fee_increase = overrides.get("maxSubmissionFee", {}).get("percentIncrease", 0) if overrides else 0
 
             gas_limit_adjusted = self._percent_increase(base_gas_limit, gas_limit_increase)
@@ -990,15 +965,9 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             if gas_limit_adjusted < min_gas_limit:
                 gas_limit_adjusted = min_gas_limit
 
-            return {
-                "gasLimit": gas_limit_adjusted,
-                "maxSubmissionFee": sub_fee_adjusted
-            }
+            return {"gasLimit": gas_limit_adjusted, "maxSubmissionFee": sub_fee_adjusted}
 
-        def apply_gas_percent_increase(
-            override_dict: Dict[str, Any],
-            get_estimate
-        ) -> int:
+        def apply_gas_percent_increase(override_dict: Dict[str, Any], get_estimate) -> int:
             base_val = override_dict.get("base") if override_dict else None
             if not base_val:
                 # call get_estimate
@@ -1007,66 +976,79 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
                     val = val
                 base_val = val
 
-            inc = override_dict.get("percentIncrease", self.defaultGasPricePercentIncrease) if override_dict else self.defaultGasPricePercentIncrease
+            inc = (
+                override_dict.get("percentIncrease", self.defaultGasPricePercentIncrease)
+                if override_dict
+                else self.defaultGasPricePercentIncrease
+            )
             return self._percent_increase(base_val, inc)
 
-        l1_gas_price = apply_gas_percent_increase(retryable_overrides.get("l1GasPrice", {}), lambda: l1_provider.eth.gas_price)
-        l2_gas_price = apply_gas_percent_increase(retryable_overrides.get("l2GasPrice", {}), lambda: l2_provider.eth.gas_price)
+        l1_gas_price = apply_gas_percent_increase(
+            retryable_overrides.get("l1GasPrice", {}), lambda: l1_provider.eth.gas_price
+        )
+        l2_gas_price = apply_gas_percent_increase(
+            retryable_overrides.get("l2GasPrice", {}), lambda: l2_provider.eth.gas_price
+        )
 
         if partial_teleport_params["l3FeeTokenL1Addr"] == self.skipL1GasTokenMagic:
             l3_gas_price = 0
         else:
-            l3_gas_price = apply_gas_percent_increase(retryable_overrides.get("l3GasPrice", {}), lambda: l3_provider.eth.gas_price)
+            l3_gas_price = apply_gas_percent_increase(
+                retryable_overrides.get("l3GasPrice", {}), lambda: l3_provider.eth.gas_price
+            )
 
         fake_random_l2_forwarder = "0x" + os.urandom(20).hex()
 
         l1l2_token_bridge = get_retryable_gas_values_with_overrides(
             retryable_overrides.get("l1l2TokenBridgeRetryableGas"),
-            lambda: self._get_l1_l2_token_bridge_gas_estimates({
-                "l1Token": partial_teleport_params["l1Token"],
-                "amount": partial_teleport_params["amount"],
-                "l1GasPrice": l1_gas_price,
-                "l2ForwarderAddress": fake_random_l2_forwarder,
-                "l1Provider": l1_provider,
-                "l2Provider": l2_provider
-            })
+            lambda: self._get_l1_l2_token_bridge_gas_estimates(
+                {
+                    "l1Token": partial_teleport_params["l1Token"],
+                    "amount": partial_teleport_params["amount"],
+                    "l1GasPrice": l1_gas_price,
+                    "l2ForwarderAddress": fake_random_l2_forwarder,
+                    "l1Provider": l1_provider,
+                    "l2Provider": l2_provider,
+                }
+            ),
         )
 
         l2_forwarder_factory = get_retryable_gas_values_with_overrides(
             retryable_overrides.get("l2ForwarderFactoryRetryableGas"),
-            lambda: self._get_l2_forwarder_factory_gas_estimates(l1_gas_price, l1_provider)
+            lambda: self._get_l2_forwarder_factory_gas_estimates(l1_gas_price, l1_provider),
         )
 
         l2l3_token_bridge = get_retryable_gas_values_with_overrides(
             retryable_overrides.get("l2l3TokenBridgeRetryableGas"),
-            lambda: self._get_l2_l3_bridge_gas_estimates({
-                "partialTeleportParams": partial_teleport_params,
-                "l2GasPrice": l2_gas_price,
-                "l1Provider": l1_provider,
-                "l2Provider": l2_provider,
-                "l3Provider": l3_provider,
-                "l2ForwarderAddress": fake_random_l2_forwarder
-            })
+            lambda: self._get_l2_l3_bridge_gas_estimates(
+                {
+                    "partialTeleportParams": partial_teleport_params,
+                    "l2GasPrice": l2_gas_price,
+                    "l1Provider": l1_provider,
+                    "l2Provider": l2_provider,
+                    "l3Provider": l3_provider,
+                    "l2ForwarderAddress": fake_random_l2_forwarder,
+                }
+            ),
         )
 
         from_type = self.teleportation_type(partial_teleport_params)
         if from_type == TeleportationType.NonGasTokenToCustomGas:
             fee_gas = get_retryable_gas_values_with_overrides(
                 retryable_overrides.get("l1l2GasTokenBridgeRetryableGas"),
-                lambda: self._get_l1_l2_fee_token_bridge_gas_estimates({
-                    "l1GasPrice": l1_gas_price,
-                    "feeTokenAmount": (l2l3_token_bridge["gasLimit"] * l3_gas_price)
-                                      + l2l3_token_bridge["maxSubmissionFee"],
-                    "l3FeeTokenL1Addr": partial_teleport_params["l3FeeTokenL1Addr"],
-                    "l2ForwarderAddress": fake_random_l2_forwarder,
-                    "l1Provider": l1_provider,
-                    "l2Provider": l2_provider
-                })
+                lambda: self._get_l1_l2_fee_token_bridge_gas_estimates(
+                    {
+                        "l1GasPrice": l1_gas_price,
+                        "feeTokenAmount": (l2l3_token_bridge["gasLimit"] * l3_gas_price)
+                        + l2l3_token_bridge["maxSubmissionFee"],
+                        "l3FeeTokenL1Addr": partial_teleport_params["l3FeeTokenL1Addr"],
+                        "l2ForwarderAddress": fake_random_l2_forwarder,
+                        "l1Provider": l1_provider,
+                        "l2Provider": l2_provider,
+                    }
+                ),
             )
-            l1l2_fee_token_bridge = {
-                "gasLimit": fee_gas["gasLimit"],
-                "maxSubmissionFee": fee_gas["maxSubmissionFee"]
-            }
+            l1l2_fee_token_bridge = {"gasLimit": fee_gas["gasLimit"], "maxSubmissionFee": fee_gas["maxSubmissionFee"]}
         else:
             l1l2_fee_token_bridge = {"gasLimit": 0, "maxSubmissionFee": 0}
 
@@ -1087,7 +1069,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         teleport_params["gasParams"] = gas_params
 
         teleporter_contract = load_contract(
-            l1_provider, "IL1Teleporter", address=self.teleporter.l1Teleporter
+            provider=l1_provider, contract_name="IL1Teleporter", address=self.teleporter.l1Teleporter
         )
         costs = teleporter_contract.functions.determineTypeAndFees(teleport_params).call()
 
@@ -1109,10 +1091,7 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             contract_name="IL2ForwarderFactory",
             # address="0x0000000000000000000000000000000000000000"
         )
-        dummy_calldata = forwarder_factory.encodeABI(
-            fn_name="callForwarder",
-            args=[struct_params]
-        )
+        dummy_calldata = forwarder_factory.encodeABI(fn_name="callForwarder", args=[struct_params])
         hex_str = dummy_calldata[2:] if dummy_calldata.startswith("0x") else dummy_calldata
         total_bytes = len(hex_str) // 2
         return total_bytes - 4
@@ -1123,10 +1102,13 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             contract_name="IL1Teleporter",
             # address="0x0000000000000000000000000000000000000000"
         )
-        decoded = teleporter_iface.decode_function_input("teleport", data)
-        if not decoded or decoded[0] != "teleport":
+        function, arguments = teleporter_iface.decode_function_input(data)
+
+        if function.fn_name == "teleport":
+            return arguments["params"]
+
+        else:
             raise ArbSdkError("not a teleport tx")
-        return decoded[1]
 
     def _decode_call_forwarder_calldata(self, data: str) -> Dict[str, Any]:
         forwarder_factory = create_contract_instance(
@@ -1134,23 +1116,28 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
             contract_name="IL2ForwarderFactory",
             # address="0x0000000000000000000000000000000000000000"
         )
-        decoded = forwarder_factory.decode_function_input("callForwarder", data)
-        if not decoded or decoded[0] != "callForwarder":
+        # decoded = forwarder_factory.decode_function_input("callForwarder", data)
+        # if not decoded or decoded[0] != "callForwarder":
+        #     raise ArbSdkError("not callForwarder data")
+        # return decoded[1]
+
+        function, arguments = forwarder_factory.decode_function_input(data)
+        if function.fn_name == "callForwarder":
+            return arguments["params"]
+        else:
             raise ArbSdkError("not callForwarder data")
-        return decoded[1]
 
     def _get_l1_to_l2_messages(
-        self,
-        l1_tx_receipt: ParentContractCallTransactionReceipt,
-        l2_provider: Web3
+        self, l1_tx_receipt: ParentContractCallTransactionReceipt, l2_provider: Web3
     ) -> Dict[str, Optional[ParentToChildMessageReader]]:
-        l1l2_messages: List[ParentToChildMessageReader] = l1_tx_receipt.getParentToChildMessages(l2_provider)
+
+        l1l2_messages: List[ParentToChildMessageReader] = l1_tx_receipt.get_parent_to_child_messages(l2_provider)
 
         if len(l1l2_messages) == 2:
             return {
                 "l1l2TokenBridgeRetryable": l1l2_messages[0],
                 "l2ForwarderFactoryRetryable": l1l2_messages[1],
-                "l1l2GasTokenBridgeRetryable": None
+                "l1l2GasTokenBridgeRetryable": None,
             }
         else:
             return {
@@ -1164,13 +1151,12 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
 # EthL1L3Bridger
 # ------------------------------------------------------------------------------------
 
+
 class EthL1L3Bridger(BaseL1L3Bridger):
     def __init__(self, l3_network: ArbitrumNetwork):
         super().__init__(l3_network)
         if l3_network.nativeToken and l3_network.nativeToken != "0x0000000000000000000000000000000000000000":
-            raise ArbSdkError(
-                f"L3 network {l3_network.name} uses a custom fee token"
-            )
+            raise ArbSdkError(f"L3 network {l3_network.name} uses a custom fee token")
 
     def get_deposit_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         if "l1Provider" in params:
@@ -1199,14 +1185,14 @@ class EthL1L3Bridger(BaseL1L3Bridger):
             {
                 "to": l3_destination_address,
                 "data": "0x",
-                "from": get_address(from_addr).lower(),  # or any alias logic
+                "from": from_addr,
                 "l2CallValue": params["amount"],
                 "excessFeeRefundAddress": l3_destination_address,
                 "callValueRefundAddress": l3_destination_address,
             },
             params["l2Provider"],
             params["l3Provider"],
-            params.get("l3TicketGasOverrides")
+            params.get("l3TicketGasOverrides"),
         )
 
         l2_ticket_request = ParentToChildMessageCreator.get_ticket_creation_request(
@@ -1220,7 +1206,7 @@ class EthL1L3Bridger(BaseL1L3Bridger):
             },
             l1_provider,
             params["l2Provider"],
-            params.get("l2TicketGasOverrides")
+            params.get("l2TicketGasOverrides"),
         )
 
         return l2_ticket_request
@@ -1235,8 +1221,16 @@ class EthL1L3Bridger(BaseL1L3Bridger):
             deposit_request = dr["txRequest"]
 
         overrides = params.get("overrides", {})
-        tx = params["l1Signer"].sendTransaction({**deposit_request, **overrides})
-        return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx)
+        tx = {**deposit_request, **overrides}
+
+        if "from" not in params:
+            tx["from"] = params["l1Signer"].get_address()
+
+        tx_hash = params["l1Signer"].send_transaction(tx)
+        # burasi
+        tx_receipt = params["l1Signer"].provider.eth.wait_for_transaction_receipt(tx_hash)
+
+        return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
 
     def get_deposit_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
         self._check_l1_network(params["l1Provider"])
@@ -1249,10 +1243,7 @@ class EthL1L3Bridger(BaseL1L3Bridger):
         l2l3_ticket_data = dict(self._decode_create_retryable_ticket(l1l2_ticket_data["data"]))
         l2l3_ticket_data["l1Value"] = l1l2_ticket_data["l2CallValue"]
 
-        return {
-            "l1l2TicketData": l1l2_ticket_data,
-            "l2l3TicketData": l2l3_ticket_data
-        }
+        return {"l1l2TicketData": l1l2_ticket_data, "l2l3TicketData": l2l3_ticket_data}
 
     def get_deposit_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
         self._check_l1_network(params["l1Provider"])
@@ -1260,35 +1251,24 @@ class EthL1L3Bridger(BaseL1L3Bridger):
         self._check_l3_network(params["l3Provider"])
 
         l1_tx_receipt = self._get_tx_receipt_from_tx_ref(params, params["l1Provider"])
-        all_messages = l1_tx_receipt.getParentToChildMessages(params["l2Provider"])
+        all_messages = l1_tx_receipt.get_parent_to_child_messages(params["l2Provider"])
         if not all_messages:
-            return {
-                "l2Retryable": None,
-                "l3Retryable": None,
-                "completed": False
-            }
+            return {"l2Retryable": None, "l3Retryable": None, "completed": False}
 
         l1l2_message = all_messages[0]
         l1l2_redeem = l1l2_message.get_successful_redeem()
         if l1l2_redeem["status"] != ParentToChildMessageStatus.REDEEMED:
-            return {
-                "l2Retryable": l1l2_message,
-                "l3Retryable": None,
-                "completed": False
-            }
+            return {"l2Retryable": l1l2_message, "l3Retryable": None, "completed": False}
 
         child_tx_receipt = ParentEthDepositTransactionReceipt(l1l2_redeem["childTxReceipt"])
-        l2l3_msgs = child_tx_receipt.getParentToChildMessages(params["l3Provider"])
+        l2l3_msgs = child_tx_receipt.get_parent_to_child_messages(params["l3Provider"])
         if not l2l3_msgs:
             raise ArbSdkError("L2 to L3 message not found")
 
         l2l3_message = l2l3_msgs[0]
         completed = (l2l3_message.status()) == ParentToChildMessageStatus.REDEEMED
-        return {
-            "l2Retryable": l1l2_message,
-            "l3Retryable": l2l3_message,
-            "completed": completed
-        }
+
+        return {"l2Retryable": l1l2_message, "l3Retryable": l2l3_message, "completed": completed}
 
     def _decode_create_retryable_ticket(self, data: str) -> Dict[str, Any]:
         inbox_iface = create_contract_instance(
@@ -1296,10 +1276,19 @@ class EthL1L3Bridger(BaseL1L3Bridger):
             contract_name="IInbox",
             # address="0x0000000000000000000000000000000000000000"
         )
-        decoded = inbox_iface.decode_function_input("createRetryableTicket", data)
-        if not decoded or decoded[0] != "createRetryableTicket":
+        # decoded = inbox_iface.decode_function_input("createRetryableTicket", data)
+        # if not decoded or decoded[0] != "createRetryableTicket":
+        #     raise ArbSdkError("not createRetryableTicket data")
+        # args = decoded[1]
+
+        function, arguments = inbox_iface.decode_function_input(data)
+        args = None
+        if function.fn_name == "createRetryableTicket":
+            args = arguments["params"]
+
+        if args is None:
             raise ArbSdkError("not createRetryableTicket data")
-        args = decoded[1]
+
         return {
             "destAddress": args[0],
             "l2CallValue": args[1],

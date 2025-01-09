@@ -1,20 +1,23 @@
 import os
-from decimal import Decimal
 
-import pytest
 from eth_account import Account
 from web3 import Web3
 from web3.exceptions import ContractCustomError
 
-from src.lib.data_entities.retryable_data import RetryableDataTools
-# from src.lib.message.parent_to_child_message import GasOverrides
-from src.lib.utils.helper import deploy_abi_contract, load_contract
-from src.lib.utils.lib import get_native_token_decimals, scale_from_18_decimals_to_native_token_decimals
 from scripts.test_setup import setup_testing_env
+from src.lib.data_entities.retryable_data import RetryableDataTools
+from src.lib.utils.helper import deploy_abi_contract, load_contract
+from src.lib.utils.lib import (
+    get_native_token_decimals,
+    scale_from_18_decimals_to_native_token_decimals,
+)
+from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
+    is_arbitrum_network_with_custom_fee_token,
+)
 from tests.integration.test_helpers import fund_parent_signer
-from tests.integration.custom_fee_token.custom_fee_token_test_helpers import is_arbitrum_network_with_custom_fee_token
 
 DEPOSIT_AMOUNT = Web3.to_wei(100, "wei")
+
 
 def create_revert_params():
     """Create parameters that will trigger a revert"""
@@ -24,22 +27,16 @@ def create_revert_params():
     setup_state = setup_testing_env()
     parent_provider = setup_state.parent_signer.provider
     child_chain = setup_state.child_chain
-    decimals = get_native_token_decimals(
-        parent_provider=parent_provider,
-        child_network=child_chain
-    )
+    decimals = get_native_token_decimals(parent_provider=parent_provider, child_network=child_chain)
 
     base_value = (
-        l2_call_value 
-        + max_submission_cost 
+        l2_call_value
+        + max_submission_cost
         + RetryableDataTools.ErrorTriggeringParams["gasLimit"]
         + RetryableDataTools.ErrorTriggeringParams["maxFeePerGas"]
     )
-    
-    value = scale_from_18_decimals_to_native_token_decimals(
-        amount=base_value,
-        decimals=decimals
-    )
+
+    value = scale_from_18_decimals_to_native_token_decimals(amount=base_value, decimals=decimals)
 
     return {
         "to": Account.create().address,
@@ -52,6 +49,7 @@ def create_revert_params():
         "gasLimit": RetryableDataTools.ErrorTriggeringParams["gasLimit"],
         "maxFeePerGas": RetryableDataTools.ErrorTriggeringParams["maxFeePerGas"],
     }
+
 
 def retryable_data_parsing(func_name):
     """Test parsing of retryable data from errors"""
@@ -140,11 +138,14 @@ def retryable_data_parsing(func_name):
         assert str(parsed_data.max_submission_cost) == str(revert_params["maxSubmissionCost"])
         assert parsed_data.to == revert_params["to"]
 
+
 def test_does_parse_error_in_estimate_gas():
     retryable_data_parsing("estimateGas")
 
+
 def test_does_parse_from_call_static():
     retryable_data_parsing("callStatic")
+
 
 def test_erc20_deposit_comparison():
     setup_state = setup_testing_env()
@@ -165,17 +166,16 @@ def test_erc20_deposit_comparison():
     parent_token_address = test_token.address
 
     # Approve token
-    erc20_bridger.approve_token({
-        "erc20ParentAddress": parent_token_address,
-        "parentSigner": parent_signer
-    })
+    erc20_bridger.approve_token({"erc20ParentAddress": parent_token_address, "parentSigner": parent_signer})
 
     # Approve custom fee token if needed
     if is_arbitrum_network_with_custom_fee_token():
-        erc20_bridger.approve_gas_token({
-            "parentSigner": parent_signer,
-            "erc20ParentAddress": parent_token_address,
-        })
+        erc20_bridger.approve_gas_token(
+            {
+                "parentSigner": parent_signer,
+                "erc20ParentAddress": parent_token_address,
+            }
+        )
 
     retryable_overrides = {
         "maxFeePerGas": {
@@ -198,18 +198,22 @@ def test_erc20_deposit_comparison():
         "retryableGasOverrides": retryable_overrides,
     }
 
-    deposit_params = erc20_bridger.get_deposit_request({
-        **erc20_params,
-        "parentProvider": parent_signer.provider,
-        "childProvider": child_signer.provider,
-    })
+    deposit_params = erc20_bridger.get_deposit_request(
+        {
+            **erc20_params,
+            "parentProvider": parent_signer.provider,
+            "childProvider": child_signer.provider,
+        }
+    )
 
     try:
-        erc20_bridger.deposit({
-            **erc20_params,
-            "parentSigner": parent_signer,
-            "childProvider": child_signer.provider,
-        })
+        erc20_bridger.deposit(
+            {
+                **erc20_params,
+                "parentSigner": parent_signer,
+                "childProvider": child_signer.provider,
+            }
+        )
         assert False, "Expected estimateGas to fail"
 
     except ContractCustomError as e:
@@ -218,14 +222,14 @@ def test_erc20_deposit_comparison():
 
         assert parsed_data.call_value_refund_address == deposit_params.retryable_data.call_value_refund_address
         assert parsed_data.data == deposit_params.retryable_data.data
-        
+
         expected_deposit = (
-            deposit_params.retryable_data.deposit 
+            deposit_params.retryable_data.deposit
             if is_arbitrum_network_with_custom_fee_token()
             else deposit_params.tx_request["value"]
         )
         assert str(parsed_data.deposit) == str(expected_deposit)
-        
+
         assert parsed_data.excess_fee_refund_address == deposit_params.retryable_data.excess_fee_refund_address
         assert parsed_data["from"] == deposit_params.retryable_data["from"]
         assert str(parsed_data.gas_limit) == str(deposit_params.retryable_data.gas_limit)

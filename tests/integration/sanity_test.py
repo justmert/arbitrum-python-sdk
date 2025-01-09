@@ -1,12 +1,13 @@
 import os
-import pytest
 
-from src.lib.utils.helper import load_contract
 from scripts.test_setup import setup_testing_env
+from src.lib.utils.helper import load_contract
 from tests.integration.custom_fee_token.mocha_extensions import it_only_when_eth
+
 
 def expect_ignore_case(expected, actual):
     assert expected.lower() == actual.lower()
+
 
 def test_standard_gateways_public_storage_vars_properly_set():
     setup_state = setup_testing_env()
@@ -45,6 +46,7 @@ def test_standard_gateways_public_storage_vars_properly_set():
     child_router = child_gateway.functions.router().call()
     expect_ignore_case(child_router, child_chain.token_bridge.child_gateway_router)
 
+
 def test_custom_gateways_public_storage_vars_properly_set():
     setup_state = setup_testing_env()
     parent_signer = setup_state.parent_signer
@@ -73,6 +75,7 @@ def test_custom_gateways_public_storage_vars_properly_set():
 
     child_router = child_custom_gateway.functions.router().call()
     expect_ignore_case(child_router, child_chain.token_bridge.child_gateway_router)
+
 
 @it_only_when_eth
 def test_weth_gateways_gateways_public_storage_vars_properly_set():
@@ -110,6 +113,7 @@ def test_weth_gateways_gateways_public_storage_vars_properly_set():
     child_router = child_weth_gateway.functions.router().call()
     expect_ignore_case(child_router, child_chain.token_bridge.child_gateway_router)
 
+
 @it_only_when_eth
 def test_ae_weth_public_vars_properly_set():
     setup_state = setup_testing_env()
@@ -128,6 +132,7 @@ def test_ae_weth_public_vars_properly_set():
     parent_address_on_ae_weth = ae_weth.functions.l1Address().call()
     expect_ignore_case(parent_address_on_ae_weth, child_chain.token_bridge.parent_weth)
 
+
 @it_only_when_eth
 def test_parent_gateway_router_points_to_right_weth_gateways():
     setup_state = setup_testing_env()
@@ -136,10 +141,10 @@ def test_parent_gateway_router_points_to_right_weth_gateways():
     child_chain = setup_state.child_chain
 
     gateway = admin_erc20_bridger.get_parent_gateway_address(
-        child_chain.token_bridge.parent_weth, 
-        parent_signer.provider
+        child_chain.token_bridge.parent_weth, parent_signer.provider
     )
     assert gateway == child_chain.token_bridge.parent_weth_gateway
+
 
 def test_parent_and_child_implementations_of_calculate_child_erc20_address_match():
     setup_state = setup_testing_env()
@@ -150,10 +155,7 @@ def test_parent_and_child_implementations_of_calculate_child_erc20_address_match
 
     address = os.urandom(20)
 
-    erc20_child_address_as_per_parent = erc20_bridger.get_child_erc20_address(
-        address, 
-        parent_signer.provider
-    )
+    erc20_child_address_as_per_parent = erc20_bridger.get_child_erc20_address(address, parent_signer.provider)
     child_gateway_router = load_contract(
         contract_name="L2GatewayRouter",
         address=child_chain.token_bridge.child_gateway_router,

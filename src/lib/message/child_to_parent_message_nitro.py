@@ -1,7 +1,9 @@
+import threading
+import time
+from typing import List, Optional
 
-
-from web3 import Web3
 from eth_typing import BlockNumber
+from web3 import Web3
 
 from src.lib.data_entities.constants import ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
@@ -15,9 +17,6 @@ from src.lib.utils.lib import (
     get_block_ranges_for_l1_block,
     is_arbitrum_chain,
 )
-from typing import List, Optional
-import threading
-import time
 
 # Same constants you had before, now referencing child->parent
 ASSERTION_CREATED_PADDING = 50
@@ -25,7 +24,6 @@ ASSERTION_CONFIRMED_PADDING = 20
 
 child_block_range_cache = {}
 child_block_cache_lock = threading.Lock()
-
 
 
 def get_child_block_range_cache_key(child_chain_id: int, l1_block_number: int) -> str:
@@ -38,9 +36,7 @@ def set_child_block_range_cache(key: str, value: List[Optional[int]]) -> None:
     child_block_range_cache[key] = value
 
 
-def get_block_ranges_for_l1_block_with_cache(
-    parent_provider, child_provider, for_l1_block: int
-):
+def get_block_ranges_for_l1_block_with_cache(parent_provider, child_provider, for_l1_block: int):
     """
     Looks up the child block range for a given L1 block, using a shared cache to avoid repeated
     calls. Corresponds to getBlockRangesForL1BlockWithCache in TS code.
@@ -59,12 +55,9 @@ def get_block_ranges_for_l1_block_with_cache(
             return child_block_range_cache[key]
 
         # Actually fetch
-        child_block_range = get_block_ranges_for_l1_block(
-            parent_provider, for_l1_block
-        )
+        child_block_range = get_block_ranges_for_l1_block(parent_provider, for_l1_block)
         set_child_block_range_cache(key, child_block_range)
         return child_block_range
-
 
 
 class ChildToParentMessageNitro:
@@ -122,7 +115,6 @@ class ChildToParentMessageNitro:
                 "address": ARB_SYS_ADDRESS,
                 **filter_dict,
             },
-            
         )
         return events
 
@@ -155,7 +147,6 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             provider=child_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            
         )
 
         # callStatic.constructOutboxProof(...) in TS
@@ -179,7 +170,6 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             provider=self.parent_provider,
             contract_name="Outbox",
             address=child_chain.ethBridge.outbox,
-            
         )
         return outbox_contract.functions.isSpent(self.event["position"]).call()
 
@@ -197,7 +187,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
 
     def parse_node_created_assertion(self, fetched_event):
         """
-        For a classic RollupUserLogic NodeCreated event.  
+        For a classic RollupUserLogic NodeCreated event.
         Replaces parseNodeCreatedAssertion from TS code.
         """
         return {
@@ -209,7 +199,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
 
     def parse_assertion_created_event(self, fetched_event):
         """
-        For a BoldRollupUserLogic AssertionCreated event (BoLD).  
+        For a BoldRollupUserLogic AssertionCreated event (BoLD).
         Replaces parseAssertionCreatedEvent from TS code.
         """
         # Both NodeCreated and AssertionCreated have similar structure. BoLD has an 'assertionHash'.
@@ -250,8 +240,6 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         if not child_block:
             raise ArbSdkError(f"Block not found. {block_hash}")
 
-        print(f"Child block: {child_block}")
-        print(f"Send root: {send_root}")
         if child_block["sendRoot"] != Web3.to_hex(send_root):
             raise ArbSdkError(
                 f"Child chain block send root doesn't match assertion log. {child_block['sendRoot']} {send_root}"
@@ -260,12 +248,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
 
     def get_block_from_assertion_id(self, rollup_contract, assertion_id, child_provider):
         """
-        Merges getBlockFromNodeNum with the BoLD path using getAssertion.  
+        Merges getBlockFromNodeNum with the BoLD path using getAssertion.
         In TS, we do rollup.getNode(...) vs rollup.getAssertion(...).
         """
         # Distinguish whether this is a 'BoldRollupUserLogic' by trying a call
         # But in Python, we might just try to call .extraChallengeTimeBlocks() and catch.
-        # We'll do a simpler check: see if getAssertion(...) is valid. 
+        # We'll do a simpler check: see if getAssertion(...) is valid.
         # For your use-case, you may implement a more robust detection logic.
         is_bold = False
         try:
@@ -303,7 +291,6 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                     provider=self.parent_provider,
                     contract_name="NodeInterface",
                     address=NODE_INTERFACE_ADDRESS,
-                    
                 )
                 block_range = node_interface.functions.l2BlockRangeForL1(created_at_block).call()
                 block_range = format_contract_output(node_interface, "l2BlockRangeForL1", block_range)
@@ -362,9 +349,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                 f"Unexpected number of AssertionCreated/NodeCreated events. Expected 0 or 1, got {len(logs)}."
             )
 
-        return self.get_block_from_assertion_log(
-            child_provider, logs[0] if logs else None
-        )
+        return self.get_block_from_assertion_log(child_provider, logs[0] if logs else None)
 
     def get_batch_number(self, child_provider) -> Optional[int]:
         """
@@ -376,11 +361,8 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                     provider=child_provider,
                     contract_name="NodeInterface",
                     address=NODE_INTERFACE_ADDRESS,
-                    
                 )
-                res = node_interface_contract.functions.findBatchContainingBlock(
-                    self.event["arbBlockNum"]
-                ).call()
+                res = node_interface_contract.functions.findBatchContainingBlock(self.event["arbBlockNum"]).call()
                 self.l1_batch_number = int(res)
             except Exception:
                 pass
@@ -397,16 +379,13 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                 provider=self.parent_provider,
                 contract_name="RollupUserLogic",  # or BoldRollupUserLogic if determined
                 address=child_chain.ethBridge.rollup,
-                
             )
 
             # latestConfirmed is the ID (nodeNum or assertionHash) of the last confirmed node
             latest_confirmed = rollup_contract.functions.latestConfirmed().call()
 
             # This merges classic or bold logic in a single path, see get_block_from_assertion_id
-            confirmed_block = self.get_block_from_assertion_id(
-                rollup_contract, latest_confirmed, child_provider
-            )
+            confirmed_block = self.get_block_from_assertion_id(rollup_contract, latest_confirmed, child_provider)
             send_root_size_confirmed = int(Web3.to_int(hexstr=confirmed_block["sendCount"]))
 
             if send_root_size_confirmed > self.event["position"]:
@@ -428,9 +407,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                     unconfirmed_block = self.get_block_from_assertion_id(
                         rollup_contract, latest_created, child_provider
                     )
-                    send_root_size_unconfirmed = int(
-                        Web3.to_int(hexstr=unconfirmed_block["sendCount"])
-                    )
+                    send_root_size_unconfirmed = int(Web3.to_int(hexstr=unconfirmed_block["sendCount"]))
                     if send_root_size_unconfirmed > self.event["position"]:
                         self.send_root_size = send_root_size_unconfirmed
                         self.send_root_hash = unconfirmed_block["sendRoot"]
@@ -456,7 +433,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                 ChildToParentMessageStatus.EXECUTED,
             ):
                 return current_status
-                
+
             time.sleep(retry_delay / 1000.0)  # Convert milliseconds to seconds
 
     def get_first_executable_block(self, child_provider) -> Optional[BlockNumber]:
@@ -470,7 +447,6 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
             provider=self.parent_provider,
             contract_name="RollupUserLogic",
             address=child_chain.ethBridge.rollup,
-            
         )
 
         current_status = self.status(child_provider)
@@ -507,19 +483,14 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         logs.sort(key=lambda x: x["event"]["nodeNum"])
 
         # Get the last block from the last NodeCreated event
-        last_child_block = self.get_block_from_assertion_log(
-            child_provider, logs[-1] if logs else None
-        )
+        last_child_block = self.get_block_from_assertion_log(child_provider, logs[-1] if logs else None)
         last_send_count = int(last_child_block["sendCount"]) if last_child_block else 0
 
-        # If the last node does not include this position, 
+        # If the last node does not include this position,
         # we assume we must wait the max time for a new node + confirmation
         if last_send_count <= self.event["position"]:
             return (
-                child_chain.confirmPeriodBlocks
-                + ASSERTION_CREATED_PADDING
-                + ASSERTION_CONFIRMED_PADDING
-                + latest_block
+                child_chain.confirmPeriodBlocks + ASSERTION_CREATED_PADDING + ASSERTION_CONFIRMED_PADDING + latest_block
             )
 
         # Otherwise, do a binary search in logs to find the first node whose sendCount > position
@@ -539,10 +510,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         if not found_log:
             # No logs, fallback
             return (
-                child_chain.confirmPeriodBlocks
-                + ASSERTION_CREATED_PADDING
-                + ASSERTION_CONFIRMED_PADDING
-                + latest_block
+                child_chain.confirmPeriodBlocks + ASSERTION_CREATED_PADDING + ASSERTION_CONFIRMED_PADDING + latest_block
             )
 
         earliest_node_with_exit = found_log["event"]["nodeNum"]
@@ -558,10 +526,7 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
     """
 
     def __init__(self, parent_signer, event, parent_provider=None):
-        super().__init__(
-            parent_provider if parent_provider else parent_signer.provider,
-            event
-        )
+        super().__init__(parent_provider if parent_provider else parent_signer.provider, event)
         self.parent_signer = parent_signer
 
     def execute(self, child_provider, overrides=None):
@@ -581,7 +546,6 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
             provider=self.parent_signer.provider,
             contract_name="Outbox",
             address=child_chain.ethBridge.outbox,
-            
         )
 
         if overrides is None:

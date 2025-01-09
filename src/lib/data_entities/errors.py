@@ -36,6 +36,4 @@ class MissingProviderArbSdkError(ArbSdkError):
         """
         :param signer_name: The name or identifier of the signer that lacks a provider.
         """
-        super().__init__(
-            f"{signer_name} does not have a connected provider and one is required."
-        )
+        super().__init__(f"{signer_name} does not have a connected provider and one is required.")

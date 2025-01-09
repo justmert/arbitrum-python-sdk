@@ -1,33 +1,42 @@
 from collections import namedtuple
+
 from eth_abi import encode
 from web3.exceptions import ContractLogicError
+
 from src.lib.asset_bridger.asset_bridger import AssetBridger
 from src.lib.data_entities.constants import DISABLED_GATEWAY
 from src.lib.data_entities.errors import ArbSdkError, MissingProviderArbSdkError
 from src.lib.data_entities.networks import (
-    get_arbitrum_network,
     assert_arbitrum_network_has_token_bridge,
+    get_arbitrum_network,
 )
-from src.lib.utils.lib import is_arbitrum_chain, get_native_token_decimals, scale_from_18_decimals_to_native_token_decimals
 from src.lib.data_entities.retryable_data import RetryableDataTools
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.transaction_request import (
-    is_parent_to_child_transaction_request,
     is_child_to_parent_transaction_request,
+    is_parent_to_child_transaction_request,
 )
-from src.lib.message.parent_to_child_message_gas_estimator import ParentToChildMessageGasEstimator
-from src.lib.message.parent_transaction import ParentTransactionReceipt
 from src.lib.message.child_transaction import ChildTransactionReceipt
+from src.lib.message.parent_to_child_message_gas_estimator import (
+    ParentToChildMessageGasEstimator,
+)
+from src.lib.message.parent_transaction import ParentTransactionReceipt
+from src.lib.utils.calldata import (
+    get_erc20_parent_address_from_parent_to_child_tx_request,
+)
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import (
     CaseDict,
     create_contract_instance,
-    create_contract_instance,
     is_contract_deployed,
     load_contract,
 )
-from src.lib.utils.calldata import get_erc20_parent_address_from_parent_to_child_tx_request
-from web3 import Web3
+from src.lib.utils.lib import (
+    get_native_token_decimals,
+    is_arbitrum_chain,
+    scale_from_18_decimals_to_native_token_decimals,
+)
+
 
 class Erc20Bridger(AssetBridger):
     """
@@ -51,7 +60,7 @@ class Erc20Bridger(AssetBridger):
     @classmethod
     def from_provider(cls, child_provider):
         """
-        Create an Erc20Bridger from a child provider. 
+        Create an Erc20Bridger from a child provider.
         Looks up the network config from that provider.
 
         :param child_provider: A Web3 or similar provider connected to the child chain.
@@ -72,15 +81,14 @@ class Erc20Bridger(AssetBridger):
         parent_gateway_router = load_contract(
             provider=parent_provider,
             contract_name="L1GatewayRouter",
-            address=self.child_network.tokenBridge.parentGatewayRouter
-            
+            address=self.child_network.tokenBridge.parentGatewayRouter,
         )
         return parent_gateway_router.functions.getGateway(erc20_parent_address).call()
 
     def get_child_gateway_address(self, erc20_parent_address, child_provider):
         """
         Get the address of the gateway on the Child chain for a given ERC20 token.
-        
+
         :param erc20_parent_address: The address of the ERC20 token on the parent chain
         :param child_provider: A Web3 provider for the child chain
         :return: The address (string) of the gateway that manages bridging for this token
@@ -89,16 +97,15 @@ class Erc20Bridger(AssetBridger):
         child_gateway_router = load_contract(
             provider=child_provider,
             contract_name="L2GatewayRouter",
-            address=self.child_network.tokenBridge.childGatewayRouter
-            
+            address=self.child_network.tokenBridge.childGatewayRouter,
         )
         return child_gateway_router.functions.getGateway(erc20_parent_address).call()
 
     def get_approve_gas_token_request(self, params):
         """
-        Creates a transaction request for approving the custom gas token to be spent by the relevant gateway 
+        Creates a transaction request for approving the custom gas token to be spent by the relevant gateway
         on the parent chain. If the chain uses ETH natively, this is unnecessary and will error.
-        
+
         :param params: A dict with 'erc20ParentAddress', 'parentProvider', 'amount' (optional), etc.
         :return: dict representing a transaction request with 'to', 'data', and 'value'
         """
@@ -151,7 +158,7 @@ class Erc20Bridger(AssetBridger):
 
     def get_approve_token_request(self, params):
         """
-        Creates a transaction request to approve an ERC20 token for deposit. 
+        Creates a transaction request to approve an ERC20 token for deposit.
         The tokens will be approved for whichever gateway the router returns.
 
         :param params: A dict with 'erc20ParentAddress', 'parentProvider', optional 'amount', etc.
@@ -164,7 +171,6 @@ class Erc20Bridger(AssetBridger):
 
         i_erc20_interface = create_contract_instance(
             contract_name="ERC20",
-            
         )
         data = i_erc20_interface.encodeABI(
             fn_name="approve",
@@ -175,7 +181,7 @@ class Erc20Bridger(AssetBridger):
 
     def is_approve_params(self, params):
         """
-        Helper to check whether 'params' is a standard 'ApproveParams' 
+        Helper to check whether 'params' is a standard 'ApproveParams'
         (which includes 'erc20ParentAddress') vs. a custom txRequest.
         """
         return "erc20ParentAddress" in params
@@ -247,23 +253,18 @@ class Erc20Bridger(AssetBridger):
                 "address": gateway_address,
                 **filter_dict,
             },
-            
         )
 
         events = [{"txHash": a["transactionHash"], **a["event"]} for a in events]
 
         if parent_token_address:
-            events = [
-                ev
-                for ev in events
-                if ev["l1Token"].lower() == parent_token_address.lower()
-            ]
+            events = [ev for ev in events if ev["l1Token"].lower() == parent_token_address.lower()]
         # from_address / to_address filtering can be added as needed
         return events
 
     def looks_like_weth_gateway(self, potential_weth_gateway_address, parent_provider):
         """
-        Ad-hoc check to see if the given address is a WETH gateway. 
+        Ad-hoc check to see if the given address is a WETH gateway.
         We attempt to read the 'l1Weth()' method. If that fails with a call exception, it's not WETH.
         """
         try:
@@ -271,7 +272,6 @@ class Erc20Bridger(AssetBridger):
                 provider=parent_provider,
                 contract_name="L1WethGateway",
                 address=potential_weth_gateway_address,
-                
             )
             potential_weth_gateway.functions.l1Weth().call()
             return True
@@ -301,14 +301,13 @@ class Erc20Bridger(AssetBridger):
 
     def get_child_token_contract(self, child_provider, child_token_addr):
         """
-        Returns a contract object pointing to the child ERC20 token. 
+        Returns a contract object pointing to the child ERC20 token.
         Does not validate the contract code to confirm it's indeed an ERC20.
         """
         return load_contract(
             provider=child_provider,
             contract_name="L2GatewayToken",
             address=child_token_addr,
-            
         )
 
     def get_parent_token_contract(self, parent_provider, parent_token_addr):
@@ -319,7 +318,6 @@ class Erc20Bridger(AssetBridger):
             provider=parent_provider,
             contract_name="ERC20",
             address=parent_token_addr,
-            
         )
 
     def get_child_erc20_address(self, erc20_parent_address, parent_provider):
@@ -335,12 +333,9 @@ class Erc20Bridger(AssetBridger):
         parent_gateway_router = load_contract(
             provider=parent_provider,
             contract_name="L1GatewayRouter",
-            address=self.child_network.tokenBridge.parentGatewayRouter
-            
+            address=self.child_network.tokenBridge.parentGatewayRouter,
         )
-        return parent_gateway_router.functions.calculateL2TokenAddress(
-            erc20_parent_address
-        ).call()
+        return parent_gateway_router.functions.calculateL2TokenAddress(erc20_parent_address).call()
 
     def get_parent_erc20_address(self, erc20_child_chain_address, child_provider):
         """
@@ -362,15 +357,13 @@ class Erc20Bridger(AssetBridger):
             provider=child_provider,
             contract_name="L2GatewayToken",
             address=erc20_child_chain_address,
-            
         )
         parent_address = arb_erc20.functions.l1Address().call()
 
         child_gateway_router = load_contract(
             provider=child_provider,
             contract_name="L2GatewayRouter",
-            address=self.child_network.tokenBridge.childGatewayRouter
-            
+            address=self.child_network.tokenBridge.childGatewayRouter,
         )
         child_address = child_gateway_router.functions.calculateL2TokenAddress(parent_address).call()
 
@@ -384,7 +377,7 @@ class Erc20Bridger(AssetBridger):
     def is_deposit_disabled(self, parent_token_address, parent_provider):
         """
         Whether the deposit for this token has been disabled on the parent router.
-        
+
         :param parent_token_address: The parent's ERC20 address
         :param parent_provider: Parent chain provider
         :return: True if the token is disabled, False otherwise
@@ -393,26 +386,26 @@ class Erc20Bridger(AssetBridger):
         parent_gateway_router = load_contract(
             provider=parent_provider,
             contract_name="L1GatewayRouter",
-            address=self.child_network.tokenBridge.parentGatewayRouter
-            
+            address=self.child_network.tokenBridge.parentGatewayRouter,
         )
-        return (
-            parent_gateway_router.functions.l1TokenToGateway(parent_token_address).call()
-            == DISABLED_GATEWAY
-        )
+        return parent_gateway_router.functions.l1TokenToGateway(parent_token_address).call() == DISABLED_GATEWAY
 
     def apply_defaults(self, params):
         """
-        Ensures default addresses for 'excessFeeRefundAddress', 'callValueRefundAddress', 
+        Ensures default addresses for 'excessFeeRefundAddress', 'callValueRefundAddress',
         'destinationAddress' are set to 'from' if not otherwise specified.
         """
         return {
             **params,
-            "excessFeeRefundAddress": params["excessFeeRefundAddress"] if params.get("excessFeeRefundAddress") is not None else params["from"],
-
-            "callValueRefundAddress": params["callValueRefundAddress"] if params.get("callValueRefundAddress") is not None else params["from"],
-
-            "destinationAddress": params["destinationAddress"] if params.get("destinationAddress") is not None else params["from"],
+            "excessFeeRefundAddress": (
+                params["excessFeeRefundAddress"] if params.get("excessFeeRefundAddress") is not None else params["from"]
+            ),
+            "callValueRefundAddress": (
+                params["callValueRefundAddress"] if params.get("callValueRefundAddress") is not None else params["from"]
+            ),
+            "destinationAddress": (
+                params["destinationAddress"] if params.get("destinationAddress") is not None else params["from"]
+            ),
         }
 
     def get_deposit_request_call_value(self, deposit_params):
@@ -422,25 +415,19 @@ class Erc20Bridger(AssetBridger):
         """
         if not self.native_token_is_eth:
             return 0
-        return (
-            deposit_params["gasLimit"] * deposit_params["maxFeePerGas"]
-            + deposit_params["maxSubmissionCost"]
-        )
+        return deposit_params["gasLimit"] * deposit_params["maxFeePerGas"] + deposit_params["maxSubmissionCost"]
 
     def get_deposit_request_outbound_transfer_inner_data(self, deposit_params, decimals):
         """
-        Builds the 'innerData' argument for the gateway's outboundTransfer/outboundTransferCustomRefund calls. 
+        Builds the 'innerData' argument for the gateway's outboundTransfer/outboundTransferCustomRefund calls.
         If the chain uses ETH natively, we pass [maxSubmissionCost, '0x'].
         Otherwise, also pack the fee inside.
         """
-        print("deposit", deposit_params)
+
         if not self.native_token_is_eth:
             # For a chain that uses an ERC-20 gas token, we pass three fields:
             # [maxSubmissionCost, "0x", tokenTotalFee]
-            fee_wei = (
-                deposit_params["gasLimit"] * deposit_params["maxFeePerGas"]
-                + deposit_params["maxSubmissionCost"]
-            )
+            fee_wei = deposit_params["gasLimit"] * deposit_params["maxFeePerGas"] + deposit_params["maxSubmissionCost"]
             encoded_values = self._solidity_encode(
                 ["uint256", "bytes", "uint256"],
                 [
@@ -468,7 +455,7 @@ class Erc20Bridger(AssetBridger):
         """
         Constructs the deposit (parent->child) bridging transaction data.
 
-        :param params: 
+        :param params:
           {
             'from', 'parentProvider', 'childProvider',
             'erc20ParentAddress', 'amount', optional 'excessFeeRefundAddress',
@@ -481,7 +468,7 @@ class Erc20Bridger(AssetBridger):
         self.check_child_network(params["childProvider"])
 
         defaulted_params = self.apply_defaults(params)
-        print('defaultedd_params', defaulted_params)
+
         amount = defaulted_params["amount"]
         destination_address = defaulted_params["destinationAddress"]
         erc20_parent_address = defaulted_params["erc20ParentAddress"]
@@ -492,9 +479,7 @@ class Erc20Bridger(AssetBridger):
             retryable_gas_overrides = {}
 
         # Possibly apply a custom min gas limit if this is the "custom" gateway
-        parent_gateway_address = self.get_parent_gateway_address(
-            erc20_parent_address, parent_provider
-        )
+        parent_gateway_address = self.get_parent_gateway_address(erc20_parent_address, parent_provider)
         if parent_gateway_address == self.child_network.tokenBridge.parentCustomGateway:
             if "gasLimit" not in retryable_gas_overrides:
                 retryable_gas_overrides["gasLimit"] = {}
@@ -521,12 +506,10 @@ class Erc20Bridger(AssetBridger):
             i_gateway_router = create_contract_instance(
                 # provider=parent_provider,
                 contract_name="L1GatewayRouter",
-                
             )
             # If user specified a non-default 'excessFeeRefundAddress'
             if defaulted_params["excessFeeRefundAddress"] != defaulted_params["from"]:
-                print('second', defaulted_params["excessFeeRefundAddress"])
-                print('destionation', destination_address)
+
                 # outboundTransferCustomRefund
                 function_data = i_gateway_router.encodeABI(
                     fn_name="outboundTransferCustomRefund",
@@ -563,22 +546,19 @@ class Erc20Bridger(AssetBridger):
 
         # Use our ParentToChildMessageGasEstimator to figure out the final gas parameters
         gas_estimator = ParentToChildMessageGasEstimator(child_provider)
-        print("ret", retryable_gas_overrides)
+
         estimates = gas_estimator.populate_function_params(
             deposit_func,
             parent_provider,
             retryable_gas_overrides,
         )
-        print('final_estimates', estimates)
 
         def is_valid():
             # Re-fetch estimates to see if they've changed
             re_estimates = gas_estimator.populate_function_params(
                 deposit_func, parent_provider, retryable_gas_overrides
             )
-            return ParentToChildMessageGasEstimator.is_valid(
-                estimates["estimates"], re_estimates["estimates"]
-            )
+            return ParentToChildMessageGasEstimator.is_valid(estimates["estimates"], re_estimates["estimates"])
 
         return CaseDict(
             {
@@ -597,22 +577,18 @@ class Erc20Bridger(AssetBridger):
 
     def deposit(self, params):
         """
-        Execute a token deposit from the parent chain to the child chain. 
+        Execute a token deposit from the parent chain to the child chain.
         If the user has not provided a prebuilt transaction, we build it via get_deposit_request().
 
         :param params: Erc20DepositParams (with 'parentSigner', 'childProvider', 'erc20ParentAddress', etc.)
                        OR a pre-built ParentToChildTxReqAndSignerProvider
         :return: A ParentContractCallTransaction receipt-like object
         """
-        print('first', params)
+
         self.check_parent_network(params["parentSigner"])
 
         # Safety check: the TS code disallows overriding 'value' in this call; do the same
-        if (
-            "overrides" in params
-            and params["overrides"] is not None
-            and "value" in params["overrides"]
-        ):
+        if "overrides" in params and params["overrides"] is not None and "value" in params["overrides"]:
             raise ArbSdkError("Parent call value should be set through l1CallValue param")
 
         parent_provider = SignerProviderUtils.get_provider_or_throw(params["parentSigner"])
@@ -681,7 +657,6 @@ class Erc20Bridger(AssetBridger):
         # Create function data for L2GatewayRouter.outboundTransfer
         router_interface = create_contract_instance(
             contract_name="L2GatewayRouter",
-            
         )
         function_data = router_interface.encodeABI(
             fn_name="outboundTransfer",
@@ -695,8 +670,8 @@ class Erc20Bridger(AssetBridger):
 
         def estimate_parent_gas_limit(parent_provider):
             """
-            For display, we do a rough estimate of how many parent chain gas is needed 
-            once the L2->L1 message is executed. 
+            For display, we do a rough estimate of how many parent chain gas is needed
+            once the L2->L1 message is executed.
             """
             if is_arbitrum_chain(parent_provider):
                 # Hardcode for possible L3 scenario
@@ -723,14 +698,14 @@ class Erc20Bridger(AssetBridger):
         """
         Withdraw tokens from the child network back to the parent chain.
 
-        :param params: 
+        :param params:
           - Erc20WithdrawParams + childSigner
           - OR ChildToParentTxReqAndSigner
         :return: A ChildContractTransaction receipt-like object
         """
         if not SignerProviderUtils.signer_has_provider(params["childSigner"]):
             raise MissingProviderArbSdkError("childSigner")
-        
+
         self.check_child_network(params["childSigner"])
 
         # If user gave us a full "ChildToParentTransactionRequest", no need to build
@@ -757,7 +732,7 @@ class Erc20Bridger(AssetBridger):
         """
         Checks if the token has been properly registered on both the parent and child gateways.
         Useful for tokens using a custom gateway.
-        
+
         :param params: {
           "erc20ParentAddress": str,
           "parentProvider": Web3,
@@ -765,9 +740,7 @@ class Erc20Bridger(AssetBridger):
         }
         :return: bool - True if the token is fully registered, False otherwise
         """
-        parent_standard_gateway_address_from_chain_config = (
-            self.child_network.tokenBridge.parentErc20Gateway
-        )
+        parent_standard_gateway_address_from_chain_config = self.child_network.tokenBridge.parentErc20Gateway
         parent_gateway_address_from_parent_gateway_router = self.get_parent_gateway_address(
             params["erc20ParentAddress"], params["parentProvider"]
         )
@@ -793,16 +766,12 @@ class Erc20Bridger(AssetBridger):
             provider=params["childProvider"],
             contract_name="L2ERC20Gateway",
             address=child_gateway_address_from_child_router,
-            
         )
         child_token_address_from_child_gateway = l2_erc20_gateway.functions.calculateL2TokenAddress(
             params["erc20ParentAddress"]
         ).call()
 
-        return (
-            child_token_address_from_parent_gateway_router.lower()
-            == child_token_address_from_child_gateway.lower()
-        )
+        return child_token_address_from_parent_gateway_router.lower() == child_token_address_from_child_gateway.lower()
 
     def _solidity_encode(self, types, values):
         """
@@ -817,7 +786,7 @@ class Erc20Bridger(AssetBridger):
 
 class AdminErc20Bridger(Erc20Bridger):
     """
-    Extended bridging class with admin functionality for registering custom tokens, 
+    Extended bridging class with admin functionality for registering custom tokens,
     setting gateways, etc.
     """
 
@@ -834,7 +803,6 @@ class AdminErc20Bridger(Erc20Bridger):
 
         i_erc20_interface = create_contract_instance(
             contract_name="ERC20",
-            
         )
         data = i_erc20_interface.encodeABI(
             fn_name="approve",
@@ -852,7 +820,7 @@ class AdminErc20Bridger(Erc20Bridger):
 
     def approve_gas_token_for_custom_token_registration(self, params):
         """
-        Approves the custom gas token for the given custom token's registration transaction. 
+        Approves the custom gas token for the given custom token's registration transaction.
         This is needed so we can pay fees using the custom gas token if the chain doesn't use ETH natively.
         """
         if self.native_token_is_eth:
@@ -912,13 +880,11 @@ class AdminErc20Bridger(Erc20Bridger):
             provider=parent_provider,
             contract_name="ICustomToken",
             address=parent_token_address,
-            
         )
         child_token = load_contract(
             provider=child_provider,
             contract_name="IArbToken",
             address=child_token_address,
-            
         )
 
         # Ensure deployed
@@ -933,7 +899,6 @@ class AdminErc20Bridger(Erc20Bridger):
                 provider=parent_provider,
                 contract_name="ERC20",
                 address=self.native_token,
-                
             )
             allowance = native_token_contract.functions.allowance(
                 parent_sender_address,
@@ -941,9 +906,7 @@ class AdminErc20Bridger(Erc20Bridger):
             ).call()
 
             max_fee_per_gas_on_child = child_provider.eth.max_priority_fee
-            max_fee_per_gas_on_child_with_buffer = self.percent_increase(
-                max_fee_per_gas_on_child, 500
-            )
+            max_fee_per_gas_on_child_with_buffer = self.percent_increase(max_fee_per_gas_on_child, 500)
             # Hardcode ~60k gas
             estimated_gas_fee = 60000 * max_fee_per_gas_on_child_with_buffer
 
@@ -969,7 +932,7 @@ class AdminErc20Bridger(Erc20Bridger):
 
         def encode_func_data(set_token_gas, set_gateway_gas, max_fee_per_gas):
             """
-            Build the registerTokenOnL2(...) call for parentToken, including deposit amounts 
+            Build the registerTokenOnL2(...) call for parentToken, including deposit amounts
             for each call (setToken call & setGateways call).
             """
             # If max_fee_per_gas is the error-triggering param, multiply by 2 to ensure it triggers for the second step
@@ -1003,9 +966,7 @@ class AdminErc20Bridger(Erc20Bridger):
             return {
                 "data": encoded_data,
                 "to": parent_token.address,
-                "value": (
-                    set_token_deposit + set_gateway_deposit if self.native_token_is_eth else 0
-                ),
+                "value": (set_token_deposit + set_gateway_deposit if self.native_token_is_eth else 0),
                 "from": from_address,
             }
 
@@ -1016,7 +977,7 @@ class AdminErc20Bridger(Erc20Bridger):
             lambda p: encode_func_data(
                 GasParams(p["maxSubmissionCost"], p["gasLimit"]),
                 GasParams(
-                    gasLimit=RetryableDataTools.ErrorTriggeringParams['gasLimit'],
+                    gasLimit=RetryableDataTools.ErrorTriggeringParams["gasLimit"],
                     maxSubmissionCost=1,
                 ),
                 p["maxFeePerGas"],
@@ -1024,7 +985,7 @@ class AdminErc20Bridger(Erc20Bridger):
             parent_provider,
         )
 
-        # Second call triggers the setGateways logic 
+        # Second call triggers the setGateways logic
         set_gateway_estimates2 = g_estimator.populate_function_params(
             lambda p: encode_func_data(
                 GasParams(
@@ -1070,7 +1031,6 @@ class AdminErc20Bridger(Erc20Bridger):
                 **filter_dict,
                 "address": parent_gateway_router_address,
             },
-            
         )
 
         return [a["event"] for a in events]
@@ -1091,8 +1051,7 @@ class AdminErc20Bridger(Erc20Bridger):
         self.check_child_network(child_provider)
 
         child_gateway_router_address = (
-            custom_network_child_gateway_router
-            or self.child_network.tokenBridge.childGatewayRouter
+            custom_network_child_gateway_router or self.child_network.tokenBridge.childGatewayRouter
         )
         event_fetcher = EventFetcher(child_provider)
 
@@ -1104,7 +1063,6 @@ class AdminErc20Bridger(Erc20Bridger):
                 **filter_dict,
                 "address": child_gateway_router_address,
             },
-            
         )
         return [a["event"] for a in events]
 
@@ -1129,8 +1087,7 @@ class AdminErc20Bridger(Erc20Bridger):
         parent_gateway_router = load_contract(
             provider=parent_signer.provider,
             contract_name="L1GatewayRouter",
-            address=self.child_network.tokenBridge.parentGatewayRouter
-            
+            address=self.child_network.tokenBridge.parentGatewayRouter,
         )
 
         def set_gateways_func(params):

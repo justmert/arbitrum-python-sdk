@@ -4,13 +4,14 @@ from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import get_arbitrum_network
 from src.lib.data_entities.retryable_data import RetryableDataTools
-from src.lib.utils.helper import CaseDict, load_contract
+from src.lib.utils.helper import CaseDict, load_contract, to_checksum_address
 from src.lib.utils.lib import (
     get_base_fee,
-    is_defined,
     get_native_token_decimals,
-    scale_from_18_decimals_to_native_token_decimals
+    is_defined,
+    scale_from_18_decimals_to_native_token_decimals,
 )
+
 DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = 300
 DEFAULT_GAS_PRICE_PERCENT_INCREASE = 500
 
@@ -86,7 +87,6 @@ class ParentToChildMessageGasEstimator:
             contract_name="Inbox",
             address=network.ethBridge.inbox,
             provider=parent_provider,
-            
         )
 
         # If user did not supply a custom base, fetch from chain
@@ -113,17 +113,16 @@ class ParentToChildMessageGasEstimator:
             provider=self.child_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            
         )
 
         # estimateGas is used to get the gas limit for NodeInterface.estimateRetryableTicket()
         return node_interface.functions.estimateRetryableTicket(
-            retryable_data["from"],
+            to_checksum_address(retryable_data["from"]),
             sender_deposit,
-            retryable_data["to"],
+            to_checksum_address(retryable_data["to"]),
             retryable_data["l2CallValue"],
-            retryable_data["excessFeeRefundAddress"],
-            retryable_data["callValueRefundAddress"],
+            to_checksum_address(retryable_data["excessFeeRefundAddress"]),
+            to_checksum_address(retryable_data["callValueRefundAddress"]),
             retryable_data["data"],
         ).estimate_gas()
 
@@ -149,26 +148,20 @@ class ParentToChildMessageGasEstimator:
             and estimates["maxSubmissionCost"] >= re_estimates["maxSubmissionCost"]
         )
 
-    def estimate_all(
-        self,
-        retryable_estimate_data: dict,
-        parent_base_fee: int,
-        parent_provider,
-        options=None
-    ) -> dict:
+    def estimate_all(self, retryable_estimate_data: dict, parent_base_fee: int, parent_provider, options=None) -> dict:
         """
         Get gas limit, gas price, submission cost, and deposit needed for a Parent->Child message.
         Merges logic from the updated TS code.
         """
         if options is None:
             options = {}
-        
+
         data = retryable_estimate_data["data"]
 
         # Apply defaults
         gas_limit_defaults = self.apply_gas_limit_defaults(options.get("gasLimit", {}))
-        max_fee_per_gas_estimate =  self.estimate_max_fee_per_gas(options.get("maxFeePerGas", {}))
-        max_submission_fee_estimate =  self.estimate_submission_fee(
+        max_fee_per_gas_estimate = self.estimate_max_fee_per_gas(options.get("maxFeePerGas", {}))
+        max_submission_fee_estimate = self.estimate_submission_fee(
             parent_provider,
             parent_base_fee,
             len(data),
@@ -178,7 +171,7 @@ class ParentToChildMessageGasEstimator:
         # Estimate gas limit
         base = gas_limit_defaults.get("base")
         if base is None:
-            base =  self.estimate_retryable_ticket_gas_limit(
+            base = self.estimate_retryable_ticket_gas_limit(
                 retryable_estimate_data, options.get("deposit", {}).get("base")
             )
 
@@ -188,7 +181,7 @@ class ParentToChildMessageGasEstimator:
         # Now figure out the deposit
         # The new code scales from 18 decimals to the child chain's native decimals if needed
         child_network = get_arbitrum_network(self.child_provider)
-        decimals =  get_native_token_decimals(
+        decimals = get_native_token_decimals(
             parent_provider=parent_provider,
             child_network=child_network,
         )
@@ -202,16 +195,9 @@ class ParentToChildMessageGasEstimator:
             deposit_wei += retryable_estimate_data["l2CallValue"]
 
             deposit = scale_from_18_decimals_to_native_token_decimals(
-            amount=deposit_wei,
-            decimals=decimals,
-            
+                amount=deposit_wei,
+                decimals=decimals,
             )
-        print('heyy', {
-            "gasLimit": gas_limit,
-            "maxFeePerGas": max_fee_per_gas_estimate,
-            "maxSubmissionCost": max_submission_fee_estimate,
-            "deposit": deposit,
-        })
         return {
             "gasLimit": gas_limit,
             "maxFeePerGas": max_fee_per_gas_estimate,
@@ -242,12 +228,14 @@ class ParentToChildMessageGasEstimator:
 
         # These special dummy values will cause the contract to revert with the real RetryableData
         # See RetryableDataTools.ErrorTriggeringParams
-        dummy_params = CaseDict({
-            "gasLimit": RetryableDataTools.ErrorTriggeringParams["gasLimit"],
-            "maxFeePerGas": RetryableDataTools.ErrorTriggeringParams["maxFeePerGas"],
-            "maxSubmissionCost": 1,
-        })
-        print('dummy_params', dummy_params)
+        dummy_params = CaseDict(
+            {
+                "gasLimit": RetryableDataTools.ErrorTriggeringParams["gasLimit"],
+                "maxFeePerGas": RetryableDataTools.ErrorTriggeringParams["maxFeePerGas"],
+                "maxSubmissionCost": 1,
+            }
+        )
+
         null_data_request = data_func(dummy_params)
         retryable = None
 
@@ -268,8 +256,8 @@ class ParentToChildMessageGasEstimator:
                 raise ArbSdkError(f"No retryable data found in error: {err}")
 
         # Now use that RetryableData to get real gas estimates
-        parent_base_fee =  get_base_fee(parent_provider)
-        estimates =  self.estimate_all(
+        parent_base_fee = get_base_fee(parent_provider)
+        estimates = self.estimate_all(
             {
                 "from": retryable["from"],
                 "to": retryable["to"],

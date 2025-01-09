@@ -1,13 +1,13 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 from web3 import Web3
 from web3.contract import Contract
-from web3.types import LogReceipt
 
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import CaseDict, load_contract
+
 
 class FetchedEvent(CaseDict):
     """
@@ -26,7 +26,7 @@ class FetchedEvent(CaseDict):
         transaction_hash: str,
         address: str,
         topics: List[str],
-        data: Optional[str]
+        data: Optional[str],
     ):
         """
         :param event: The parsed event.args object
@@ -71,7 +71,7 @@ class EventFetcher:
 
     def __init__(self, provider: Union[Web3, SignerOrProvider, ArbitrumProvider]):
         """
-        :param provider: A raw Web3 instance, a SignerOrProvider, or an ArbitrumProvider 
+        :param provider: A raw Web3 instance, a SignerOrProvider, or an ArbitrumProvider
                          from which to fetch logs.
         """
         if isinstance(provider, Web3):
@@ -95,7 +95,7 @@ class EventFetcher:
         is_classic: bool = False,
     ) -> List[FetchedEvent]:
         """
-        Fetch logs from the chain using the given contract and event name, 
+        Fetch logs from the chain using the given contract and event name,
         and parse them into FetchedEvent objects.
 
         :param contract_factory: Either a string contract name or an actual Contract instance
@@ -113,14 +113,12 @@ class EventFetcher:
         # 1) Build or retrieve the contract instance
         if isinstance(contract_factory, str):
             contract_address = filter.get(
-                "address",
-                Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
+                "address", Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
             )
             contract = load_contract(
                 provider=self.provider,
                 contract_name=contract_factory,
                 address=contract_address,
-                
             )
         elif isinstance(contract_factory, Contract):
             contract = contract_factory
@@ -134,10 +132,7 @@ class EventFetcher:
 
         # 3) Create a filter for the event
         #    E.g. fromBlock=..., toBlock=..., argument_filters=...
-        event_filter = event_abi().create_filter(
-            argument_filters=argument_filters,
-            **filter
-        )
+        event_filter = event_abi().create_filter(argument_filters=argument_filters, **filter)
 
         # 4) Grab all matching logs
         logs = event_filter.get_all_entries()

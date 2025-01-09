@@ -41,7 +41,7 @@ else:
 def get_local_networks_from_file() -> Dict:
     """Read networks configuration from local file"""
     network_path = Path(__file__).parent.parent / "localNetwork.json"
-    
+
     if not network_path.exists():
         raise ArbSdkError("localNetwork.json not found, must gen network first")
 

@@ -1,25 +1,20 @@
 import json
-from typing import cast
+from pathlib import Path
+from typing import Any, List, Optional, Tuple, Union, cast
 
 import rlp
 from eth.vm.forks.arrow_glacier.transactions import (
     ArrowGlacierTransactionBuilder as TransactionBuilder,
 )
+from eth_typing import Address, HexStr
 from eth_utils import encode_hex
 from hexbytes import HexBytes
 from web3 import Web3
 from web3.contract import Contract
-from web3.types import AccessList, Nonce, Wei
+from web3.types import ABI, AccessList, Nonce, Wei
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
-from dataclasses import asdict
-import dataclasses
-from typing import Any
-from typing import Optional, Union, List, Tuple, Any
-from pathlib import Path
-from web3.types import ABI
-from eth_typing import Address, HexStr
 
 
 def format_contract_output(contract, function_name, output):
@@ -54,7 +49,7 @@ def format_contract_output(contract, function_name, output):
     return format_output(func_abi.get("outputs", []), output)
 
 
-def get_address(address):
+def to_checksum_address(address):
     if Web3.is_address(address):
         return Web3.to_checksum_address(address)
     else:
@@ -91,9 +86,11 @@ def parse_raw_tx(raw_tx):
         "nonce": cast(Nonce, tx.nonce),
         "r": HexBytes(tx.r),
         "s": HexBytes(tx.s),
-        "to": Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
-        if (tx.to.hex() == "0x" or tx.to.hex() == "")
-        else Web3.to_checksum_address(tx.to),
+        "to": (
+            Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
+            if (tx.to.hex() == "0x" or tx.to.hex() == "")
+            else Web3.to_checksum_address(tx.to)
+        ),
         "transactionIndex": None,
         "type": tx.type_id,
         "v": None,
@@ -155,6 +152,7 @@ def normalize_contract_address(address: Union[str, Contract, Address]) -> Addres
     elif isinstance(address, Contract):
         return Web3.to_checksum_address(address.address)
     return address
+
 
 def create_contract_instance(contract_name: str) -> Contract:
     """
@@ -279,12 +277,12 @@ def sign_and_sent_raw_transaction(signer, tx):
     return tx_receipt
 
 
-
 class CaseDict:
 
     SPECIAL_CASES = {
         "erc20": "Erc20",
     }
+
     def __init__(self, x):
         for key, value in x.items():
             self.__setitem__(key, value)
@@ -316,9 +314,9 @@ class CaseDict:
 
     @classmethod
     def snake_to_camel(cls, name):
-        components = name.split('_')
+        components = name.split("_")
         result = components[0]  # First component stays lowercase
-        # Process remaining components  
+        # Process remaining components
         for component in components[1:]:
             # Check if component is in special cases
             if component in CaseDict.SPECIAL_CASES:
@@ -326,24 +324,23 @@ class CaseDict:
             else:
                 result += component.title()
         return result
-    
+
     @classmethod
     def camel_to_snake(cls, name):
         # First handle special cases
         for camel, snake in CaseDict.SPECIAL_CASES.items():
             name = name.replace(camel, snake)
-        
+
         # Convert the remaining camelCase to snake_case
         snake_case = ""
         for i, char in enumerate(name):
             if i > 0 and char.isupper():
                 # Check if this uppercase letter is part of a sequence of uppercase letters
-                if not name[i-1].isupper():  # Only add underscore if previous char wasn't uppercase
+                if not name[i - 1].isupper():  # Only add underscore if previous char wasn't uppercase
                     snake_case += "_"
             snake_case += char.lower()
-        
-        return snake_case
 
+        return snake_case
 
     def get(self, key, default=None):
         return getattr(self, key, default)
@@ -378,7 +375,7 @@ class CaseDict:
         """Convert CaseDict to a regular dict for JSON serialization"""
         result = {}
         for k, v in self.__dict__.items():
-            if not k.startswith('_'):
+            if not k.startswith("_"):
                 result[k] = self._convert_value(v)
         return result
 
@@ -390,7 +387,7 @@ class CaseDict:
             return [self._convert_value(item) for item in value]
         elif isinstance(value, dict):
             return {k: self._convert_value(v) for k, v in value.items()}
-        elif hasattr(value, 'hex'):  # Handle Web3 types like HexBytes
+        elif hasattr(value, "hex"):  # Handle Web3 types like HexBytes
             return value.hex()
         else:
             return value
@@ -400,6 +397,6 @@ class CaseDictEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, CaseDict):
             return obj.to_dict()
-        elif hasattr(obj, 'hex'):  # Handle Web3 types
+        elif hasattr(obj, "hex"):  # Handle Web3 types
             return obj.hex()
         return super().default(obj)

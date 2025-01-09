@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 
 from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.networks import is_arbitrum_network_native_token_ether
+from src.lib.data_entities.networks import (
+    ArbitrumNetwork,
+    is_arbitrum_network_native_token_ether,
+)
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
-from src.lib.data_entities.networks import ArbitrumNetwork
+
 
 class AssetBridger(ABC):
     """
@@ -19,12 +22,12 @@ class AssetBridger(ABC):
                               (including child_network.chain_id, child_network.parent_chain_id, etc.)
         :raises ArbSdkError: If the parent chain ID is invalid or undefined
         """
-        
-        child_network['parent_chain_id']
-        
+
+        child_network["parent_chain_id"]
+
         if not child_network or not hasattr(child_network, "parent_chain_id"):
             raise ArbSdkError("Invalid or missing child_network object.")
-        
+
         if child_network.parentChainId is None:
             raise ArbSdkError(f"Unknown parent chain ID: {child_network.parentChainId}")
 

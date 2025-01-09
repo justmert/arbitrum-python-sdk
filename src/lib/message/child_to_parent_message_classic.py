@@ -1,3 +1,5 @@
+from typing import List, Optional
+
 from eth_typing import BlockNumber
 from web3.types import TxReceipt
 
@@ -9,7 +11,6 @@ from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import load_contract
 from src.lib.utils.lib import is_defined, wait
-from typing import List, Optional
 
 
 class MessageBatchProofInfo:
@@ -138,7 +139,6 @@ class ChildToParentMessageClassic:
                 "address": ARB_SYS_ADDRESS,
                 **filter_dict,
             },
-            
         )
         for e in raw_events:
             event_data = {**e.event, "transactionHash": e.transactionHash}
@@ -219,7 +219,6 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
             provider=self.parent_provider,
             contract_name="Outbox",
             address=outbox_address,
-            
         )
 
         return outbox_contract.functions.outboxEntryExists(self.batch_number).call()
@@ -234,12 +233,9 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
             provider=child_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            
         )
         try:
-            return node_interface_contract.functions.legacyLookupMessageBatchProof(
-                batch_number, index_in_batch
-            ).call()
+            return node_interface_contract.functions.legacyLookupMessageBatchProof(batch_number, index_in_batch).call()
         except Exception as e:
             if "batch doesn't exist" in str(e):
                 return None
@@ -281,7 +277,6 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
             provider=self.parent_provider,
             contract_name="Outbox",
             address=outbox_address,
-            
         )
         try:
             # Dry-run call to see if it reverts with ALREADY_SPENT or NO_OUTBOX_ENTRY
@@ -329,7 +324,7 @@ class ChildToParentMessageReaderClassic(ChildToParentMessageClassic):
         retry_delay_ms=500,
     ) -> ChildToParentMessageStatus:
         """
-        Waits (possibly a very long time) until the outbox entry has been created. 
+        Waits (possibly a very long time) until the outbox entry has been created.
         Once created, returns either CONFIRMED or EXECUTED (if it was executed meanwhile).
         """
         entry_exists = self.outbox_entry_exists(child_provider)
@@ -389,16 +384,13 @@ class ChildToParentMessageWriterClassic(ChildToParentMessageReaderClassic):
 
         proof_info = self.try_get_proof(child_provider)
         if not is_defined(proof_info):
-            raise ArbSdkError(
-                f"Unexpected missing proof: batch {self.batch_number} index {self.index_in_batch}"
-            )
+            raise ArbSdkError(f"Unexpected missing proof: batch {self.batch_number} index {self.index_in_batch}")
 
         outbox_address = self.get_outbox_address(child_provider, self.batch_number)
         outbox_contract = load_contract(
             provider=self.parent_provider,
             contract_name="Outbox",
             address=outbox_address,
-            
         )
 
         if overrides is None:

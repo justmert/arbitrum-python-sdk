@@ -1,17 +1,17 @@
 from src.lib.data_entities.errors import MissingProviderArbSdkError
 from src.lib.data_entities.networks import (
     get_arbitrum_network,
-    is_arbitrum_network_native_token_ether
+    is_arbitrum_network_native_token_ether,
 )
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 from src.lib.data_entities.transaction_request import (
-    is_parent_to_child_transaction_request
+    is_parent_to_child_transaction_request,
+)
+from src.lib.message.parent_to_child_message_gas_estimator import (
+    ParentToChildMessageGasEstimator,
 )
 from src.lib.message.parent_transaction import ParentTransactionReceipt
-from src.lib.message.parent_to_child_message_gas_estimator import (
-    ParentToChildMessageGasEstimator
-)
-from src.lib.utils.helper import create_contract_instance, load_contract
+from src.lib.utils.helper import create_contract_instance
 from src.lib.utils.lib import get_base_fee
 
 
@@ -30,12 +30,7 @@ class ParentToChildMessageCreator:
             raise MissingProviderArbSdkError("parentSigner")
 
     @staticmethod
-    def get_ticket_estimate(
-        params: dict,
-        parent_provider,
-        child_provider,
-        retryable_gas_overrides=None
-    ) -> dict:
+    def get_ticket_estimate(params: dict, parent_provider, child_provider, retryable_gas_overrides=None) -> dict:
         """
         Gets current gas estimates (maxFeePerGas, maxSubmissionCost, gasLimit, deposit)
         for creating a retryable ticket on the child chain.
@@ -46,14 +41,9 @@ class ParentToChildMessageCreator:
         :param retryable_gas_overrides: Optional dict of GasOverrides
         :return: A dict with keys "maxSubmissionCost", "maxFeePerGas", "gasLimit", "deposit"
         """
-        base_fee =  get_base_fee(parent_provider)
+        base_fee = get_base_fee(parent_provider)
         gas_estimator = ParentToChildMessageGasEstimator(child_provider)
-        return  gas_estimator.estimate_all(
-            params,
-            base_fee,
-            parent_provider,
-            retryable_gas_overrides
-        )
+        return gas_estimator.estimate_all(params, base_fee, parent_provider, retryable_gas_overrides)
 
     @staticmethod
     def get_ticket_creation_request_call_data(
@@ -61,7 +51,7 @@ class ParentToChildMessageCreator:
         estimates: dict,
         excess_fee_refund_address: str,
         call_value_refund_address: str,
-        native_token_is_eth: bool
+        native_token_is_eth: bool,
     ) -> bytes:
         """
         Prepare calldata for a call to create a retryable ticket.
@@ -75,7 +65,6 @@ class ParentToChildMessageCreator:
                 contract_name="ERC20Inbox",
                 # address="0x",  # Not used in encodeABI, so dummy
                 # provider=None,  # We only need the ABI here
-                
             )
             return erc20_inbox_contract.encodeABI(
                 fn_name="createRetryableTicket",
@@ -97,7 +86,6 @@ class ParentToChildMessageCreator:
             contract_name="Inbox",
             # address="0x",
             # provider=None,
-            
         )
         return inbox_contract.encodeABI(
             fn_name="createRetryableTicket",
@@ -114,12 +102,7 @@ class ParentToChildMessageCreator:
         )
 
     @staticmethod
-    def get_ticket_creation_request(
-        params: dict,
-        parent_provider,
-        child_provider,
-        options=None
-    ) -> dict:
+    def get_ticket_creation_request(params: dict, parent_provider, child_provider, options=None) -> dict:
         """
         Generate a transaction request for creating a retryable ticket.
 
@@ -148,11 +131,8 @@ class ParentToChildMessageCreator:
         }
 
         # Estimate relevant gas values
-        estimates =  ParentToChildMessageCreator.get_ticket_estimate(
-            parsed_params,
-            parent_provider,
-            child_provider,
-            options
+        estimates = ParentToChildMessageCreator.get_ticket_estimate(
+            parsed_params, parent_provider, child_provider, options
         )
 
         # Identify the child chain
@@ -161,11 +141,7 @@ class ParentToChildMessageCreator:
 
         # Prepare the calldata
         function_data = ParentToChildMessageCreator.get_ticket_creation_request_call_data(
-            params,
-            estimates,
-            excess_fee_refund_address,
-            call_value_refund_address,
-            native_token_is_eth
+            params, estimates, excess_fee_refund_address, call_value_refund_address, native_token_is_eth
         )
 
         # Final transaction request
@@ -191,13 +167,10 @@ class ParentToChildMessageCreator:
         }
 
         def is_valid():
-            re_estimates =  ParentToChildMessageCreator.get_ticket_estimate(
-                parsed_params,
-                parent_provider,
-                child_provider,
-                options
+            re_estimates = ParentToChildMessageCreator.get_ticket_estimate(
+                parsed_params, parent_provider, child_provider, options
             )
-            return  ParentToChildMessageGasEstimator.is_valid(estimates, re_estimates)
+            return ParentToChildMessageGasEstimator.is_valid(estimates, re_estimates)
 
         return {
             "txRequest": tx_request,
@@ -217,15 +190,12 @@ class ParentToChildMessageCreator:
         parent_provider = SignerProviderUtils.get_provider_or_throw(self.parent_signer)
 
         # Distinguish if 'params' is already a ParentToChildTransactionRequest or not
-        print("nediyor:", is_parent_to_child_transaction_request(params))
+
         if is_parent_to_child_transaction_request(params):
             create_request = params
         else:
-            create_request =  ParentToChildMessageCreator.get_ticket_creation_request(
-                params,
-                parent_provider,
-                child_provider,
-                options
+            create_request = ParentToChildMessageCreator.get_ticket_creation_request(
+                params, parent_provider, child_provider, options
             )
 
         # Merge any local overrides into the final tx

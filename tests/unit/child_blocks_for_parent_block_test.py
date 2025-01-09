@@ -1,7 +1,5 @@
-
-import pytest
 from web3 import HTTPProvider, Web3
-
+import pytest
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.lib import (
     get_block_ranges_for_l1_block,
@@ -17,19 +15,17 @@ provider = Web3(HTTPProvider("https://arb1.arbitrum.io/rpc"))
 arb_provider = ArbitrumProvider(provider)
 
 
-
 def validate_child_blocks(child_blocks, child_blocks_count, block_type="number"):
     """
     Validate child blocks for parent block
-    
+
     :param child_blocks: List of child blocks to validate
     :param child_blocks_count: Expected number of child blocks
     :param block_type: Type of blocks ('number' or 'undefined')
     """
     if len(child_blocks) != child_blocks_count:
         raise ValidationException(
-            f"Expected Child block range to have the array length of {child_blocks_count}, "
-            f"got {len(child_blocks)}."
+            f"Expected Child block range to have the array length of {child_blocks_count}, " f"got {len(child_blocks)}."
         )
 
     if block_type == "number" and not all(isinstance(block, int) or block is None for block in child_blocks):
@@ -47,11 +43,11 @@ def validate_child_blocks(child_blocks, child_blocks_count, block_type="number")
             raise ValidationException("Child block is undefined.")
 
         is_start_block = index == 0
-        
+
         # Get current block
         current_block = arb_provider.get_block(child_block)
         blocks.append(current_block)
-        
+
         # Get adjacent block (previous for start block, next for end block)
         adjacent_block = arb_provider.get_block(child_block + (-1 if is_start_block else 1))
         blocks.append(adjacent_block)
@@ -71,80 +67,71 @@ def validate_child_blocks(child_blocks, child_blocks_count, block_type="number")
 
         if is_start_block:
             if not current_block_number > adjacent_block_number:
-                raise ValidationException(
-                    "Child start block is not the first block in range for parent block."
-                )
+                raise ValidationException("Child start block is not the first block in range for parent block.")
         else:
             if not current_block_number < adjacent_block_number:
-                raise ValidationException(
-                    "Child end block is not the last block in range for parent block."
-                )
+                raise ValidationException("Child end block is not the last block in range for parent block.")
 
 
 def test_successfully_searches_for_child_block_range():
     """Test successful search for child block range"""
     child_blocks = get_block_ranges_for_l1_block(
-            arbitrum_provider =  arb_provider,
-            for_l1_block =  17926532,
-            min_arbitrum_block =  121800000,
-            max_arbitrum_block =  122000000,
-        
+        arbitrum_provider=arb_provider,
+        for_l1_block=17926532,
+        min_arbitrum_block=121800000,
+        max_arbitrum_block=122000000,
     )
     validate_child_blocks(child_blocks, 2)
-
 
 
 def test_fails_to_search_for_child_block_range():
     """Test failed search for child block range"""
     child_blocks = get_block_ranges_for_l1_block(
-            arbitrum_provider =  arb_provider,
-            for_l1_block =  17926533,
-            min_arbitrum_block =  121800000,
-            max_arbitrum_block =  122000000,
+        arbitrum_provider=arb_provider,
+        for_l1_block=17926533,
+        min_arbitrum_block=121800000,
+        max_arbitrum_block=122000000,
     )
     validate_child_blocks(child_blocks, 2, "undefined")
-
 
 
 def test_successfully_searches_for_first_child_block():
     """Test successful search for first child block"""
     child_blocks = [
         get_first_block_for_l1_block(
-                arbitrum_provider =  arb_provider,
-                for_l1_block =  17926532,
-                min_arbitrum_block =  121800000,
-                max_arbitrum_block =  122000000,
+            arbitrum_provider=arb_provider,
+            for_l1_block=17926532,
+            min_arbitrum_block=121800000,
+            max_arbitrum_block=122000000,
         )
     ]
     validate_child_blocks(child_blocks, 1)
-
 
 
 def test_fails_to_search_for_first_child_block_without_allow_greater():
     """Test failed search for first child block without allow_greater flag"""
     child_blocks = [
         get_first_block_for_l1_block(
-                arbitrum_provider = arb_provider,
-                for_l1_block = 17926533,
-                allow_greater = False,
-                min_arbitrum_block = 121800000,
-                max_arbitrum_block=122000000,
+            arbitrum_provider=arb_provider,
+            for_l1_block=17926533,
+            allow_greater=False,
+            min_arbitrum_block=121800000,
+            max_arbitrum_block=122000000,
         )
     ]
     validate_child_blocks(child_blocks, 1, "undefined")
-
 
 
 def test_successfully_searches_for_first_child_block_with_allow_greater():
     """Test successful search for first child block with allow_greater flag"""
     child_blocks = [
         get_first_block_for_l1_block(
-                arbitrum_provider =  arb_provider,
-                for_l1_block = 17926533,
-                allow_greater = True,
-                # Expected result: 121907740. Narrows down the range to speed up the search.
-                min_arbitrum_block= 121800000,
-                max_arbitrum_block=122000000,
+            arbitrum_provider=arb_provider,
+            for_l1_block=17926533,
+            allow_greater=True,
+            # Expected result: 121907740. Narrows down the range to speed up the search.
+            min_arbitrum_block=121800000,
+            max_arbitrum_block=122000000,
         )
     ]
     validate_child_blocks(child_blocks, 1)

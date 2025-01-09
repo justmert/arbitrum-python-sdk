@@ -1,19 +1,27 @@
-import pytest
-from eth_account import Account
-from web3 import Web3
 import threading
 
+from eth_account import Account
+from web3 import Web3
+
+from scripts.test_setup import setup_testing_env
 from src.lib.data_entities.message import ChildToParentMessageStatus
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
 from src.lib.message.child_to_parent_message import ChildToParentMessage
 from src.lib.message.child_transaction import ChildTransactionReceipt
-from src.lib.data_entities.networks import get_arbitrum_network
+from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
 from src.lib.message.parent_transaction import ParentTransactionReceipt
-from src.lib.utils.lib import get_native_token_decimals, scale_from_18_decimals_to_native_token_decimals
-from scripts.test_setup import setup_testing_env
-from tests.integration.test_helpers import fund_parent_signer, fund_child_signer, mine_until_stop
-from tests.integration.custom_fee_token.custom_fee_token_test_helpers import is_arbitrum_network_with_custom_fee_token
+from src.lib.utils.lib import (
+    get_native_token_decimals,
+    scale_from_18_decimals_to_native_token_decimals,
+)
+from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
+    is_arbitrum_network_with_custom_fee_token,
+)
+from tests.integration.test_helpers import (
+    fund_child_signer,
+    fund_parent_signer,
+    mine_until_stop,
+)
 
 
 def test_transfers_ether_on_child():
@@ -58,18 +66,8 @@ def test_deposit_ether():
 
     decimals = get_native_token_decimals(parent_provider=parent_provider, child_network=child_chain)
 
-    print("parent_signer account addr: ", parent_signer.account.address)
-    print(
-        "parent_signer account balance initial: ", parent_signer.provider.eth.get_balance(parent_signer.account.address)
-    )
     fund_parent_signer(parent_signer)
-    print(
-        "parent_signer account balance after funding: ",
-        parent_signer.provider.eth.get_balance(parent_signer.account.address),
-    )
-
     inbox_address = eth_bridger.child_network.eth_bridge.inbox
-    print("inbox_address: ", inbox_address)
 
     initial_inbox_balance = parent_signer.provider.eth.get_balance(inbox_address)
     amount = "0.0002"

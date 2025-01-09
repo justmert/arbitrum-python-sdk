@@ -1,28 +1,23 @@
+import threading
 import time
-from typing import Dict, Any, Optional
-
+from typing import Any, Dict, Optional
 from eth_typing import Address
 from web3 import Account, Web3
 from web3.types import Wei
 
-from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
-from src.lib.data_entities.errors import ArbSdkError
-
-from src.lib.data_entities.message import ChildToParentMessageStatus
-
-from src.lib.data_entities.networks import ArbitrumNetwork, assert_arbitrum_network_has_token_bridge
-
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-
 from scripts.setup_common import config, get_signer
-
-from src.lib.utils.lib import scale_from_18_decimals_to_native_token_decimals
-
+from src.lib.data_entities.errors import ArbSdkError
+from src.lib.data_entities.message import ChildToParentMessageStatus
+from src.lib.data_entities.networks import (
+    ArbitrumNetwork,
+    assert_arbitrum_network_has_token_bridge,
+)
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.helper import load_contract
-
-from tests.integration.custom_fee_token.custom_fee_token_test_helpers import is_arbitrum_network_with_custom_fee_token
-
-import threading
+from src.lib.utils.lib import scale_from_18_decimals_to_native_token_decimals
+from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
+    is_arbitrum_network_with_custom_fee_token,
+)
 
 PRE_FUND_AMOUNT = Web3.to_wei(0.1, "ether")
 

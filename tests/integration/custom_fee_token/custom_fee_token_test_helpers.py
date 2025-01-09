@@ -1,15 +1,15 @@
-from eth_account import Account
-from web3 import Web3
-from eth_utils import to_bytes, keccak
 from typing import Union
 
-from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
-from src.lib.asset_bridger.eth_bridger import EthBridger
-from src.lib.utils.helper import load_contract
-from src.lib.utils.lib import get_native_token_decimals
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from eth_account import Account
+from eth_utils import keccak, to_bytes
+from web3 import Web3
 
 from scripts.setup_common import config, get_local_networks_from_file
+from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
+from src.lib.asset_bridger.eth_bridger import EthBridger
+from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from src.lib.utils.helper import load_contract
+from src.lib.utils.lib import get_native_token_decimals
 
 
 def eth_provider():
@@ -118,9 +118,7 @@ def get_parent_custom_fee_token_allowance(owner: str, spender: str):
 def approve_parent_custom_fee_token_for_erc20_deposit(parent_signer: SignerOrProvider, erc20_parent_address: str):
     """Approve custom fee token for ERC20 deposit"""
     erc20_bridger = Erc20Bridger.from_provider(arb_provider())
-    tx = erc20_bridger.approve_gas_token(
-        {"erc20ParentAddress": erc20_parent_address, "parentSigner": parent_signer}
-    )
+    tx = erc20_bridger.approve_gas_token({"erc20ParentAddress": erc20_parent_address, "parentSigner": parent_signer})
     tx.wait()
 
 
@@ -129,9 +127,7 @@ def fund_child_custom_fee_token(child_signer: SignerOrProvider):
     deployer_account = Account.from_key(config["arbKey"])
     deployer = SignerOrProvider(deployer_account, arb_provider())
 
-    decimals = get_native_token_decimals(
-        parent_provider=eth_provider(), child_network=local_networks()["l2Network"]
-    )
+    decimals = get_native_token_decimals(parent_provider=eth_provider(), child_network=local_networks()["l2Network"])
 
     tx = {
         "from": deployer.account.address,

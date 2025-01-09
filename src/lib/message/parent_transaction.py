@@ -1,4 +1,4 @@
-from typing import Any, List, Dict
+from typing import Any, Dict, List
 
 from web3.types import TxReceipt
 
@@ -8,13 +8,13 @@ from src.lib.data_entities.event import parse_typed_logs
 from src.lib.data_entities.message import InboxMessageKind
 from src.lib.data_entities.networks import get_arbitrum_network
 from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+from src.lib.message.message_data_parser import SubmitRetryableMessageDataParser
 from src.lib.message.parent_to_child_message import (
     EthDepositMessage,
     ParentToChildMessage,
     ParentToChildMessageReaderClassic,
     ParentToChildMessageStatus,
 )
-from src.lib.message.message_data_parser import SubmitRetryableMessageDataParser
 from src.lib.utils.helper import CaseDict
 from src.lib.utils.lib import is_defined
 
@@ -53,31 +53,29 @@ class ParentTransactionReceipt(CaseDict):
         # All networks except Arbitrum One started with Nitro
         if network.chain_id == 42161:
             return self.block_number < ARB1_NITRO_GENESIS_L1_BLOCK
-        
+
         return False
 
     def get_message_delivered_events(self) -> List[Dict[str, Any]]:
         """Get MessageDelivered events"""
         return parse_typed_logs(
-            contract_name="Bridge", 
+            contract_name="Bridge",
             logs=self.logs,
             event_name="MessageDelivered",
-            
         )
 
     def get_inbox_message_delivered_events(self) -> List[Dict[str, Any]]:
         """Get InboxMessageDelivered events"""
         return parse_typed_logs(
             contract_name="Inbox",
-            logs=self.logs, 
+            logs=self.logs,
             event_name="InboxMessageDelivered",
-            
         )
 
     def get_message_events(self) -> List[Dict[str, Any]]:
         """Get combined message events"""
         bridge_messages = self.get_message_delivered_events()
-        
+
         inbox_messages = self.get_inbox_message_delivered_events()
 
         if len(bridge_messages) != len(inbox_messages):
@@ -94,14 +92,14 @@ class ParentTransactionReceipt(CaseDict):
                 None,
             )
             if not im:
-                raise ArbSdkError(
-                    f"Unexpected missing event for message index: {bm['messageIndex']}."
-                )
+                raise ArbSdkError(f"Unexpected missing event for message index: {bm['messageIndex']}.")
 
-            messages.append({
-                "inboxMessageEvent": im,
-                "bridgeMessageEvent": bm,
-            })
+            messages.append(
+                {
+                    "inboxMessageEvent": im,
+                    "bridgeMessageEvent": bm,
+                }
+            )
 
         return messages
 
@@ -112,7 +110,7 @@ class ParentTransactionReceipt(CaseDict):
 
         for e in messages:
             if e["bridgeMessageEvent"]["kind"] == InboxMessageKind.L1MessageType_ethDeposit.value:
-                eth_deposit_message =  EthDepositMessage.from_event_components(
+                eth_deposit_message = EthDepositMessage.from_event_components(
                     child_provider,
                     e["inboxMessageEvent"]["messageNum"],
                     e["bridgeMessageEvent"]["sender"],
@@ -122,30 +120,23 @@ class ParentTransactionReceipt(CaseDict):
 
         return eth_deposit_messages
 
-    def get_parent_to_child_messages_classic(
-        self, 
-        child_provider
-    ) -> List[ParentToChildMessageReaderClassic]:
+    def get_parent_to_child_messages_classic(self, child_provider) -> List[ParentToChildMessageReaderClassic]:
         """Get classic parent-to-child messages"""
         network = get_arbitrum_network(child_provider)
         chain_id = network.chainId
 
-        is_classic =  self.is_classic(child_provider)
+        is_classic = self.is_classic(child_provider)
 
         if not is_classic:
             raise Exception(
                 "This method is only for classic transactions. "
-                "Use 'getParentToChildMessages' for nitro transactions."
+                "Use 'get_parent_to_child_messages' for nitro transactions."
             )
 
-        message_nums = [
-            msg["messageNum"] 
-            for msg in self.get_inbox_message_delivered_events()
-        ]
+        message_nums = [msg["messageNum"] for msg in self.get_inbox_message_delivered_events()]
 
         return [
-            ParentToChildMessageReaderClassic(child_provider, chain_id, message_num) 
-            for message_num in message_nums
+            ParentToChildMessageReaderClassic(child_provider, chain_id, message_num) for message_num in message_nums
         ]
 
     def get_parent_to_child_messages(self, child_signer_or_provider):
@@ -153,16 +144,16 @@ class ParentTransactionReceipt(CaseDict):
         provider = SignerProviderUtils.get_provider_or_throw(child_signer_or_provider)
         network = get_arbitrum_network(provider)
         chain_id = network.chain_id
-        is_classic =  self.is_classic(provider)
+        is_classic = self.is_classic(provider)
 
         if is_classic:
             raise Exception(
                 "This method is only for nitro transactions. "
-                "Use 'getParentToChildMessagesClassic' for classic transactions."
+                "Use 'get_parent_to_child_messages' for classic transactions."
             )
 
         events = self.get_message_events()
-        
+
         return [
             ParentToChildMessage.from_event_components(
                 child_signer_or_provider,
@@ -174,10 +165,8 @@ class ParentTransactionReceipt(CaseDict):
             )
             for event in events
             if (
-                event["bridgeMessageEvent"]["kind"] == 
-                    InboxMessageKind.L1MessageType_submitRetryableTx.value
-                and event["bridgeMessageEvent"]["inbox"].lower() == 
-                    network.ethBridge.inbox.lower()
+                event["bridgeMessageEvent"]["kind"] == InboxMessageKind.L1MessageType_submitRetryableTx.value
+                and event["bridgeMessageEvent"]["inbox"].lower() == network.ethBridge.inbox.lower()
             )
         ]
 
@@ -187,7 +176,6 @@ class ParentTransactionReceipt(CaseDict):
             contract_name="L1ERC20Gateway",
             logs=self.logs,
             event_name="DepositInitiated",
-            
         )
 
     @staticmethod
@@ -204,35 +192,36 @@ class ParentTransactionReceipt(CaseDict):
     def monkey_patch_contract_call_wait(tx_receipt):
         """Add contract call wait functionality"""
         return ParentContractCallTransactionReceipt(tx_receipt)
-    
+
+
 class ParentEthDepositTransactionReceipt(ParentTransactionReceipt):
     """
     A ParentTransactionReceipt with additional functionality that only exists
     if the transaction created a single ETH deposit.
     """
+
     def wait_for_child_transaction_receipt(
         self,
         child_provider,
         confirmations=None,
         timeout=None,
     ):
-        
         """
         Wait for the funds to arrive on the child chain.
-        
+
         Args:
             child_provider: Provider for child chain
             confirmations: Number of confirmations needed
             timeout: Timeout in milliseconds
-            
+
         Returns:
             Dict containing complete status, message and child transaction receipt
         """
-        message = ( self.get_eth_deposits(child_provider))[0]
+        message = (self.get_eth_deposits(child_provider))[0]
         if not message:
             raise ArbSdkError("Unexpected missing Eth Deposit message.")
 
-        result =  message.wait(confirmations, timeout)
+        result = message.wait(confirmations, timeout)
         return {
             "complete": is_defined(result),
             "childTxReceipt": result,
@@ -246,6 +235,7 @@ class ParentContractCallTransactionReceipt(ParentTransactionReceipt):
     if the transaction created a single call to a child chain contract - this includes
     token deposits.
     """
+
     def wait_for_child_transaction_receipt(
         self,
         child_signer_or_provider,
@@ -254,21 +244,21 @@ class ParentContractCallTransactionReceipt(ParentTransactionReceipt):
     ):
         """
         Wait for the transaction to arrive and be executed on the child chain.
-        
+
         Args:
             child_signer_or_provider: Signer or provider for child chain
             confirmations: Number of confirmations needed
             timeout: Timeout in milliseconds
-            
+
         Returns:
             Dict containing complete status, message and operation result
         """
-        messages =  self.get_parent_to_child_messages(child_signer_or_provider)
+        messages = self.get_parent_to_child_messages(child_signer_or_provider)
         if not messages or len(messages) == 0:
             raise ArbSdkError("Unexpected missing Parent-to-child message.")
-            
+
         message = messages[0]
-        result =  message.wait_for_status(confirmations, timeout)
+        result = message.wait_for_status(confirmations, timeout)
 
         return {
             "complete": result["status"] == ParentToChildMessageStatus.REDEEMED,
@@ -280,7 +270,7 @@ class ParentContractCallTransactionReceipt(ParentTransactionReceipt):
 # Optional helper types for better type hints
 class ParentContractTransaction:
     """Base class for parent contract transactions"""
-    
+
     def wait(self, confirmations=None) -> ParentTransactionReceipt:
         """Wait for transaction confirmation"""
         raise NotImplementedError()
@@ -288,7 +278,7 @@ class ParentContractTransaction:
 
 class ParentEthDepositTransaction(ParentContractTransaction):
     """Parent ETH deposit transaction"""
-    
+
     def wait(self, confirmations=None) -> ParentEthDepositTransactionReceipt:
         """Wait for ETH deposit confirmation"""
         raise NotImplementedError()
@@ -296,7 +286,7 @@ class ParentEthDepositTransaction(ParentContractTransaction):
 
 class ParentContractCallTransaction(ParentContractTransaction):
     """Parent contract call transaction"""
-    
+
     def wait(self, confirmations=None) -> ParentContractCallTransactionReceipt:
         """Wait for contract call confirmation"""
         raise NotImplementedError()

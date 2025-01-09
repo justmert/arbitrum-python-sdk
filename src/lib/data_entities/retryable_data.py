@@ -9,7 +9,7 @@ class RetryableData:
     Python representation of the TypeScript `RetryableData` interface.
 
     This structure is often embedded in revert data when calling `createRetryableTicket`
-    on `Inbox.sol` with special triggering parameters. 
+    on `Inbox.sol` with special triggering parameters.
     It contains the info needed to reconstruct a retryable ticket on Arbitrum.
     """
 
@@ -24,7 +24,7 @@ class RetryableData:
         "address",  # callValueRefundAddress
         "uint256",  # gasLimit
         "uint256",  # maxFeePerGas
-        "bytes",    # data
+        "bytes",  # data
     ]
 
     def __init__(
@@ -70,7 +70,7 @@ class RetryableDataTools:
     Allows capturing the parameters from an Ethers.js error or raw revert data.
     """
 
-    # Values that, when passed to createRetryableTicket, will intentionally 
+    # Values that, when passed to createRetryableTicket, will intentionally
     # revert and embed the RetryableData struct in the revert data.
     ErrorTriggeringParams = {
         "gasLimit": 1,
@@ -81,9 +81,9 @@ class RetryableDataTools:
     def try_parse_error(error_data_hex: str):
         """
         Attempt to parse a RetryableData struct from the given hex string.
-        The caller is expected to supply the revert data from a transaction 
+        The caller is expected to supply the revert data from a transaction
         that reverts with `error RetryableData(...)`.
-        
+
         :param error_data_hex: The raw revert data as a hex string (with or without '0x' prefix).
         :return: A CaseDict containing the fields, or None if parsing fails.
         """
@@ -104,18 +104,20 @@ class RetryableDataTools:
 
             # Build a dictionary that matches the TS 'RetryableData' shape
             # Use checksummed addresses for 'from', 'to', etc.
-            return CaseDict({
-                "from": Web3.to_checksum_address(decoded_data[0]),
-                "to": Web3.to_checksum_address(decoded_data[1]),
-                "l2CallValue": decoded_data[2],
-                "deposit": decoded_data[3],
-                "maxSubmissionCost": decoded_data[4],
-                "excessFeeRefundAddress": Web3.to_checksum_address(decoded_data[5]),
-                "callValueRefundAddress": Web3.to_checksum_address(decoded_data[6]),
-                "gasLimit": decoded_data[7],
-                "maxFeePerGas": decoded_data[8],
-                "data": decoded_data[9],   # bytes
-            })
+            return CaseDict(
+                {
+                    "from": Web3.to_checksum_address(decoded_data[0]),
+                    "to": Web3.to_checksum_address(decoded_data[1]),
+                    "l2CallValue": decoded_data[2],
+                    "deposit": decoded_data[3],
+                    "maxSubmissionCost": decoded_data[4],
+                    "excessFeeRefundAddress": Web3.to_checksum_address(decoded_data[5]),
+                    "callValueRefundAddress": Web3.to_checksum_address(decoded_data[6]),
+                    "gasLimit": decoded_data[7],
+                    "maxFeePerGas": decoded_data[8],
+                    "data": decoded_data[9],  # bytes
+                }
+            )
         except Exception:
             # Return None if we fail to decode
             return None

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from web3 import Account, HTTPProvider, Web3
+
 # from web3.middleware import geth_poa_middleware
 from web3.middleware import construct_sign_and_send_raw_middleware, geth_poa_middleware
 
@@ -32,6 +33,7 @@ from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
     is_arbitrum_network_with_custom_fee_token,
 )
 
+
 def setup_testing_env():
     """Setup test environment with bridgers and networks"""
     eth_provider = Web3(HTTPProvider(config["ethUrl"]))
@@ -40,26 +42,20 @@ def setup_testing_env():
     eth_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
     arb_provider.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-
     parent_deployer = SignerOrProvider(get_signer(eth_provider, config["ethKey"]), eth_provider)
     child_deployer = SignerOrProvider(get_signer(arb_provider, config["arbKey"]), arb_provider)
-    
+
     seed = Account.create()
     signer_private_key = seed.key.hex()
     signer_account = Account.from_key(signer_private_key)
 
     eth_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
-    
+
     arb_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(signer_account))
 
     # Add signing middleware
-    eth_provider.middleware_onion.add(
-        construct_sign_and_send_raw_middleware(config["ethKey"])
-    )
-    arb_provider.middleware_onion.add(
-        construct_sign_and_send_raw_middleware(config["arbKey"])
-    )
-
+    eth_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(config["ethKey"]))
+    arb_provider.middleware_onion.add(construct_sign_and_send_raw_middleware(config["arbKey"]))
 
     parent_signer = SignerOrProvider(signer_account, eth_provider)
     child_signer = SignerOrProvider(signer_account, arb_provider)
@@ -81,9 +77,9 @@ def setup_testing_env():
 
     # Handle custom fee token setup if needed
     if is_arbitrum_network_with_custom_fee_token():
-         fund_parent_signer(parent_signer)
-         fund_parent_custom_fee_token(parent_signer)
-         approve_parent_custom_fee_token(parent_signer)
+        fund_parent_signer(parent_signer)
+        fund_parent_custom_fee_token(parent_signer)
+        approve_parent_custom_fee_token(parent_signer)
 
     return CaseDict(
         {
@@ -100,4 +96,3 @@ def setup_testing_env():
             "childDeployer": child_deployer,
         }
     )
-    

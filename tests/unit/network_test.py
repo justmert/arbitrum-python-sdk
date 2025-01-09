@@ -1,20 +1,18 @@
 import pytest
+
 from src.lib.data_entities.constants import ADDRESS_ZERO
+from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import (
     dict_to_arbitrum_network_instance,
-    reset_networks_to_default,
-    register_custom_arbitrum_network,
     get_arbitrum_network,
     get_arbitrum_networks,
     get_children_for_network,
-    is_parent_network,
     get_multicall_address,
     is_arbitrum_network_native_token_ether,
-    ArbitrumNetwork,
+    is_parent_network,
+    register_custom_arbitrum_network,
+    reset_networks_to_default,
 )
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.networks import EthBridge
 
 ETHEREUM_MAINNET_CHAIN_ID = 1
 ARBITRUM_ONE_CHAIN_ID = 42161
@@ -103,7 +101,7 @@ class TestNetworks:
 
     class TestReturnsCorrectNetworks:
         def test_returns_correct_arbitrum_networks(self):
-            
+
             arbitrum_network_ids = [n.chain_id for n in get_arbitrum_networks()]
             expected = [42161, 42170, 421614]
 
@@ -149,49 +147,51 @@ class TestNetworks:
 
     class TestGetMulticallAddress:
         def test_returns_correct_value_for_ethereum_mainnet(self):
-            multicall =  get_multicall_address(1)
+            multicall = get_multicall_address(1)
             assert multicall == "0x5ba1e12693dc8f9c48aad8770482f4739beed696"
 
         def test_returns_correct_value_for_arbitrum_one(self):
-            multicall =  get_multicall_address(42161)
+            multicall = get_multicall_address(42161)
             assert multicall == "0x842eC2c7D803033Edf55E478F461FC547Bc54EB2"
 
         def test_returns_correct_value_for_arbitrum_nova(self):
-            multicall =  get_multicall_address(42170)
+            multicall = get_multicall_address(42170)
             assert multicall == "0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86"
 
         def test_returns_correct_value_for_sepolia(self):
-            multicall =  get_multicall_address(11155111)
+            multicall = get_multicall_address(11155111)
             assert multicall == "0xded9AD2E65F3c4315745dD915Dbe0A4Df61b2320"
 
         def test_returns_correct_value_for_arbitrum_sepolia(self):
-            multicall =  get_multicall_address(421614)
+            multicall = get_multicall_address(421614)
             assert multicall == "0xA115146782b7143fAdB3065D86eACB54c169d092"
 
 
 class TestIsArbitrumNetworkNativeTokenEther:
-    test_network = dict_to_arbitrum_network_instance({
-        "name": "Test Network Undefined",
-        "chain_id": 123456,
-        "parent_chain_id": 1,
-        "eth_bridge": {
-            "bridge": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            "inbox": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            "sequencer_inbox": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            "outbox": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            "rollup": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            "classic_outboxes": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        },
-        "token_bridge": None,
-        "confirm_period_blocks": 10000,
-        "is_custom": True,
-        "teleporter": None,
-        "is_testnet": True,
-        "explorer_url": None,
-        "retryable_lifetime_seconds": 604800,
-        "native_token": None,  # Undefined nativeToken
-        "is_bold": False,
-    })
+    test_network = dict_to_arbitrum_network_instance(
+        {
+            "name": "Test Network Undefined",
+            "chain_id": 123456,
+            "parent_chain_id": 1,
+            "eth_bridge": {
+                "bridge": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "inbox": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "sequencer_inbox": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "outbox": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "rollup": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "classic_outboxes": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            },
+            "token_bridge": None,
+            "confirm_period_blocks": 10000,
+            "is_custom": True,
+            "teleporter": None,
+            "is_testnet": True,
+            "explorer_url": None,
+            "retryable_lifetime_seconds": 604800,
+            "native_token": None,  # Undefined nativeToken
+            "is_bold": False,
+        }
+    )
 
     def test_returns_true_when_native_token_is_undefined(self):
         self.test_network.nativeToken = None

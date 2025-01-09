@@ -8,10 +8,11 @@ from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import create_contract_instance, load_contract
 
+
 class MultiCaller:
     """
-    Python equivalent of the TypeScript `MultiCaller` class. 
-    Uses a 'Multicall2' contract to perform batch calls on chain 
+    Python equivalent of the TypeScript `MultiCaller` class.
+    Uses a 'Multicall2' contract to perform batch calls on chain
     and decode the results.
     """
 
@@ -36,18 +37,18 @@ class MultiCaller:
     @staticmethod
     def from_provider(provider: Union[Web3, SignerOrProvider, ArbitrumProvider]) -> "MultiCaller":
         """
-        Creates a MultiCaller by looking up the Multicall2 address 
+        Creates a MultiCaller by looking up the Multicall2 address
         for the chain to which `provider` is connected.
 
         :param provider: A Web3, SignerOrProvider, or ArbitrumProvider
         :return: A new MultiCaller instance
         """
-        multicall_addr =  get_multicall_address(provider)
+        multicall_addr = get_multicall_address(provider)
         return MultiCaller(provider, multicall_addr)
 
     def get_block_number_input(self) -> Dict[str, Any]:
         """
-        Returns a structured call input for retrieving the current block number 
+        Returns a structured call input for retrieving the current block number
         from Multicall2.
 
         :return: A dict with 'targetAddr', 'encoder', 'decoder'
@@ -56,7 +57,6 @@ class MultiCaller:
             # provider=self.provider,
             contract_name="Multicall2",
             # address=self.address,
-            
         )
 
         return {
@@ -67,7 +67,7 @@ class MultiCaller:
 
     def get_current_block_timestamp_input(self) -> Dict[str, Any]:
         """
-        Returns a structured call input for retrieving the current block timestamp 
+        Returns a structured call input for retrieving the current block timestamp
         from Multicall2.
 
         :return: A dict with 'targetAddr', 'encoder', 'decoder'
@@ -76,7 +76,6 @@ class MultiCaller:
             # provider=self.provider,
             contract_name="Multicall2",
             # address=self.address,
-            
         )
         return {
             "targetAddr": self.address,
@@ -86,7 +85,7 @@ class MultiCaller:
 
     def multi_call(self, params: List[Dict[str, Any]], require_success: bool = False) -> List[Any]:
         """
-        Execute a batch of calls against the multicall contract. 
+        Execute a batch of calls against the multicall contract.
         Each item in 'params' should contain:
          - 'targetAddr': The address to call
          - 'encoder': A function returning the encoded call data
@@ -100,25 +99,18 @@ class MultiCaller:
             provider=self.provider,
             contract_name="Multicall2",
             address=self.address,
-            
         )
 
         # Build the array of calls
         calls = []
         for p in params:
-            calls.append({
-                "target": p["targetAddr"],
-                "callData": p["encoder"]()
-            })
+            calls.append({"target": p["targetAddr"], "callData": p["encoder"]()})
 
         # tryAggregate(bool requireSuccess, Call[] calls) returns (bool success, bytes returnData)[]
-        outputs = multi_call_contract.functions.tryAggregate(
-            require_success,
-            calls
-        ).call()
+        outputs = multi_call_contract.functions.tryAggregate(require_success, calls).call()
 
         decoded_results = []
-        for ((success, return_data), p) in zip(outputs, params):
+        for (success, return_data), p in zip(outputs, params):
             if success and return_data and return_data != "0x":
                 decoded_results.append(p["decoder"](return_data))
             else:
@@ -128,11 +120,11 @@ class MultiCaller:
 
     def get_token_data(self, erc20_addresses: List[str], options: dict = None) -> List[dict]:
         """
-        Retrieves token info (balanceOf, allowance, symbol, decimals, name) 
+        Retrieves token info (balanceOf, allowance, symbol, decimals, name)
         for each address in erc20_addresses, according to 'options'.
 
         :param erc20_addresses: List of token addresses
-        :param options: A dictionary specifying which fields to retrieve, e.g. 
+        :param options: A dictionary specifying which fields to retrieve, e.g.
             { "balanceOf": { "account": "0x..." }, "allowance": {"owner": "0x...","spender": "0x..."},"symbol":True,"decimals":True,"name":True }
         :return: A list of dicts where each dict has the results for that token in the same order as erc20_addresses
         """
@@ -142,7 +134,7 @@ class MultiCaller:
 
         # We'll gather input calls, then decode them in batch
         contract = create_contract_instance("ERC20")
-        
+
         inputs: List[Dict[str, Any]] = []
 
         # For each token, for each option we want, create a call
@@ -166,7 +158,7 @@ class MultiCaller:
             if options.get("name"):
                 inputs.append(self._make_call_input(contract, address, "name", []))
 
-        results =  self.multi_call(inputs)
+        results = self.multi_call(inputs)
 
         # Re-chunk results by token
         token_info_list = []
@@ -174,31 +166,30 @@ class MultiCaller:
         for _ in erc20_addresses:
             token_info = {}
             if "balanceOf" in options:
-                token_info["balance"] = results[idx]; idx += 1
+                token_info["balance"] = results[idx]
+                idx += 1
             if "allowance" in options:
-                token_info["allowance"] = results[idx]; idx += 1
+                token_info["allowance"] = results[idx]
+                idx += 1
             if options.get("symbol"):
-                token_info["symbol"] = results[idx]; idx += 1
+                token_info["symbol"] = results[idx]
+                idx += 1
             if options.get("decimals"):
-                token_info["decimals"] = results[idx]; idx += 1
+                token_info["decimals"] = results[idx]
+                idx += 1
             if options.get("name"):
-                token_info["name"] = results[idx]; idx += 1
+                token_info["name"] = results[idx]
+                idx += 1
             token_info_list.append(token_info)
 
         return token_info_list
 
-    def _make_call_input(
-        self,
-        contract,
-        target_addr: str,
-        method_name: str,
-        args: List[Any]
-    ) -> Dict[str, Any]:
+    def _make_call_input(self, contract, target_addr: str, method_name: str, args: List[Any]) -> Dict[str, Any]:
         """
         Helper to build a single call input dict for multiCall.
         """
         return {
             "targetAddr": target_addr,
             "encoder": lambda: contract.encodeABI(fn_name=method_name, args=args),
-            "decoder": lambda return_data: contract.decode_function_input(method_name, return_data)[1]
+            "decoder": lambda return_data: contract.decode_function_input(method_name, return_data)[1],
         }
