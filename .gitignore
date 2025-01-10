@@ -16,4 +16,12 @@ arbitrum_py.egg-info/
 arbitrum_sdk.egg-info/
 arbitrumpy.egg-info/
 .gitignore
+example.py
+generate_md.py
+generate_mypy_report.py
+monkeytype.sqlite3
+monkeytype_config.py
+mypy_report.md
+python_files_content.md
+test_script.py
 

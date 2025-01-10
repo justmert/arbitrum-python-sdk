@@ -1,23 +1,37 @@
+from typing import Any, Dict, List, Optional, Tuple, Union, cast, TypeVar, Iterator
 import json
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union, cast
-
 import rlp
 from eth.vm.forks.arrow_glacier.transactions import (
     ArrowGlacierTransactionBuilder as TransactionBuilder,
 )
-from eth_typing import Address, HexStr
+from eth_typing import Address, HexStr, Hash32, HexAddress, ChecksumAddress, BlockNumber
 from eth_utils import encode_hex
 from hexbytes import HexBytes
 from web3 import Web3
 from web3.contract import Contract
-from web3.types import ABI, AccessList, Nonce, Wei
+from web3.types import ABI, AccessList, Nonce, Wei, TxParams, TxData, TxReceipt, BlockData
 
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
 
+T = TypeVar('T')
 
-def format_contract_output(contract, function_name, output):
+def format_contract_output(contract: Contract, function_name: str, output: Any) -> Union[Dict[str, Any], Any]:
+    """
+    Format contract function output according to ABI specification.
+    
+    Args:
+        contract: Web3 Contract instance
+        function_name: Name of the function to format output for
+        output: Raw output from contract function call
+        
+    Returns:
+        Formatted output according to ABI specification
+        
+    Raises:
+        ValueError: If function not found in contract ABI
+    """
     func_abi = next(
         (item for item in contract.abi if item.get("name") == function_name and item.get("type") == "function"),
         None,
@@ -25,22 +39,23 @@ def format_contract_output(contract, function_name, output):
     if not func_abi:
         raise ValueError(f"Function {function_name} not found in contract ABI")
 
-    def format_output(abi_outputs, output_values):
+    def format_output(abi_outputs: List[Dict[str, Any]], output_values: Any) -> Union[Dict[str, Any], Any]:
         if not isinstance(abi_outputs, list) or not abi_outputs:
             return output_values
-        if len(abi_outputs) == 1 and abi_outputs[0].get("type").startswith("tuple") and not abi_outputs[0].get("name"):
+        if len(abi_outputs) == 1 and abi_outputs[0].get("type", "").startswith("tuple") and not abi_outputs[0].get("name"):
             return format_output(abi_outputs[0].get("components", []), output_values)
 
-        formatted_output = {}
+        formatted_output: Dict[str, Any] = {}
         for i, output in enumerate(abi_outputs):
-            output_type = output.get("type")
+            output_type = output.get("type", "")
             output_name = output.get("name", f"output_{i}")
 
-            if output_type.startswith("tuple"):
-                if isinstance(output_values, list) or isinstance(output_values, tuple):
-                    formatted_output[output_name] = format_output(output.get("components", []), output_values[i])
-                else:
-                    formatted_output[output_name] = format_output(output.get("components", []), output_values)
+            if output_type == "tuple":
+                formatted_output[output_name] = format_output(output.get("components", []), output_values[i])
+            elif output_type == "tuple[]":
+                formatted_output[output_name] = [
+                    format_output(output.get("components", []), item) for item in output_values[i]
+                ]
             else:
                 formatted_output[output_name] = output_values[i]
 
@@ -49,53 +64,48 @@ def format_contract_output(contract, function_name, output):
     return format_output(func_abi.get("outputs", []), output)
 
 
-def to_checksum_address(address):
+def to_checksum_address(address: Union[str, HexAddress]) -> ChecksumAddress:
     if Web3.is_address(address):
         return Web3.to_checksum_address(address)
     else:
         raise ValueError(f"Invalid Ethereum address: {address}")
 
 
-def parse_raw_tx_pyevm(raw_tx):
+def parse_raw_tx_pyevm(raw_tx: bytes) -> TransactionBuilder:
     return TransactionBuilder().decode(raw_tx)
 
 
-def get_contract_address(sender_address, nonce):
+def get_contract_address(sender_address: Union[str, HexAddress], nonce: Nonce) -> ChecksumAddress:
     """Compute the contract address like Ethereum does."""
     encoded_data = rlp.encode([bytes.fromhex(sender_address[2:]), nonce])
     hashed_data = Web3.solidity_keccak(["bytes"], [encoded_data])
     contract_address = hashed_data[-20:].hex()
-    return contract_address
+    return Web3.to_checksum_address(contract_address)
 
 
-def parse_raw_tx(raw_tx):
+def parse_raw_tx(raw_tx: bytes) -> TxReceipt:
     tx = parse_raw_tx_pyevm(raw_tx)
-    return {
-        "accessList": cast(AccessList, tx.access_list),
-        "blockHash": None,
-        "blockNumber": None,
-        "chainId": tx.chain_id,
-        "data": HexBytes(Web3.to_hex(tx.data)),
+    receipt: TxReceipt = {
+        "blockHash": HexBytes(""),
+        "blockNumber": cast(BlockNumber, 0),
+        "contractAddress": None,
+        "cumulativeGasUsed": 0,
+        "effectiveGasPrice": cast(Wei, 0),
         "from": Web3.to_checksum_address(encode_hex(tx.sender)),
-        "gas": tx.gas,
-        "gasPrice": None if tx.type_id is not None else cast(Wei, tx.gas_price),
-        "maxFeePerGas": cast(Wei, tx.max_fee_per_gas),
-        "maxPriorityFeePerGas": cast(Wei, tx.max_priority_fee_per_gas),
-        "hash": HexBytes(tx.hash),
-        "input": None,
-        "nonce": cast(Nonce, tx.nonce),
-        "r": HexBytes(tx.r),
-        "s": HexBytes(tx.s),
+        "gasUsed": 0,
+        "logs": [],
+        "logsBloom": HexBytes(""),
+        "root": None,
+        "status": 1,
         "to": (
             Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
             if (tx.to.hex() == "0x" or tx.to.hex() == "")
             else Web3.to_checksum_address(tx.to)
         ),
-        "transactionIndex": None,
-        "type": tx.type_id,
-        "v": None,
-        "value": cast(Wei, tx.value),
+        "transactionHash": HexBytes(tx.hash),
+        "transactionIndex": 0,
     }
+    return receipt
 
 
 class ContractLoadError(Exception):
@@ -104,7 +114,7 @@ class ContractLoadError(Exception):
     pass
 
 
-def get_normalized_provider(provider: Union[Web3, SignerOrProvider, ArbitrumProvider]) -> Web3:
+def get_normalized_provider(provider: Union[Web3, SignerOrProvider, ArbitrumProvider]) -> Optional[Web3]:
     """Normalize different provider types to Web3 instance"""
     if isinstance(provider, SignerOrProvider):
         return provider.provider
@@ -145,13 +155,13 @@ def load_contract_data(contract_name: str) -> Tuple[ABI, Optional[HexStr]]:
     return abi, bytecode
 
 
-def normalize_contract_address(address: Union[str, Contract, Address]) -> Address:
+def normalize_contract_address(address: Union[str, Contract, Address]) -> ChecksumAddress:
     """Convert various address formats to checksum address"""
     if isinstance(address, str):
         return Web3.to_checksum_address(address)
     elif isinstance(address, Contract):
         return Web3.to_checksum_address(address.address)
-    return address
+    return Web3.to_checksum_address(address)
 
 
 def create_contract_instance(contract_name: str) -> Contract:
@@ -206,7 +216,7 @@ def deploy_abi_contract(
     provider: Union[Web3, SignerOrProvider],
     deployer: SignerOrProvider,
     contract_name: str,
-    constructor_args: List[Any] = None,
+    constructor_args: Optional[List[Any]] = None,
     **tx_params: Any,
 ) -> Contract:
     """
@@ -246,12 +256,12 @@ def deploy_abi_contract(
         raise ContractLoadError(f"Contract deployment failed: {str(e)}") from e
 
 
-def is_contract_deployed(provider, address):
+def is_contract_deployed(provider: Web3, address: Union[str, HexAddress]) -> bool:
     bytecode = provider.eth.get_code(Web3.to_checksum_address(address))
     return bytecode != "0x" and len(bytecode) > 2
 
 
-def sign_and_sent_raw_transaction(signer, tx):
+def sign_and_sent_raw_transaction(signer: SignerOrProvider, tx: TxData) -> TxReceipt:
     if "gasPrice" not in tx:
         if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
             pass
@@ -279,27 +289,24 @@ def sign_and_sent_raw_transaction(signer, tx):
 
 class CaseDict:
 
-    SPECIAL_CASES = {
+    SPECIAL_CASES: Dict[str, str] = {
         "erc20": "Erc20",
     }
 
-    def __init__(self, x):
+    def __init__(self, x: Dict[str, Any]) -> None:
         for key, value in x.items():
             self.__setitem__(key, value)
 
-    def __setitem__(self, key, value):
-        # for special_key, special_value in self.SPECIAL_CASES.items():
-        #     if special_key in key:
-        #         key = key.replace(special_key, special_value)
+    def __setitem__(self, key: str, value: Any) -> None:
         self.__setattr__(key, value)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         try:
             return getattr(self, key)
         except AttributeError:
             raise KeyError(key)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         try:
             return super().__getattribute__(name)
         except AttributeError:
@@ -313,7 +320,7 @@ class CaseDict:
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     @classmethod
-    def snake_to_camel(cls, name):
+    def snake_to_camel(cls, name: str) -> str:
         components = name.split("_")
         result = components[0]  # First component stays lowercase
         # Process remaining components
@@ -326,7 +333,7 @@ class CaseDict:
         return result
 
     @classmethod
-    def camel_to_snake(cls, name):
+    def camel_to_snake(cls, name: str) -> str:
         # First handle special cases
         for camel, snake in CaseDict.SPECIAL_CASES.items():
             name = name.replace(camel, snake)
@@ -342,22 +349,22 @@ class CaseDict:
 
         return snake_case
 
-    def get(self, key, default=None):
+    def get(self, key: str, default: Optional[T] = None) -> Optional[T]:
         return getattr(self, key, default)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self.__dict__)
 
-    def keys(self):
-        return self.__dict__.keys()
+    def keys(self) -> List[str]:
+        return list(self.__dict__.keys())
 
-    def items(self):
-        return self.__dict__.items()
+    def items(self) -> List[Tuple[str, Any]]:
+        return list(self.__dict__.items())
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         return key in self.__dict__
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         if isinstance(value, dict):
             value = CaseDict(value)
         elif isinstance(value, list):
@@ -365,21 +372,21 @@ class CaseDict:
         camel_case_name = self.snake_to_camel(name)
         super().__setattr__(camel_case_name, value)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.to_dict())
 
-    def convert_to_serializable(self, value):
+    def convert_to_serializable(self, value: Any) -> Any:
         return self._convert_value(value)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         """Convert CaseDict to a regular dict for JSON serialization"""
-        result = {}
+        result: Dict[str, Any] = {}
         for k, v in self.__dict__.items():
             if not k.startswith("_"):
                 result[k] = self._convert_value(v)
         return result
 
-    def _convert_value(self, value):
+    def _convert_value(self, value: Any) -> Any:
         """Helper method to convert values for serialization"""
         if isinstance(value, CaseDict):
             return value.to_dict()
@@ -394,7 +401,7 @@ class CaseDict:
 
 
 class CaseDictEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, CaseDict):
             return obj.to_dict()
         elif hasattr(obj, "hex"):  # Handle Web3 types

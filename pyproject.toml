@@ -2,6 +2,11 @@
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "arbitrum_sdk"
+version = "0.1.0"
+description = "Arbitrum Python SDK"
+
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true
@@ -16,6 +21,8 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [
