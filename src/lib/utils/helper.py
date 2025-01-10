@@ -72,7 +72,7 @@ def to_checksum_address(address: Union[str, HexAddress]) -> ChecksumAddress:
         raise ValueError(f"Invalid Ethereum address: {address}")
 
 
-def parse_raw_tx_pyevm(raw_tx: bytes) -> TransactionBuilder:
+def parse_raw_tx_pyevm(raw_tx):
     return TransactionBuilder().decode(raw_tx)
 
 
@@ -83,48 +83,34 @@ def get_contract_address(sender_address: Union[str, HexAddress], nonce: Nonce) -
     contract_address = hashed_data[-20:].hex()
     return Web3.to_checksum_address(contract_address)
 
-
-class RawTxReceipt(TypedDict):
-    blockHash: HexBytes
-    blockNumber: BlockNumber
-    contractAddress: Optional[ChecksumAddress]
-    cumulativeGasUsed: int
-    effectiveGasPrice: Wei
-    from_: ChecksumAddress
-    gasUsed: int
-    logs: List[Any]
-    logsBloom: HexBytes
-    root: Optional[HexStr]
-    status: int
-    to: ChecksumAddress
-    transactionHash: HexBytes
-    transactionIndex: int
-
-def parse_raw_tx(raw_tx: bytes) -> RawTxReceipt:
+def parse_raw_tx(raw_tx):
     tx = parse_raw_tx_pyevm(raw_tx)
-    tx_dict = tx.as_dict()
-    
-    receipt: RawTxReceipt = {
-        "blockHash": HexBytes(""),
-        "blockNumber": cast(BlockNumber, 0),
-        "contractAddress": None,
-        "cumulativeGasUsed": 0,
-        "effectiveGasPrice": cast(Wei, 0),
-        "from_": Web3.to_checksum_address(encode_hex(tx_dict["sender"])),
-        "gasUsed": 0,
-        "logs": [],
-        "logsBloom": HexBytes(""),
-        "root": cast(HexStr, ""),
-        "status": 1,
+    return {
+        "accessList": cast(AccessList, tx.access_list),
+        "blockHash": None,
+        "blockNumber": None,
+        "chainId": tx.chain_id,
+        "data": HexBytes(Web3.to_hex(tx.data)),
+        "from": Web3.to_checksum_address(encode_hex(tx.sender)),
+        "gas": tx.gas,
+        "gasPrice": None if tx.type_id is not None else cast(Wei, tx.gas_price),
+        "maxFeePerGas": cast(Wei, tx.max_fee_per_gas),
+        "maxPriorityFeePerGas": cast(Wei, tx.max_priority_fee_per_gas),
+        "hash": HexBytes(tx.hash),
+        "input": None,
+        "nonce": cast(Nonce, tx.nonce),
+        "r": HexBytes(tx.r),
+        "s": HexBytes(tx.s),
         "to": (
             Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
-            if (not tx_dict.get("to") or tx_dict["to"] == b"")
-            else Web3.to_checksum_address(encode_hex(tx_dict["to"]))
+            if (tx.to.hex() == "0x" or tx.to.hex() == "")
+            else Web3.to_checksum_address(tx.to)
         ),
-        "transactionHash": HexBytes(tx_dict["hash"]),
-        "transactionIndex": 0,
+        "transactionIndex": None,
+        "type": tx.type_id,
+        "v": None,
+        "value": cast(Wei, tx.value),
     }
-    return receipt
 
 
 class ContractLoadError(Exception):
@@ -138,7 +124,9 @@ def get_normalized_provider(provider: Union[Web3, SignerOrProvider, ArbitrumProv
     if isinstance(provider, SignerOrProvider):
         return provider.provider
     elif isinstance(provider, ArbitrumProvider):
-        return provider._provider
+        return provider.provider
+    elif isinstance(provider, Web3):
+        return provider
     return provider
 
 
@@ -247,9 +235,7 @@ def deploy_abi_contract(
     if web3_provider is None:
         raise ContractLoadError("No valid provider found")
 
-    if not deployer.account:
-        raise ContractLoadError("No deployer account found")
-    deployer_address = deployer.account.address
+    deployer_address = deployer.account.address if isinstance(deployer, SignerOrProvider) else deployer.address
 
     abi, bytecode = load_contract_data(contract_name)
     if not bytecode:
