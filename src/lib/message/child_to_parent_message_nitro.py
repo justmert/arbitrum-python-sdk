@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from eth_typing import BlockNumber
 from web3 import Web3
@@ -27,19 +27,45 @@ child_block_cache_lock = threading.Lock()
 
 
 def get_child_block_range_cache_key(child_chain_id: int, l1_block_number: int) -> str:
-    """Create a unique cache key for the child block range lookup."""
+    """
+    Create a unique cache key for the child block range lookup.
+    
+    Args:
+        child_chain_id: The chain ID of the child chain
+        l1_block_number: The L1 block number to create a cache key for
+        
+    Returns:
+        A unique string key combining chain ID and block number
+    """
     return f"{child_chain_id}-{l1_block_number}"
 
 
 def set_child_block_range_cache(key: str, value: List[Optional[int]]) -> None:
-    """Cache the child block range under the given key."""
+    """
+    Cache the child block range under the given key.
+    
+    Args:
+        key: The cache key to store the value under
+        value: The block range values to cache
+    """
     child_block_range_cache[key] = value
 
 
-def get_block_ranges_for_l1_block_with_cache(parent_provider, child_provider, for_l1_block: int):
+def get_block_ranges_for_l1_block_with_cache(
+    parent_provider: Web3,
+    child_provider: Web3,
+    for_l1_block: int
+) -> List[Optional[int]]:
     """
-    Looks up the child block range for a given L1 block, using a shared cache to avoid repeated
-    calls. Corresponds to getBlockRangesForL1BlockWithCache in TS code.
+    Get block ranges for an L1 block using a shared cache to avoid repeated calls.
+    
+    Args:
+        parent_provider: Web3 provider instance for the parent chain
+        child_provider: Web3 provider instance for the child chain
+        for_l1_block: The L1 block number to get ranges for
+        
+    Returns:
+        List of block ranges, where each element can be None
     """
     child_chain_id = child_provider.eth.chain_id
     key = get_child_block_range_cache_key(child_chain_id, for_l1_block)
@@ -62,20 +88,35 @@ def get_block_ranges_for_l1_block_with_cache(parent_provider, child_provider, fo
 
 class ChildToParentMessageNitro:
     """
-    Base functionality for 'nitro' child->parent messages, replacing L2ToL1MessageNitro from v3.
+    Base functionality for 'nitro' child->parent messages.
+    
+    This class provides the core functionality for handling messages sent from a child chain
+    to its parent chain in the Arbitrum Nitro protocol.
     """
 
-    def __init__(self, event: dict):
+    def __init__(self, event: dict) -> None:
         """
-        :param event: The ChildToParentTx event dictionary from the child chain
+        Initialize a new ChildToParentMessageNitro instance.
+        
+        Args:
+            event: The ChildToParentTx event dictionary from the child chain
         """
         self.event = event
 
     @classmethod
-    def from_event(cls, parent_signer_or_provider, event, parent_provider=None):
+    def from_event(cls, parent_signer_or_provider: Web3, 
+                  event: dict, 
+                  parent_provider: Optional[Web3] = None) -> Union['ChildToParentMessageReaderNitro', 'ChildToParentMessageWriterNitro']:
         """
-        Create either ChildToParentMessageReaderNitro or ChildToParentMessageWriterNitro
-        depending on whether the passed-in object is a Signer or a Provider.
+        Create a message reader or writer based on the provided signer/provider.
+        
+        Args:
+            parent_signer_or_provider: Signer or provider for the parent chain
+            event: The event data containing message details
+            parent_provider: Optional override provider for the parent chain
+            
+        Returns:
+            Either a reader or writer instance based on input type
         """
         if SignerProviderUtils.is_signer(parent_signer_or_provider):
             return ChildToParentMessageWriterNitro(parent_signer_or_provider, event, parent_provider)
@@ -84,15 +125,24 @@ class ChildToParentMessageNitro:
 
     @staticmethod
     def get_child_to_parent_events(
-        child_provider,
+        child_provider: Web3,
         filter_dict: dict,
-        position=None,
-        destination=None,
-        hash=None,
-    ):
+        position: Optional[int] = None,
+        destination: Optional[str] = None,
+        hash: Optional[str] = None
+    ) -> List[dict]:
         """
-        Fetch Child->Parent events (formerly L2->L1) from the child chain.
-        This parallels 'getL2ToL1Events' in the TS code but now named getChildToParentEvents.
+        Fetch Child->Parent events from the child chain.
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+            filter_dict: Dictionary containing filter parameters (fromBlock, toBlock)
+            position: Optional position to filter events by
+            destination: Optional destination address to filter events by
+            hash: Optional hash to filter events by
+            
+        Returns:
+            List of matching event dictionaries
         """
         event_fetcher = EventFetcher(child_provider)
 
@@ -136,6 +186,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     def get_outbox_proof(self, child_provider):
         """
         Equivalent to getOutboxProof in the TS code. Constructs a proof to execute the message.
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+        
+        Returns:
+            The outbox proof
         """
         send_props = self.get_send_props(child_provider)
         send_root_size = send_props.get("sendRootSize", None)
@@ -164,6 +220,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     def has_executed(self, child_provider) -> bool:
         """
         Checks if the message is already executed by calling Outbox.isSpent(position).
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+        
+        Returns:
+            Whether the message has been executed
         """
         child_chain = get_arbitrum_network(child_provider)
         outbox_contract = load_contract(
@@ -176,6 +238,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     def status(self, child_provider) -> ChildToParentMessageStatus:
         """
         Returns the status of this message (UNCONFIRMED, CONFIRMED, or EXECUTED).
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+        
+        Returns:
+            The status of the message
         """
         send_props = self.get_send_props(child_provider)
         if not send_props.get("sendRootConfirmed"):
@@ -189,6 +257,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         For a classic RollupUserLogic NodeCreated event.
         Replaces parseNodeCreatedAssertion from TS code.
+        
+        Args:
+            fetched_event: The event data
+        
+        Returns:
+            The parsed assertion data
         """
         return {
             "afterState": {
@@ -201,6 +275,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         For a BoldRollupUserLogic AssertionCreated event (BoLD).
         Replaces parseAssertionCreatedEvent from TS code.
+        
+        Args:
+            fetched_event: The event data
+        
+        Returns:
+            The parsed assertion data
         """
         # Both NodeCreated and AssertionCreated have similar structure. BoLD has an 'assertionHash'.
         return {
@@ -214,6 +294,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         Distinguishes between NodeCreated (legacy) vs. AssertionCreated (BoLD).
         In TS, we look for 'event.challengeManager != undefined'.
+        
+        Args:
+            fetched_event: The event data
+        
+        Returns:
+            Whether the event is an AssertionCreated log
         """
         # We'll look for 'assertionHash' or 'challengeManager' or do a simpler check here:
         return "assertionHash" in fetched_event["event"]
@@ -221,12 +307,19 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     def get_block_from_assertion_log(self, child_provider, fetched_event=None):
         """
         Merges logic from getBlockFromNodeLog + getBlockFromAssertionLog in TS.
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+            fetched_event: The event data
+        
+        Returns:
+            The block data
         """
-        arbitrum_provider = ArbitrumProvider(child_provider)
+        arbitrum_provider = child_provider
 
         if not fetched_event:
             # If no logs found, default block 0
-            return arbitrum_provider.get_block(0)
+            return arbitrum_provider.eth.get_block(0)
 
         if self.is_assertion_created_log(fetched_event):
             parsed = self.parse_assertion_created_event(fetched_event)
@@ -236,7 +329,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         block_hash = parsed["afterState"]["blockHash"]
         send_root = parsed["afterState"]["sendRoot"]
 
-        child_block = arbitrum_provider.get_block(block_hash)
+        child_block = arbitrum_provider.eth.get_block(block_hash)
         if not child_block:
             raise ArbSdkError(f"Block not found. {block_hash}")
 
@@ -250,6 +343,14 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         Merges getBlockFromNodeNum with the BoLD path using getAssertion.
         In TS, we do rollup.getNode(...) vs rollup.getAssertion(...).
+        
+        Args:
+            rollup_contract: The rollup contract instance
+            assertion_id: The assertion ID
+            child_provider: Web3 provider for the child chain
+        
+        Returns:
+            The block data
         """
         # Distinguish whether this is a 'BoldRollupUserLogic' by trying a call
         # But in Python, we might just try to call .extraChallengeTimeBlocks() and catch.
@@ -354,6 +455,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     def get_batch_number(self, child_provider) -> Optional[int]:
         """
         findBatchContainingBlock parallels TS logic, but might fail if the block doesn't exist yet.
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+        
+        Returns:
+            The batch number
         """
         if self.l1_batch_number is None:
             try:
@@ -372,6 +479,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         Merges logic from getSendProps in TS: checks whether the node is confirmed or not.
         If so, we store sendRootSize, sendRootHash, sendRootConfirmed, etc.
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+        
+        Returns:
+            The send properties
         """
         if not self.send_root_confirmed:
             child_chain = get_arbitrum_network(child_provider)
@@ -419,28 +532,42 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
 
     def wait_until_ready_to_execute(
         self,
-        child_provider,
-        retry_delay=1000,
+        child_provider: Web3,
+        retry_delay: int = 1000,
     ) -> ChildToParentMessageStatus:
         """
         Wait repeatedly until the outbox entry (assertion) is confirmed, so the message can be executed.
-        Like waitUntilReadyToExecute in TS code.
+        
+        Warning:
+            This operation may take a very long time (1 week+) as outbox entries
+            are only created when the corresponding node is confirmed.
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+            retry_delay: Milliseconds to wait between status checks
+            
+        Returns:
+            Final message status (either EXECUTED or CONFIRMED)
         """
         while True:
             current_status = self.status(child_provider)
-            if current_status in (
-                ChildToParentMessageStatus.CONFIRMED,
-                ChildToParentMessageStatus.EXECUTED,
-            ):
+            if current_status in [ChildToParentMessageStatus.EXECUTED, ChildToParentMessageStatus.CONFIRMED]:
                 return current_status
 
-            time.sleep(retry_delay / 1000.0)  # Convert milliseconds to seconds
+            # Sleep for the specified delay (converting ms to seconds)
+            time.sleep(retry_delay / 1000.0)
 
     def get_first_executable_block(self, child_provider) -> Optional[BlockNumber]:
         """
         getFirstExecutableBlock from the TS code:
         - If message can be or is already executed, return None
         - Otherwise, find the earliest block in which it can be executed
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+        
+        Returns:
+            The first executable block number
         """
         child_chain = get_arbitrum_network(child_provider)
         rollup_contract = load_contract(
@@ -533,6 +660,13 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
         """
         Executes the Child->Parent message on the parent chain once the outbox entry is confirmed.
         Throws if message is not yet CONFIRMED.
+        
+        Args:
+            child_provider: Web3 provider for the child chain
+            overrides: Optional transaction overrides
+        
+        Returns:
+            The transaction receipt
         """
         current_status = self.status(child_provider)
         if current_status != ChildToParentMessageStatus.CONFIRMED:

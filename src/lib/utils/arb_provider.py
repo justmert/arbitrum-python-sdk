@@ -1,25 +1,41 @@
+from typing import Dict, Union, Optional, Any
+
 from src.lib.data_entities.rpc import (
     ArbBlock,
     ArbBlockWithTransactions,
     ArbTransactionReceipt,
 )
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from web3.eth import eth
 
 
 class ArbFormatter:
     """
-    A Python equivalent of the Arbitrum-specific Formatter in TypeScript.
-    Provides methods for formatting blocks and receipts to include
-    Arbitrum-specific fields (e.g. sendRoot, sendCount, l1BlockNumber).
+    A formatter class for Arbitrum-specific data structures.
+
+    This class provides methods for formatting blocks and transaction receipts
+    to include Arbitrum-specific fields. It is the Python equivalent of the
+    TypeScript ArbFormatter class.
+
+    The formatter handles the following Arbitrum-specific fields:
+        - sendRoot: Hash of the send root
+        - sendCount: Number of messages sent
+        - l1BlockNumber: L1 block number reference
+        - gasUsedForL1: Gas used for L1 posting (in receipts)
     """
 
-    def receipt(self, value: dict) -> ArbTransactionReceipt:
+    def receipt(self, value: Dict[str, Any]) -> ArbTransactionReceipt:
         """
-        Convert a raw transaction receipt dict into an ArbTransactionReceipt with
-        extra Arbitrum fields (l1BlockNumber, gasUsedForL1).
+        Format a raw transaction receipt into an ArbTransactionReceipt.
+
+        Adds Arbitrum-specific fields to the standard transaction receipt:
+        - l1BlockNumber: The referenced L1 block number
+        - gasUsedForL1: Amount of gas used for L1 posting
 
         :param value: Raw receipt data from a node
-        :return: ArbTransactionReceipt with additional fields
+        :type value: Dict[str, Any]
+        :return: Formatted receipt with Arbitrum-specific fields
+        :rtype: ArbTransactionReceipt
         """
         formatted_value = {
             **value,
@@ -28,13 +44,19 @@ class ArbFormatter:
         }
         return ArbTransactionReceipt(**formatted_value)
 
-    def block(self, block: dict) -> ArbBlock:
+    def block(self, block: Dict[str, Any]) -> ArbBlock:
         """
-        Convert a raw block dict into an ArbBlock including
-        Arbitrum fields (sendRoot, sendCount, l1BlockNumber).
+        Format a raw block into an ArbBlock.
 
-        :param block: Raw block data
-        :return: ArbBlock
+        Adds Arbitrum-specific fields to the standard block:
+        - sendRoot: Hash of the send root
+        - sendCount: Number of messages sent
+        - l1BlockNumber: Referenced L1 block number
+
+        :param block: Raw block data from the node
+        :type block: Dict[str, Any]
+        :return: Formatted block with Arbitrum-specific fields
+        :rtype: ArbBlock
         """
         formatted_block = {
             **block,
@@ -44,13 +66,17 @@ class ArbFormatter:
         }
         return ArbBlock(**formatted_block)
 
-    def block_with_transactions(self, block: dict) -> ArbBlockWithTransactions:
+    def block_with_transactions(self, block: Dict[str, Any]) -> ArbBlockWithTransactions:
         """
-        Convert raw block data (with transactions) into an ArbBlockWithTransactions
-        containing extra Arbitrum fields.
+        Format a raw block (including full transactions) into an ArbBlockWithTransactions.
 
-        :param block: Raw block data including transactions
-        :return: ArbBlockWithTransactions
+        Similar to block(), but includes complete transaction objects rather than
+        just transaction hashes.
+
+        :param block: Raw block data including full transaction objects
+        :type block: Dict[str, Any]
+        :return: Formatted block with transactions and Arbitrum-specific fields
+        :rtype: ArbBlockWithTransactions
         """
         formatted_block = {
             **block,
@@ -61,18 +87,22 @@ class ArbFormatter:
         return ArbBlockWithTransactions(**formatted_block)
 
 
+
 class ArbitrumProvider:
     """
-    Python equivalent of the TypeScript `ArbitrumProvider extends Web3Provider`.
-    This class wraps a standard Web3 provider but returns Arbitrum-formatted
-    blocks and receipts (ArbBlock, ArbTransactionReceipt, etc.).
+    An Arbitrum-aware provider that wraps a Web3 provider.
+
+    This class extends the functionality of a standard Web3 provider to handle
+    Arbitrum-specific data structures and formatting. It automatically formats
+    blocks and receipts to include Arbitrum-specific fields.
+
+    :param provider: The underlying provider to wrap
+    :type provider: Union[SignerOrProvider, 'ArbitrumProvider', Any]
+    :param network: Optional network configuration (currently unused)
+    :type network: Optional[Any]
     """
 
-    def __init__(self, provider, network=None):
-        """
-        :param provider: Could be a raw Web3 object, or a SignerOrProvider, or another ArbitrumProvider
-        :param network: Optional network info (unused in this simplified version)
-        """
+    def __init__(self, provider: Union[SignerOrProvider, 'ArbitrumProvider', Any], network: Optional[Any] = None):
         if isinstance(provider, SignerOrProvider):
             provider = provider.provider
         elif isinstance(provider, ArbitrumProvider):
@@ -82,37 +112,47 @@ class ArbitrumProvider:
         self.formatter = ArbFormatter()
 
     @property
-    def provider(self):
+    def provider(self) -> Any:
+        """
+        Get the underlying provider instance.
+
+        :return: The wrapped provider instance
+        :rtype: Any
+        """
         return self._provider
 
     def get_transaction_receipt(self, transaction_hash: str) -> ArbTransactionReceipt:
         """
-        Get a transaction receipt from the underlying provider,
-        then format it to an ArbTransactionReceipt.
+        Get and format a transaction receipt with Arbitrum-specific fields.
 
-        :param transaction_hash: The tx hash to fetch
-        :return: ArbTransactionReceipt with Arbitrum fields
+        :param transaction_hash: The transaction hash to fetch
+        :type transaction_hash: str
+        :return: Transaction receipt with Arbitrum-specific fields
+        :rtype: ArbTransactionReceipt
         """
         receipt = self._provider.eth.get_transaction_receipt(transaction_hash)
         return self.formatter.receipt(receipt)
 
-    def get_block_with_transactions(self, block_identifier) -> ArbBlockWithTransactions:
+    def get_block_with_transactions(self, block_identifier: Union[str, int]) -> ArbBlockWithTransactions:
         """
-        Get a block by number or hash, including full transaction objects,
-        then format it to ArbBlockWithTransactions.
+        Get and format a block (including transactions) with Arbitrum-specific fields.
 
-        :param block_identifier: e.g. 'latest', a block number, or a block hash
-        :return: ArbBlockWithTransactions including Arbitrum fields
+        :param block_identifier: Block identifier (number, hash, or tag like 'latest')
+        :type block_identifier: Union[str, int]
+        :return: Block with full transactions and Arbitrum-specific fields
+        :rtype: ArbBlockWithTransactions
         """
         block = self._provider.eth.get_block(block_identifier, full_transactions=True)
         return self.formatter.block_with_transactions(block)
 
-    def get_block(self, block_identifier) -> ArbBlock:
+    def get_block(self, block_identifier: Union[str, int]) -> ArbBlock:
         """
-        Get a block by number or hash, then format it to ArbBlock.
+        Get and format a block with Arbitrum-specific fields.
 
-        :param block_identifier: e.g. 'latest', a block number, or a block hash
-        :return: ArbBlock including Arbitrum fields
+        :param block_identifier: Block identifier (number, hash, or tag like 'latest')
+        :type block_identifier: Union[str, int]
+        :return: Block with Arbitrum-specific fields
+        :rtype: ArbBlock
         """
         block = self._provider.eth.get_block(block_identifier)
         return self.formatter.block(block)

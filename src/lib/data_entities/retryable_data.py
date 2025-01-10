@@ -1,20 +1,33 @@
+from typing import Optional, Dict, Any, List
+
 from eth_abi import abi
+from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from src.lib.utils.helper import CaseDict
 
 
 class RetryableData:
-    """
-    Python representation of the TypeScript `RetryableData` interface.
+    """Represents a retryable ticket's data structure on Arbitrum.
 
-    This structure is often embedded in revert data when calling `createRetryableTicket`
-    on `Inbox.sol` with special triggering parameters.
-    It contains the info needed to reconstruct a retryable ticket on Arbitrum.
+    This class mirrors the RetryableData error struct from Inbox.sol and contains
+    all parameters needed to create or estimate a retryable ticket transaction.
+
+    Attributes:
+        fromAddress (HexAddress): The L1 address creating the retryable ticket
+        to (HexAddress): Destination address on L2
+        l2CallValue (int): The amount of ETH (or token) supplied on L2
+        deposit (int): The total deposit on L1 covering L2 gas + L2 call value
+        maxSubmissionCost (int): The base submission fee for sending the message
+        excessFeeRefundAddress (HexAddress): L2 address for any leftover gas funds
+        callValueRefundAddress (HexAddress): L2 address for leftover callValue if canceled
+        gasLimit (int): The L2 gas limit for execution
+        maxFeePerGas (int): The max L2 gas price
+        data (bytes): The calldata for the L2 contract call
     """
 
     # Types expected in the custom error's signature, in order
-    abi_types = [
+    abi_types: List[str] = [
         "address",  # from
         "address",  # to
         "uint256",  # l2CallValue
@@ -29,28 +42,30 @@ class RetryableData:
 
     def __init__(
         self,
-        from_address: str,
-        to: str,
+        from_address: HexAddress,
+        to: HexAddress,
         l2_call_value: int,
         deposit: int,
         max_submission_cost: int,
-        excess_fee_refund_address: str,
-        call_value_refund_address: str,
+        excess_fee_refund_address: HexAddress,
+        call_value_refund_address: HexAddress,
         gas_limit: int,
         max_fee_per_gas: int,
         data: bytes,
-    ):
-        """
-        :param from_address: The L1 address creating the retryable ticket
-        :param to: Destination address on L2
-        :param l2_call_value: The amount of ETH (or token) supplied on L2
-        :param deposit: The total deposit on L1 covering L2 gas + L2 call value
-        :param max_submission_cost: The base submission fee for sending the message
-        :param excess_fee_refund_address: L2 address for any leftover gas funds
-        :param call_value_refund_address: L2 address for leftover callValue if canceled
-        :param gas_limit: The L2 gas limit for execution
-        :param max_fee_per_gas: The max L2 gas price
-        :param data: The calldata (bytes) for the L2 contract call
+    ) -> None:
+        """Initialize a new RetryableData instance.
+
+        Args:
+            from_address: The L1 address creating the retryable ticket
+            to: Destination address on L2
+            l2_call_value: The amount of ETH (or token) supplied on L2
+            deposit: The total deposit on L1 covering L2 gas + L2 call value
+            max_submission_cost: The base submission fee for sending the message
+            excess_fee_refund_address: L2 address for any leftover gas funds
+            call_value_refund_address: L2 address for leftover callValue if canceled
+            gas_limit: The L2 gas limit for execution
+            max_fee_per_gas: The max L2 gas price
+            data: The calldata for the L2 contract call
         """
         self.fromAddress = from_address
         self.to = to
@@ -65,27 +80,56 @@ class RetryableData:
 
 
 class RetryableDataTools:
-    """
-    Tools for parsing or triggering a revert that contains `RetryableData`.
-    Allows capturing the parameters from an Ethers.js error or raw revert data.
+    """Tools for parsing retryable data from revert errors.
+
+    When calling createRetryableTicket on Inbox.sol, special values can be passed
+    for gasLimit and maxFeePerGas. This causes the call to revert with the info
+    needed to estimate the gas needed for a retryable ticket.
+
+    Attributes:
+        ErrorTriggeringParams (Dict[str, int]): Parameters that should be passed
+            to createRetryableTicket to induce a revert with retryable data.
+            Contains gasLimit=1 and maxFeePerGas=1.
     """
 
-    # Values that, when passed to createRetryableTicket, will intentionally
-    # revert and embed the RetryableData struct in the revert data.
-    ErrorTriggeringParams = {
+    ErrorTriggeringParams: Dict[str, int] = {
         "gasLimit": 1,
         "maxFeePerGas": 1,
     }
 
     @staticmethod
-    def try_parse_error(error_data_hex: str):
-        """
-        Attempt to parse a RetryableData struct from the given hex string.
-        The caller is expected to supply the revert data from a transaction
-        that reverts with `error RetryableData(...)`.
+    def try_parse_error(error_data_hex: HexStr) -> Optional[CaseDict]:
+        """Parse RetryableData struct from revert error data.
 
-        :param error_data_hex: The raw revert data as a hex string (with or without '0x' prefix).
-        :return: A CaseDict containing the fields, or None if parsing fails.
+        Attempts to parse a RetryableData struct from the given hex string.
+        The input should be the revert data from a transaction that reverts
+        with `error RetryableData(...)`.
+
+        Args:
+            error_data_hex: The raw revert data as a hex string (with or
+                without '0x' prefix)
+
+        Returns:
+            A CaseDict containing the parsed RetryableData fields if successful,
+            or None if parsing fails. The returned dict will have the following
+            fields:
+                - from (HexAddress): The L1 sender address
+                - to (HexAddress): The L2 destination address
+                - l2CallValue (int): Amount of ETH/tokens for L2
+                - deposit (int): Total L1 deposit amount
+                - maxSubmissionCost (int): Base submission fee
+                - excessFeeRefundAddress (HexAddress): Refund address for excess gas
+                - callValueRefundAddress (HexAddress): Refund address for call value
+                - gasLimit (int): L2 gas limit
+                - maxFeePerGas (int): Max L2 gas price
+                - data (bytes): L2 call data
+
+        Example:
+            >>> error_data = "0x..."  # Revert data from failed tx
+            >>> retryable = RetryableDataTools.try_parse_error(error_data)
+            >>> if retryable:
+            ...     print(f"L2 destination: {retryable['to']}")
+            ...     print(f"Gas limit: {retryable['gasLimit']}")
         """
         try:
             # Ensure we strip '0x' if present

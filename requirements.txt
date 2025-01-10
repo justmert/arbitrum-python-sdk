@@ -11,3 +11,5 @@ pyyaml==6.0.1
 mock==5.1.0
 addict==2.4.0
 py-evm==0.8.0b1
+mypy==1.8.0
+types-setuptools

@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+from web3.types import TxReceipt
 
 from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
@@ -10,31 +11,65 @@ from src.lib.utils.helper import CaseDict, load_contract
 
 
 class RedeemTransaction:
-    """A redeemable transaction with wait functionality"""
+    """A redeemable transaction with wait functionality.
 
-    def __init__(self, transaction, child_provider):
+    A transaction that can be redeemed on the Arbitrum chain.
+    Provides methods to wait for both transaction confirmation and redeem completion.
+
+    Args:
+        transaction: The transaction object
+        child_provider: The provider instance for child chain operations
+    """
+
+    def __init__(self, transaction: Dict[str, Any], child_provider: Any) -> None:
         self.transaction = transaction
         self.child_provider = child_provider
 
-    def wait(self):
-        """Wait for transaction confirmation"""
+    def wait(self) -> Dict[str, Any]:
+        """Wait for transaction confirmation.
+
+        Returns:
+            The transaction receipt
+        """
         return self.transaction
 
-    def wait_for_redeem(self):
-        """Wait for redeem completion"""
+    def wait_for_redeem(self) -> TxReceipt:
+        """Wait for redeem completion and return the transaction receipt.
+
+        This method waits for the redeem transaction to complete and returns the receipt
+        of the redemption transaction.
+
+        Returns:
+            The transaction receipt of the redeem transaction
+
+        Raises:
+            ArbSdkError: If the transaction is not a valid redeem transaction
+        """
         child_receipt = ChildTransactionReceipt(self.transaction)
         redeem_scheduled_events = child_receipt.get_redeem_scheduled_events()
 
         if len(redeem_scheduled_events) != 1:
-            raise ArbSdkError(f"Transaction is not a redeem transaction: {self.transaction.transactionHash}")
+            raise ArbSdkError(
+                f"Transaction is not a redeem transaction: {self.transaction['transactionHash']}"
+            )
 
-        return self.child_provider.eth.get_transaction_receipt(redeem_scheduled_events[0]["retryTxHash"])
+        return self.child_provider.eth.get_transaction_receipt(
+            redeem_scheduled_events[0]["retryTxHash"]
+        )
 
 
 class ChildTransactionReceipt(CaseDict):
-    """Extension of transaction receipt with Arbitrum-specific functionality"""
+    """Extension of transaction receipt with Arbitrum-specific functionality.
 
-    def __init__(self, tx: Dict[str, Any]):
+    This class extends the standard transaction receipt with additional methods
+    specific to Arbitrum chain operations, such as handling child-to-parent messages
+    and batch information.
+
+    Args:
+        tx: The transaction receipt dictionary
+    """
+
+    def __init__(self, tx: Dict[str, Any]) -> None:
         super().__init__(
             {
                 "to": tx.get("to"),
@@ -46,7 +81,7 @@ class ChildTransactionReceipt(CaseDict):
                 "logsBloom": tx.get("logsBloom"),
                 "blockHash": tx.get("blockHash"),
                 "transactionHash": tx.get("transactionHash"),
-                "logs": tx.get("logs"),
+                "logs": tx.get("logs", []),
                 "blockNumber": tx.get("blockNumber"),
                 "confirmations": tx.get("confirmations"),
                 "cumulativeGasUsed": tx.get("cumulativeGasUsed"),
@@ -58,7 +93,13 @@ class ChildTransactionReceipt(CaseDict):
         )
 
     def get_child_to_parent_events(self) -> List[Dict[str, Any]]:
-        """Get child-to-parent transaction events"""
+        """Get child-to-parent transaction events.
+
+        Retrieves both classic and nitro L2-to-L1 transaction events from the logs.
+
+        Returns:
+            List of child-to-parent transaction events
+        """
         classic_logs = parse_typed_logs(
             contract_name="ArbSys",
             logs=self.logs,
@@ -74,21 +115,49 @@ class ChildTransactionReceipt(CaseDict):
         return [*classic_logs, *nitro_logs]
 
     def get_redeem_scheduled_events(self) -> List[Dict[str, Any]]:
-        """Get redeem scheduled events"""
-        return parse_typed_logs(contract_name="ArbRetryableTx", logs=self.logs, event_name="RedeemScheduled")
+        """Get redeem scheduled events from transaction logs.
 
-    def get_child_to_parent_messages(self, parent_signer_or_provider):
-        """Get child-to-parent messages"""
+        Returns:
+            List of redeem scheduled events
+        """
+        return parse_typed_logs(
+            contract_name="ArbRetryableTx",
+            logs=self.logs,
+            event_name="RedeemScheduled"
+        )
+
+    def get_child_to_parent_messages(
+        self, parent_signer_or_provider: Any
+    ) -> List[ChildToParentMessage]:
+        """Get child-to-parent messages from the transaction.
+
+        Args:
+            parent_signer_or_provider: The parent chain signer or provider
+
+        Returns:
+            List of child-to-parent messages
+
+        Raises:
+            ArbSdkError: If signer is not connected to a provider
+        """
         provider = SignerProviderUtils.get_provider(parent_signer_or_provider)
         if not provider:
             raise ArbSdkError("Signer not connected to provider.")
 
         return [
-            ChildToParentMessage.from_event(parent_signer_or_provider, log) for log in self.get_child_to_parent_events()
+            ChildToParentMessage.from_event(parent_signer_or_provider, log)
+            for log in self.get_child_to_parent_events()
         ]
 
-    def get_batch_confirmations(self, child_provider) -> int:
-        """Get batch confirmations on parent chain"""
+    def get_batch_confirmations(self, child_provider: Any) -> int:
+        """Get batch confirmations on parent chain.
+
+        Args:
+            child_provider: The child chain provider
+
+        Returns:
+            Number of confirmations
+        """
         node_interface = load_contract(
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
@@ -96,49 +165,76 @@ class ChildTransactionReceipt(CaseDict):
         )
         return node_interface.functions.getL1Confirmations(self.block_hash).call()
 
-    def get_batch_number(self, child_provider) -> int:
-        """Get the batch number containing this transaction"""
-        arb_provider = ArbitrumProvider(child_provider)
+    def get_batch_number(self, child_provider: Any) -> int:
+        """Get the batch number containing this transaction.
+
+        Args:
+            child_provider: The child chain provider
+
+        Returns:
+            Batch number
+        """
+        arb_provider = child_provider
         node_interface = load_contract(
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
-            provider=arb_provider.provider,
+            provider=arb_provider,
         )
-
-        receipt = arb_provider.get_transaction_receipt(self.transaction_hash)
-        if receipt is None:
-            raise ArbSdkError("No receipt available for current transaction")
+        receipt = arb_provider.eth.get_transaction_receipt(self.transactionHash)
+        if not receipt:
+            raise ArbSdkError("Transaction receipt not found")
 
         return node_interface.functions.findBatchContainingBlock(receipt.blockNumber).call()
 
-    def is_data_available(self, child_provider, confirmations: int = 10) -> bool:
-        """
-        Check if transaction data is available on parent chain
+    def is_data_available(self, child_provider: Any, confirmations: int = 10) -> bool:
+        """Check if transaction data is available on parent chain.
 
         Args:
-            child_provider: Child chain provider
+            child_provider: The child chain provider
             confirmations: Number of required confirmations
 
         Returns:
-            bool: True if data is available
+            True if data is available
         """
         batch_confirmations = self.get_batch_confirmations(child_provider)
         return int(batch_confirmations) > confirmations
 
     @staticmethod
-    def monkey_patch_wait(contract_transaction):
-        """Add wait functionality to contract transaction"""
+    def monkey_patch_wait(contract_transaction: Dict[str, Any]) -> 'ChildTransactionReceipt':
+        """Add wait functionality to contract transaction.
+
+        Args:
+            contract_transaction: The contract transaction
+
+        Returns:
+            The patched transaction receipt
+        """
         return ChildTransactionReceipt(contract_transaction)
 
     @staticmethod
-    def to_redeem_transaction(redeem_tx, child_provider):
-        """Convert to redeemable transaction"""
+    def to_redeem_transaction(redeem_tx: Dict[str, Any], child_provider: Any) -> RedeemTransaction:
+        """Convert to redeemable transaction.
+
+        Args:
+            redeem_tx: The redeem transaction
+            child_provider: The child chain provider
+
+        Returns:
+            The redeem transaction
+        """
         return RedeemTransaction(redeem_tx, child_provider)
 
 
 class ChildContractTransaction:
-    """Base class for child chain contract transactions"""
+    """Base class for child chain contract transactions."""
 
     def wait(self, confirmations: Optional[int] = None) -> ChildTransactionReceipt:
-        """Wait for transaction confirmation"""
+        """Wait for transaction confirmation.
+
+        Args:
+            confirmations: Number of confirmations to wait for
+
+        Returns:
+            The transaction receipt
+        """
         raise NotImplementedError()

@@ -264,7 +264,7 @@ def test_does_call_for_classic_events():
         assert isinstance(err, Exception)
         assert (
             str(err)
-            == "This method is only for nitro transactions. Use 'get_parent_to_child_messages' for classic transactions."
+            == "This method is only for nitro transactions. Use 'get_parent_to_child_messages_classic' for classic transactions."
         )
     finally:
         # Should not successfully get nitro messages

@@ -1,90 +1,110 @@
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar, Optional
 
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.networks import (
     ArbitrumNetwork,
     is_arbitrum_network_native_token_ether,
 )
-from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
+from src.lib.message.parent_transaction import ParentContractTransaction
+from src.lib.message.child_transaction import ChildContractTransaction
+
+DepositParams = TypeVar("DepositParams")
+WithdrawParams = TypeVar("WithdrawParams")
 
 
-class AssetBridger(ABC):
+class AssetBridger(ABC, Generic[DepositParams, WithdrawParams]):
+    """Base class for bridging assets between parent and child chains.
+
+    This abstract base class provides the foundation for implementing asset bridging
+    functionality between parent (L1-like) and child (L2-like) chains in the Arbitrum
+    ecosystem. It handles basic network validation and provides abstract methods for
+    deposit and withdrawal operations.
+
+    Attributes:
+        child_network (ArbitrumNetwork): Network configuration for the child chain
+        native_token (Optional[str]): Address of the native token on the parent chain.
+            - For chains using ETH as native token: None or zero address
+            - For chains using ERC-20 as native token: Address of token on parent chain
     """
-    Base class for bridging assets from a parent chain to a child chain (and back).
-    Replaces the old L1->L2 bridging concept with v4 parent->child terminology.
-    """
 
-    def __init__(self, child_network: ArbitrumNetwork):
+    def __init__(self, child_network: ArbitrumNetwork) -> None:
+        """Initialize the AssetBridger.
+
+        Args:
+            child_network: ArbitrumNetwork instance containing chain configuration
+                including chain IDs and network properties.
+
+        Raises:
+            ArbSdkError: If child_network is invalid or parent chain ID is undefined
         """
-        Initialize the AssetBridger.
-
-        :param child_network: ArbitrumNetwork (v4) instance describing the child chain
-                              (including child_network.chain_id, child_network.parent_chain_id, etc.)
-        :raises ArbSdkError: If the parent chain ID is invalid or undefined
-        """
-
-        child_network["parent_chain_id"]
-
-        if not child_network or not hasattr(child_network, "parent_chain_id"):
+        if not child_network or not hasattr(child_network, "parentChainId"):
             raise ArbSdkError("Invalid or missing child_network object.")
 
         if child_network.parentChainId is None:
             raise ArbSdkError(f"Unknown parent chain ID: {child_network.parentChainId}")
 
         self.child_network = child_network
+        self.native_token: Optional[str] = child_network.nativeToken
 
-        # In v4, child_network may have a .native_token property describing
-        # which token is used as the native currency on this chain (ETH or an ERC-20).
-        self.native_token = child_network.nativeToken
+    def check_parent_network(self, sop: SignerOrProvider) -> None:
+        """Verify the signer/provider matches the parent network.
 
-    def check_parent_network(self, sop):
-        """
-        Checks if the signer/provider matches the parent (L1) network by comparing chain IDs.
-        Throws an exception if it does not match.
+        Args:
+            sop: SignerOrProvider instance for the parent chain
 
-        :param sop: SignerOrProvider instance for the parent chain
-        :raises ArbSdkError: If the network does not match child_network.parent_chain_id
+        Raises:
+            ArbSdkError: If the network does not match child_network.parent_chain_id
         """
         SignerProviderUtils.check_network_matches(sop, self.child_network.parentChainId)
 
-    def check_child_network(self, sop):
-        """
-        Checks if the signer/provider matches the child (L2 or orbit) network by comparing chain IDs.
-        Throws an exception if it does not match.
+    def check_child_network(self, sop: SignerOrProvider) -> None:
+        """Verify the signer/provider matches the child network.
 
-        :param sop: SignerOrProvider instance for the child chain
-        :raises ArbSdkError: If the network does not match child_network.chain_id
+        Args:
+            sop: SignerOrProvider instance for the child chain
+
+        Raises:
+            ArbSdkError: If the network does not match child_network.chain_id
         """
         SignerProviderUtils.check_network_matches(sop, self.child_network.chainId)
 
     @property
     def native_token_is_eth(self) -> bool:
-        """
-        Whether this child network uses ETH as its native token.
-        For some Orbit chains, the native token may be an ERC-20 instead.
+        """Check if the child network uses ETH as its native token.
 
-        :return: True if native token is ETH, False otherwise
+        Returns:
+            bool: True if the native token is ETH, False if it's an ERC-20 token
         """
         return is_arbitrum_network_native_token_ether(self.child_network)
 
     @abstractmethod
-    def deposit(self, params):
-        """
-        Transfer assets from the parent chain to the child chain.
+    def deposit(self, params: DepositParams) -> ParentContractTransaction:
+        """Transfer assets from parent chain to child chain.
 
-        :param params: A dictionary or object specifying deposit parameters (e.g., token address, amount)
-        :return: Typically a ParentContractTransaction (analogous to L1ContractTransaction in old code)
-        :raises ArbSdkError: If any checks fail or transaction reverts
+        Args:
+            params: Parameters required for the deposit operation
+
+        Returns:
+            ParentContractTransaction: Transaction object for the deposit
+
+        Raises:
+            ArbSdkError: If the deposit operation fails
         """
         pass
 
     @abstractmethod
-    def withdraw(self, params):
-        """
-        Transfer assets from the child chain back to the parent chain.
+    def withdraw(self, params: WithdrawParams) -> ChildContractTransaction:
+        """Transfer assets from child chain to parent chain.
 
-        :param params: A dictionary or object specifying withdrawal parameters
-        :return: Typically a ChildContractTransaction (analogous to L2ContractTransaction in old code)
-        :raises ArbSdkError: If any checks fail or transaction reverts
+        Args:
+            params: Parameters required for the withdrawal operation
+
+        Returns:
+            ChildContractTransaction: Transaction object for the withdrawal
+
+        Raises:
+            ArbSdkError: If the withdrawal operation fails
         """
         pass

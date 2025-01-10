@@ -54,7 +54,6 @@ def mine_until_stop(miner: SignerOrProvider, state: Dict[str, bool]) -> None:
         signed_tx = miner.account.sign_transaction(tx)
         tx_hash = miner.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         miner.provider.eth.wait_for_transaction_receipt(tx_hash)
-        time.sleep(15)
 
 
 def withdraw_token(params: Dict[str, Any]) -> None:

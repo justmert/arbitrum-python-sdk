@@ -1,6 +1,7 @@
-from typing import Any, Dict, List
-
+from typing import Any, Dict, List, Optional, Union
+from web3 import Web3
 from web3.types import TxReceipt
+from web3.providers import BaseProvider
 
 from src.lib.data_entities.constants import ARB1_NITRO_GENESIS_L1_BLOCK
 from src.lib.data_entities.errors import ArbSdkError
@@ -20,9 +21,36 @@ from src.lib.utils.lib import is_defined
 
 
 class ParentTransactionReceipt(CaseDict):
-    """A Python equivalent of the TypeScript ParentTransactionReceipt class."""
+    """
+    A transaction receipt for transactions sent on the parent chain.
+    
+    This class represents a transaction receipt with additional functionality specific to
+    parent chain transactions in the Arbitrum ecosystem.
+    
+    Args:
+        tx (TxReceipt): The transaction receipt from web3.py
+        
+    Attributes:
+        to (str): The address the transaction was sent to
+        from_ (str): The address that sent the transaction
+        contractAddress (str): The contract address created, if the transaction was a contract creation
+        transactionIndex (int): Integer of the transaction's index position in the block
+        root (str): The root of the state trie after this transaction
+        gasUsed (int): The amount of gas used by this specific transaction
+        logsBloom (str): The bloom filter for the logs of the block
+        blockHash (str): Hash of the block where this transaction was in
+        transactionHash (str): Hash of the transaction
+        logs (List[Dict]): Array of log objects that this transaction generated
+        blockNumber (int): Block number where this transaction was in
+        confirmations (int): Number of block confirmations
+        cumulativeGasUsed (int): The total amount of gas used when this transaction was executed in the block
+        effectiveGasPrice (int): The actual value per gas deducted from the senders account
+        byzantium (bool): True if block is byzantium hard fork or later
+        type (int): Transaction type
+        status (int): Either 1 (success) or 0 (failure)
+    """
 
-    def __init__(self, tx: TxReceipt):
+    def __init__(self, tx: TxReceipt) -> None:
         super().__init__(
             {
                 "to": tx.get("to"),
@@ -45,8 +73,16 @@ class ParentTransactionReceipt(CaseDict):
             }
         )
 
-    def is_classic(self, child_signer_or_provider):
-        """Check if transaction is classic"""
+    def is_classic(self, child_signer_or_provider: Union[Web3, BaseProvider]) -> bool:
+        """
+        Check if the transaction was processed by the classic Arbitrum system.
+        
+        Args:
+            child_signer_or_provider: The Web3 instance or provider for the child chain
+            
+        Returns:
+            bool: True if the transaction was processed by classic Arbitrum, False otherwise
+        """
         provider = SignerProviderUtils.get_provider_or_throw(child_signer_or_provider)
         network = get_arbitrum_network(provider)
 
@@ -57,7 +93,12 @@ class ParentTransactionReceipt(CaseDict):
         return False
 
     def get_message_delivered_events(self) -> List[Dict[str, Any]]:
-        """Get MessageDelivered events"""
+        """
+        Get MessageDelivered events from the transaction logs.
+        
+        Returns:
+            List[Dict[str, Any]]: List of parsed MessageDelivered events
+        """
         return parse_typed_logs(
             contract_name="Bridge",
             logs=self.logs,
@@ -65,7 +106,12 @@ class ParentTransactionReceipt(CaseDict):
         )
 
     def get_inbox_message_delivered_events(self) -> List[Dict[str, Any]]:
-        """Get InboxMessageDelivered events"""
+        """
+        Get InboxMessageDelivered events from the transaction logs.
+        
+        Returns:
+            List[Dict[str, Any]]: List of parsed InboxMessageDelivered events
+        """
         return parse_typed_logs(
             contract_name="Inbox",
             logs=self.logs,
@@ -73,9 +119,20 @@ class ParentTransactionReceipt(CaseDict):
         )
 
     def get_message_events(self) -> List[Dict[str, Any]]:
-        """Get combined message events"""
+        """
+        Get combined message events from both Bridge and Inbox contracts.
+        
+        This method combines MessageDelivered events from the Bridge contract with
+        InboxMessageDelivered events from the Inbox contract, matching them by message index.
+        
+        Returns:
+            List[Dict[str, Any]]: List of combined message events
+            
+        Raises:
+            ArbSdkError: If there is a mismatch in the number of events or if a matching
+                        event is not found
+        """
         bridge_messages = self.get_message_delivered_events()
-
         inbox_messages = self.get_inbox_message_delivered_events()
 
         if len(bridge_messages) != len(inbox_messages):
@@ -100,11 +157,18 @@ class ParentTransactionReceipt(CaseDict):
                     "bridgeMessageEvent": bm,
                 }
             )
-
         return messages
 
-    def get_eth_deposits(self, child_provider) -> List[EthDepositMessage]:
-        """Get ETH deposit messages"""
+    def get_eth_deposits(self, child_provider: Union[Web3, BaseProvider]) -> List[EthDepositMessage]:
+        """
+        Get ETH deposit messages from the transaction logs.
+        
+        Args:
+            child_provider: The Web3 instance or provider for the child chain
+            
+        Returns:
+            List[EthDepositMessage]: List of ETH deposit messages
+        """
         messages = self.get_message_events()
         eth_deposit_messages = []
 
@@ -120,8 +184,19 @@ class ParentTransactionReceipt(CaseDict):
 
         return eth_deposit_messages
 
-    def get_parent_to_child_messages_classic(self, child_provider) -> List[ParentToChildMessageReaderClassic]:
-        """Get classic parent-to-child messages"""
+    def get_parent_to_child_messages_classic(self, child_provider: Union[Web3, BaseProvider]) -> List[ParentToChildMessageReaderClassic]:
+        """
+        Get classic parent-to-child messages from the transaction logs.
+        
+        Args:
+            child_provider: The Web3 instance or provider for the child chain
+            
+        Returns:
+            List[ParentToChildMessageReaderClassic]: List of classic parent-to-child messages
+            
+        Raises:
+            Exception: If the transaction is not a classic transaction
+        """
         network = get_arbitrum_network(child_provider)
         chain_id = network.chainId
 
@@ -129,8 +204,7 @@ class ParentTransactionReceipt(CaseDict):
 
         if not is_classic:
             raise Exception(
-                "This method is only for classic transactions. "
-                "Use 'get_parent_to_child_messages' for nitro transactions."
+                "This method is only for classic transactions. Use 'get_parent_to_child_messages' for nitro transactions."
             )
 
         message_nums = [msg["messageNum"] for msg in self.get_inbox_message_delivered_events()]
@@ -139,8 +213,19 @@ class ParentTransactionReceipt(CaseDict):
             ParentToChildMessageReaderClassic(child_provider, chain_id, message_num) for message_num in message_nums
         ]
 
-    def get_parent_to_child_messages(self, child_signer_or_provider):
-        """Get parent-to-child messages"""
+    def get_parent_to_child_messages(self, child_signer_or_provider: Union[Web3, BaseProvider]) -> List[ParentToChildMessage]:
+        """
+        Get parent-to-child messages from the transaction logs.
+        
+        Args:
+            child_signer_or_provider: The Web3 instance or provider for the child chain
+            
+        Returns:
+            List[ParentToChildMessage]: List of parent-to-child messages
+            
+        Raises:
+            Exception: If the transaction is not a nitro transaction
+        """
         provider = SignerProviderUtils.get_provider_or_throw(child_signer_or_provider)
         network = get_arbitrum_network(provider)
         chain_id = network.chain_id
@@ -148,8 +233,7 @@ class ParentTransactionReceipt(CaseDict):
 
         if is_classic:
             raise Exception(
-                "This method is only for nitro transactions. "
-                "Use 'get_parent_to_child_messages' for classic transactions."
+                "This method is only for nitro transactions. Use 'get_parent_to_child_messages_classic' for classic transactions."
             )
 
         events = self.get_message_events()
@@ -170,8 +254,13 @@ class ParentTransactionReceipt(CaseDict):
             )
         ]
 
-    def get_token_deposit_events(self):
-        """Get token deposit events"""
+    def get_token_deposit_events(self) -> List[Dict[str, Any]]:
+        """
+        Get token deposit events from the transaction logs.
+        
+        Returns:
+            List[Dict[str, Any]]: List of parsed token deposit events
+        """
         return parse_typed_logs(
             contract_name="L1ERC20Gateway",
             logs=self.logs,
@@ -179,43 +268,77 @@ class ParentTransactionReceipt(CaseDict):
         )
 
     @staticmethod
-    def monkey_patch_wait(contract_transaction):
-        """Add wait functionality to contract transaction"""
+    def monkey_patch_wait(contract_transaction: TxReceipt) -> 'ParentTransactionReceipt':
+        """
+        Add wait functionality to contract transaction.
+        
+        Args:
+            contract_transaction: The contract transaction
+        
+        Returns:
+            ParentTransactionReceipt: The transaction receipt
+        """
         return ParentTransactionReceipt(contract_transaction)
 
     @staticmethod
-    def monkey_patch_eth_deposit_wait(contract_transaction):
-        """Add ETH deposit wait functionality"""
+    def monkey_patch_eth_deposit_wait(contract_transaction: TxReceipt) -> 'ParentEthDepositTransactionReceipt':
+        """
+        Add ETH deposit wait functionality.
+        
+        Args:
+            contract_transaction: The contract transaction
+        
+        Returns:
+            ParentEthDepositTransactionReceipt: The transaction receipt
+        """
         return ParentEthDepositTransactionReceipt(contract_transaction)
 
     @staticmethod
-    def monkey_patch_contract_call_wait(tx_receipt):
-        """Add contract call wait functionality"""
+    def monkey_patch_contract_call_wait(tx_receipt: TxReceipt) -> 'ParentContractCallTransactionReceipt':
+        """
+        Add contract call wait functionality.
+        
+        Args:
+            tx_receipt: The transaction receipt
+        
+        Returns:
+            ParentContractCallTransactionReceipt: The transaction receipt
+        """
         return ParentContractCallTransactionReceipt(tx_receipt)
 
 
 class ParentEthDepositTransactionReceipt(ParentTransactionReceipt):
     """
-    A ParentTransactionReceipt with additional functionality that only exists
-    if the transaction created a single ETH deposit.
+    A transaction receipt for ETH deposits from parent to child chain.
+    
+    This class extends ParentTransactionReceipt with additional functionality specific to
+    ETH deposit transactions.
+    
+    Attributes:
+        complete (bool): Whether the transaction is complete
+        message (EthDepositMessage): The ETH deposit message
     """
 
     def wait_for_child_transaction_receipt(
         self,
-        child_provider,
-        confirmations=None,
-        timeout=None,
-    ):
+        child_provider: Union[Web3, BaseProvider],
+        confirmations: Optional[int] = None,
+        timeout: Optional[int] = None,
+    ) -> Dict[str, Any]:
         """
-        Wait for the funds to arrive on the child chain.
-
+        Wait for the ETH deposit to arrive on the child chain.
+        
         Args:
-            child_provider: Provider for child chain
-            confirmations: Number of confirmations needed
-            timeout: Timeout in milliseconds
-
+            child_provider: The Web3 instance or provider for the child chain
+            confirmations: Number of confirmations to wait for (optional)
+            timeout: Maximum time to wait in milliseconds (optional)
+            
         Returns:
-            Dict containing complete status, message and child transaction receipt
+            Dict[str, Any]: A dictionary containing:
+                - complete (bool): Whether the transaction is complete
+                - message (EthDepositMessage): The ETH deposit message
+                - status (ParentToChildMessageStatus): Current status of the message
+                - childTxReceipt (Optional[TxReceipt]): Receipt of the child transaction if available
         """
         message = (self.get_eth_deposits(child_provider))[0]
         if not message:
@@ -231,27 +354,36 @@ class ParentEthDepositTransactionReceipt(ParentTransactionReceipt):
 
 class ParentContractCallTransactionReceipt(ParentTransactionReceipt):
     """
-    A ParentTransactionReceipt with additional functionality that only exists
-    if the transaction created a single call to a child chain contract - this includes
-    token deposits.
+    A transaction receipt for contract calls from parent to child chain.
+    
+    This class extends ParentTransactionReceipt with additional functionality specific to
+    contract call transactions, including token deposits.
+    
+    Attributes:
+        complete (bool): Whether the transaction is complete
+        message (ParentToChildMessageReaderOrWriter): The parent-to-child message
     """
 
     def wait_for_child_transaction_receipt(
         self,
-        child_signer_or_provider,
-        confirmations=None,
-        timeout=None,
-    ):
+        child_signer_or_provider: Union[Web3, BaseProvider],
+        confirmations: Optional[int] = None,
+        timeout: Optional[int] = None,
+    ) -> Dict[str, Any]:
         """
         Wait for the transaction to arrive and be executed on the child chain.
-
+        
         Args:
-            child_signer_or_provider: Signer or provider for child chain
-            confirmations: Number of confirmations needed
-            timeout: Timeout in milliseconds
-
+            child_signer_or_provider: The Web3 instance or provider for the child chain
+            confirmations: Number of confirmations to wait for (optional)
+            timeout: Maximum time to wait in milliseconds (optional)
+            
         Returns:
-            Dict containing complete status, message and operation result
+            Dict[str, Any]: A dictionary containing:
+                - complete (bool): Whether the transaction is complete
+                - message (ParentToChildMessageReaderOrWriter): The parent-to-child message
+                - status (ParentToChildMessageStatus): Current status of the message
+                - childTxReceipt (Optional[TxReceipt]): Receipt of the child transaction if available
         """
         messages = self.get_parent_to_child_messages(child_signer_or_provider)
         if not messages or len(messages) == 0:
@@ -267,26 +399,61 @@ class ParentContractCallTransactionReceipt(ParentTransactionReceipt):
         }
 
 
-# Optional helper types for better type hints
 class ParentContractTransaction:
-    """Base class for parent contract transactions"""
+    """
+    Base class for parent chain contract transactions.
+    
+    This class provides a common interface for all parent chain transactions.
+    """
 
-    def wait(self, confirmations=None) -> ParentTransactionReceipt:
-        """Wait for transaction confirmation"""
+    def wait(self, confirmations: Optional[int] = None) -> ParentTransactionReceipt:
+        """
+        Wait for transaction confirmation.
+        
+        Args:
+            confirmations: Number of confirmations to wait for (optional)
+            
+        Returns:
+            ParentTransactionReceipt: The transaction receipt
+        """
         raise NotImplementedError()
 
 
 class ParentEthDepositTransaction(ParentContractTransaction):
-    """Parent ETH deposit transaction"""
+    """
+    Parent chain ETH deposit transaction.
+    
+    This class represents a transaction that deposits ETH from the parent chain to the child chain.
+    """
 
-    def wait(self, confirmations=None) -> ParentEthDepositTransactionReceipt:
-        """Wait for ETH deposit confirmation"""
+    def wait(self, confirmations: Optional[int] = None) -> ParentEthDepositTransactionReceipt:
+        """
+        Wait for ETH deposit confirmation.
+        
+        Args:
+            confirmations: Number of confirmations to wait for (optional)
+            
+        Returns:
+            ParentEthDepositTransactionReceipt: The transaction receipt
+        """
         raise NotImplementedError()
 
 
 class ParentContractCallTransaction(ParentContractTransaction):
-    """Parent contract call transaction"""
+    """
+    Parent chain contract call transaction.
+    
+    This class represents a transaction that calls a contract on the child chain from the parent chain.
+    """
 
-    def wait(self, confirmations=None) -> ParentContractCallTransactionReceipt:
-        """Wait for contract call confirmation"""
+    def wait(self, confirmations: Optional[int] = None) -> ParentContractCallTransactionReceipt:
+        """
+        Wait for contract call confirmation.
+        
+        Args:
+            confirmations: Number of confirmations to wait for (optional)
+            
+        Returns:
+            ParentContractCallTransactionReceipt: The transaction receipt
+        """
         raise NotImplementedError()

@@ -12,7 +12,7 @@ class ValidationException(Exception):
 
 
 provider = Web3(HTTPProvider("https://arb1.arbitrum.io/rpc"))
-arb_provider = ArbitrumProvider(provider)
+arb_provider = provider
 
 
 def validate_child_blocks(child_blocks, child_blocks_count, block_type="number"):
@@ -45,11 +45,11 @@ def validate_child_blocks(child_blocks, child_blocks_count, block_type="number")
         is_start_block = index == 0
 
         # Get current block
-        current_block = arb_provider.get_block(child_block)
+        current_block = arb_provider.eth.get_block(child_block)
         blocks.append(current_block)
 
         # Get adjacent block (previous for start block, next for end block)
-        adjacent_block = arb_provider.get_block(child_block + (-1 if is_start_block else 1))
+        adjacent_block = arb_provider.eth.get_block(child_block + (-1 if is_start_block else 1))
         blocks.append(adjacent_block)
 
     # Validate blocks

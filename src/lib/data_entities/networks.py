@@ -1,9 +1,19 @@
+"""Network data entities for Arbitrum SDK.
+
+This module defines the data structures and functions for managing Arbitrum network
+configurations, including core bridge contracts, token bridges, and network metadata.
+
+The module maintains a registry of known Arbitrum networks and provides utilities for
+network management and information retrieval.
+"""
+
 import dataclasses
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union, cast
 
 from eth_typing import HexAddress
 from web3.constants import ADDRESS_ZERO
+from web3.types import Wei
 
 from src.lib.data_entities.constants import (
     ARB1_NITRO_GENESIS_L2_BLOCK,
@@ -15,16 +25,25 @@ from src.lib.data_entities.signer_or_provider import (
     SignerProviderUtils,
 )
 from src.lib.utils.helper import CaseDict, load_contract
+from web3 import Web3
 
-
-T = TypeVar("T")
+T = TypeVar("T", bound="ArbitrumNetwork")
 
 
 @dataclass
 class EthBridge(CaseDict):
-    """
-    Represents the core bridging contracts (ethBridge) on an Arbitrum chain.
-    Usually includes the main 'bridge', 'inbox', 'outbox', 'rollup', etc.
+    """Core bridging contracts for an Arbitrum chain.
+
+    Contains addresses of the fundamental contracts that enable L1<->L2 communication
+    and state verification.
+
+    Attributes:
+        bridge: Main bridge contract for cross-chain messaging
+        inbox: Contract that accepts messages from L1 to L2
+        sequencerInbox: Contract for sequencer's special inbox
+        outbox: Contract for L2->L1 message execution
+        rollup: Core rollup contract managing the chain
+        classicOutboxes: Optional mapping of old outbox addresses to version numbers
     """
 
     bridge: HexAddress
@@ -32,14 +51,31 @@ class EthBridge(CaseDict):
     sequencerInbox: HexAddress
     outbox: HexAddress
     rollup: HexAddress
-    classicOutboxes: Optional[Dict[str, int]] = None
+    classicOutboxes: Optional[Dict[HexAddress, int]] = None
 
 
 @dataclass
 class TokenBridge(CaseDict):
-    """
-    Represents the token bridging contracts.
-    For bridging ERC20 tokens, custom tokens, WETH, etc.
+    """Token bridging contracts for an Arbitrum chain.
+
+    Contains addresses of contracts that enable bridging of various token types
+    between parent and child chains.
+
+    Attributes:
+        parentGatewayRouter: Router on parent chain for token gateway selection
+        childGatewayRouter: Router on child chain for token gateway selection
+        parentErc20Gateway: Standard ERC20 gateway on parent chain
+        childErc20Gateway: Standard ERC20 gateway on child chain
+        parentCustomGateway: Custom token gateway on parent chain
+        childCustomGateway: Custom token gateway on child chain
+        parentWethGateway: WETH gateway on parent chain
+        childWethGateway: WETH gateway on child chain
+        parentWeth: WETH token on parent chain
+        childWeth: WETH token on child chain
+        parentProxyAdmin: Optional proxy admin on parent chain
+        childProxyAdmin: Optional proxy admin on child chain
+        parentMultiCall: Multicall contract on parent chain
+        childMultiCall: Multicall contract on child chain
     """
 
     parentGatewayRouter: HexAddress
@@ -60,9 +96,14 @@ class TokenBridge(CaseDict):
 
 @dataclass
 class Teleporter(CaseDict):
-    """
-    Represents teleporter contracts for bridging cross-chain messages,
-    includes e.g. l2ForwarderFactory addresses, etc.
+    """Teleporter contracts for cross-chain message forwarding.
+
+    Contains addresses of contracts that enable direct message forwarding between
+    chains in the Arbitrum ecosystem.
+
+    Attributes:
+        l1Teleporter: Teleporter contract on L1/parent chain
+        l2ForwarderFactory: Factory for creating message forwarders on L2/child chain
     """
 
     l1Teleporter: HexAddress
@@ -71,9 +112,25 @@ class Teleporter(CaseDict):
 
 @dataclass
 class ArbitrumNetwork(CaseDict):
-    """
-    Represents an Arbitrum chain, either an L2 or further child chain.
-    Contains addresses for bridging, the chain ID, whether it's testnet or custom, etc.
+    """Represents an Arbitrum chain configuration.
+
+    Contains all the information needed to interact with an Arbitrum chain,
+    including bridge contracts, chain identifiers, and network metadata.
+
+    Attributes:
+        name: Name of the chain
+        chainId: Chain ID of this network
+        parentChainId: Chain ID of the parent chain
+        ethBridge: Core bridging contract addresses
+        confirmPeriodBlocks: Challenge window in L1 blocks
+        isCustom: Whether this is a user-registered network
+        tokenBridge: Optional token bridging contract addresses
+        teleporter: Optional teleporter contract addresses
+        isTestnet: Whether this is a testnet
+        explorerUrl: Optional block explorer URL
+        retryableLifetimeSeconds: Optional retryable ticket lifetime
+        nativeToken: Optional native token address (None for ETH)
+        isBold: Optional flag for Bold upgrade status
     """
 
     name: str
@@ -220,19 +277,30 @@ networks[421614] = ArbitrumNetwork(
 
 
 def get_arbitrum_networks() -> List[ArbitrumNetwork]:
-    """
-    Returns all Arbitrum networks registered in the SDK, including default
-    and any custom registrations.
+    """Returns all registered Arbitrum networks.
+
+    Returns a list of all Arbitrum networks known to the SDK, including both
+    default networks and any custom networks registered by the user.
+
+    Returns:
+        List of ArbitrumNetwork objects
     """
     return list(networks.values())
 
 
-def is_parent_network(parent_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> bool:
-    """
-    Determines if a given chain (or chain ID) is a parent of any other chain.
+def is_parent_network(
+    parent_chain_or_chain_id: Union[ArbitrumNetwork, int]
+) -> bool:
+    """Determines if a chain is a parent of any other chain.
 
-    :param parent_chain_or_chain_id: Either an ArbitrumNetwork object or chain ID (int).
-    :return: True if at least one chain references `parent_chain_id` as its parent, else False.
+    A chain is considered a parent if any other chain references it as its
+    parentChainId. The chain could be an L1 or an L2 chain.
+
+    Args:
+        parent_chain_or_chain_id: Either an ArbitrumNetwork object or chain ID
+
+    Returns:
+        True if the chain is a parent of any other chain, False otherwise
     """
     parent_chain_id = (
         parent_chain_or_chain_id.chainId
@@ -242,12 +310,18 @@ def is_parent_network(parent_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> 
     return any(net.parentChainId == parent_chain_id for net in get_arbitrum_networks())
 
 
-def get_children_for_network(parent_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> List[ArbitrumNetwork]:
-    """
-    Returns all child chains that have the specified chain as their parent.
+def get_children_for_network(
+    parent_chain_or_chain_id: Union[ArbitrumNetwork, int]
+) -> List[ArbitrumNetwork]:
+    """Returns all child chains for a given chain.
 
-    :param parent_chain_or_chain_id: Either an ArbitrumNetwork or a chain ID (int).
-    :return: A list of ArbitrumNetwork objects that are children of the given chain.
+    Finds all Arbitrum networks that have the specified chain as their parent.
+
+    Args:
+        parent_chain_or_chain_id: Either an ArbitrumNetwork object or chain ID
+
+    Returns:
+        List of ArbitrumNetwork objects that are children of the given chain
     """
     parent_chain_id = (
         parent_chain_or_chain_id.chainId
@@ -257,15 +331,22 @@ def get_children_for_network(parent_chain_or_chain_id: Union[ArbitrumNetwork, in
     return [c for c in get_arbitrum_networks() if c.parentChainId == parent_chain_id]
 
 
-def get_arbitrum_network(provider_or_chain_id: Union[SignerOrProvider, int]) -> ArbitrumNetwork:
-    """
-    Returns the ArbitrumNetwork associated with the given provider or chain ID.
+def get_arbitrum_network(
+    provider_or_chain_id: Union[SignerOrProvider, Web3, int]
+) -> Union[ArbitrumNetwork, None]:
+    """Returns the Arbitrum network for a provider or chain ID.
 
-    If an int is provided, tries to find a matching chain ID in the pre-registered networks.
-    If a provider is provided, fetches the chain ID from the provider and matches that.
+    If given a chain ID, looks up the network directly. If given a provider,
+    gets the chain ID from the provider first.
 
-    :param provider_or_chain_id: A chain ID (int) or a provider-like (SignerOrProvider).
-    :return: An ArbitrumNetwork matching the chain.
+    Args:
+        provider_or_chain_id: Either a chain ID or a provider/signer
+
+    Returns:
+        The matching ArbitrumNetwork or None if not found
+
+    Raises:
+        ArbSdkError: If the chain is not a recognized Arbitrum chain
     """
     if isinstance(provider_or_chain_id, int):
         return get_arbitrum_network_by_chain_id(provider_or_chain_id)
@@ -274,12 +355,16 @@ def get_arbitrum_network(provider_or_chain_id: Union[SignerOrProvider, int]) -> 
 
 
 def get_arbitrum_network_by_chain_id(chain_id: int) -> ArbitrumNetwork:
-    """
-    Returns an ArbitrumNetwork by its chainId, or raises an error if not recognized.
+    """Returns an Arbitrum network by its chain ID.
 
-    :param chain_id: The chain ID to lookup.
-    :return: The matching ArbitrumNetwork.
-    :raises ArbSdkError: If no network is found for the chainId.
+    Args:
+        chain_id: The chain ID to look up
+
+    Returns:
+        The matching ArbitrumNetwork
+
+    Raises:
+        ArbSdkError: If no network is found for the chain ID
     """
     net = next((n for n in get_arbitrum_networks() if n.chainId == chain_id), None)
     if not net:
@@ -287,26 +372,37 @@ def get_arbitrum_network_by_chain_id(chain_id: int) -> ArbitrumNetwork:
     return net
 
 
-def get_arbitrum_network_by_provider(provider: SignerOrProvider) -> ArbitrumNetwork:
+def get_arbitrum_network_by_provider(
+    provider: Union[SignerOrProvider, Web3]
+) -> ArbitrumNetwork:
+    """Returns an Arbitrum network for a provider.
+
+    Gets the chain ID from the provider and looks up the corresponding network.
+
+    Args:
+        provider: A provider or signer connected to an Arbitrum chain
+
+    Returns:
+        The matching ArbitrumNetwork
+
+    Raises:
+        ArbSdkError: If the provider's chain is not a recognized Arbitrum chain
     """
-    Derives the chain ID from the provider, then looks up the corresponding ArbitrumNetwork.
-
-    :param provider: A SignerOrProvider with a connected chain.
-    :return: The matching ArbitrumNetwork.
-    """
-    provider = SignerProviderUtils.get_provider_or_throw(provider)
-    chain_id = provider.eth.chain_id
-    return get_arbitrum_network_by_chain_id(chain_id)
+    return get_arbitrum_network_by_chain_id(SignerProviderUtils.get_provider_or_throw(provider).eth.chain_id)
 
 
-def get_native_token(bridge: str, provider: SignerOrProvider) -> str:
-    """
-    Attempts to retrieve the 'nativeToken' address from the given bridge contract.
-    If the contract doesn't define 'nativeToken()', returns AddressZero.
+def get_native_token(bridge: str, provider: Union[SignerOrProvider, Web3]) -> HexAddress:
+    """Gets the native token address from a bridge contract.
 
-    :param bridge: The address of the Bridge contract.
-    :param provider: A provider or signer for calling the contract.
-    :return: The native token address or zero address on failure.
+    Attempts to call nativeToken() on the bridge contract. Returns ADDRESS_ZERO
+    if the call fails or the contract doesn't implement the method.
+
+    Args:
+        bridge: Address of the bridge contract
+        provider: Provider for making the contract call
+
+    Returns:
+        The native token address or ADDRESS_ZERO
     """
     try:
         provider = SignerProviderUtils.get_provider_or_throw(provider)
@@ -321,22 +417,26 @@ def get_native_token(bridge: str, provider: SignerOrProvider) -> str:
 
 
 def get_arbitrum_network_information_from_rollup(
-    rollup_address: str, parent_provider: SignerOrProvider
+    rollup_address: str,
+    parent_provider: Union[SignerOrProvider, Web3]
 ) -> Dict[str, Any]:
-    """
-    Retrieves Arbitrum network data from a rollup contract on the parent chain.
+    """Gets network information from a rollup contract.
 
-    :param rollup_address: The address of the Rollup contract on parent chain.
-    :param parent_provider: A signer/provider for that parent chain.
-    :return: A dictionary with keys:
-             {
-               "parentChainId",
-               "confirmPeriodBlocks",
-               "ethBridge": {...},
-               "nativeToken": ...
-             }
+    Fetches core network information by calling various methods on the
+    rollup contract deployed on the parent chain.
+
+    Args:
+        rollup_address: Address of the rollup contract
+        parent_provider: Provider for the parent chain
+
+    Returns:
+        Dict containing:
+            - parentChainId (int)
+            - confirmPeriodBlocks (int)
+            - ethBridge (EthBridge)
+            - nativeToken (str)
     """
-    parent_provider = SignerProviderUtils.get_provider_or_throw(parent_provider)
+    chain_id = SignerProviderUtils.get_provider_or_throw(parent_provider).eth.chain_id
 
     rollup = load_contract(
         provider=parent_provider,
@@ -365,20 +465,27 @@ def get_arbitrum_network_information_from_rollup(
 
 
 def register_custom_arbitrum_network(
-    network: ArbitrumNetwork, options: Optional[Dict[str, bool]] = None
+    network: ArbitrumNetwork,
+    options: Optional[Dict[str, bool]] = None
 ) -> ArbitrumNetwork:
-    """
-    Registers a custom (user-defined) Arbitrum network in the global 'networks' dictionary.
+    """Registers a custom Arbitrum network.
 
-    :param network: The ArbitrumNetwork to register. Must have 'isCustom=True'.
-    :param options: Optionally pass 'throwIfAlreadyRegistered=True' to raise an error
-                    if this chainId is already present.
-    :return: The same ArbitrumNetwork that was registered.
-    :raises ArbSdkError: If 'isCustom' is not True or if chain already exists & throwIfAlreadyRegistered = True.
-    """
-    throw_if_already_registered = options.get("throwIfAlreadyRegistered", False) if options else False
+    Adds a user-defined network to the SDK's network registry. The network
+    must have isCustom=True.
 
-    # If the input is a dictionary, convert it to an ArbitrumNetwork instance
+    Args:
+        network: The ArbitrumNetwork to register
+        options: Optional dict with:
+            - throwIfAlreadyRegistered (bool): If True, raises an error if the
+              network is already registered
+
+    Returns:
+        The registered ArbitrumNetwork
+
+    Raises:
+        ArbSdkError: If network.isCustom is False or if the network is already
+            registered and throwIfAlreadyRegistered is True
+    """
 
     if isinstance(network, dict):
         network = dict_to_arbitrum_network_instance(network)
@@ -390,31 +497,38 @@ def register_custom_arbitrum_network(
         raise ArbSdkError(f"Custom network {network.chainId} must have isCustom flag set to true")
 
     if network.chainId in networks:
-        message = f"Network {network.chainId} already included"
-        if throw_if_already_registered:
-            raise ArbSdkError(message)
+        throw = options.get("throwIfAlreadyRegistered", False) if options else False
+        if throw:
+            raise ArbSdkError(
+                f"Network with chain ID {network.chainId} already registered."
+            )
+        return networks[network.chainId]
 
     networks[network.chainId] = network
     return network
 
 
-def dict_to_arbitrum_network_instance(data: Union[Dict, CaseDict]) -> ArbitrumNetwork:
-    """
-    Convert dictionary or CaseDict to ArbitrumNetwork instance.
-    Handles mixed input types and is case insensitive.
+
+def dict_to_arbitrum_network_instance(
+    data: Union[Dict[str, Any], CaseDict]
+) -> ArbitrumNetwork:
+    """Converts a dictionary to an ArbitrumNetwork instance.
+
+    Creates a properly typed ArbitrumNetwork instance from a dictionary,
+    handling nested objects like EthBridge and TokenBridge.
 
     Args:
         data: Dict or CaseDict containing network data
 
     Returns:
-        ArbitrumNetwork instance
+        An ArbitrumNetwork instance with all fields properly typed
 
     Example:
-        network = dict_to_arbitrum_network_instance({
-            'chainId': 42161,
-            'eth_bridge': {...},
-            'tokenBridge': existing_token_bridge_instance,
-        })
+        >>> network = dict_to_arbitrum_network_instance({
+        ...     'chainId': 42161,
+        ...     'eth_bridge': {...},
+        ...     'tokenBridge': existing_token_bridge_instance,
+        ... })
     """
 
     def convert_to_instance(value: Any, target_class: Type) -> Any:
@@ -452,50 +566,64 @@ def dict_to_arbitrum_network_instance(data: Union[Dict, CaseDict]) -> ArbitrumNe
     return convert_to_instance(data, ArbitrumNetwork)
 
 
-def create_network_state_handler():
-    """
-    Creates a handler to reset networks to an initial default state.
-    Useful for development or testing when you want to revert the 'networks' dict.
-    """
-    initial_state = networks.copy()
+def create_network_state_handler() -> Dict[str, Any]:
+    """Creates a handler for managing network state.
 
-    def reset_networks_to_default():
+    Returns a dictionary containing functions to manage the network registry,
+    particularly useful for testing and development.
+
+    Returns:
+        Dict with:
+            - resetNetworksToDefault: Function to reset networks to initial state
+    """
+    initial_networks = networks.copy()
+
+    def reset_networks_to_default() -> None:
         networks.clear()
-        networks.update(initial_state)
+        networks.update(initial_networks)
 
     return {"resetNetworksToDefault": reset_networks_to_default}
 
 
-def get_nitro_genesis_block(arbitrum_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> int:
-    """
-    Returns the block number where Nitro upgrade began for a given chain.
-    For Arbitrum One, returns ARB1_NITRO_GENESIS_L2_BLOCK; otherwise 0.
+def get_nitro_genesis_block(
+    arbitrum_chain_or_chain_id: Union[ArbitrumNetwork, int]
+) -> int:
+    """Gets the Nitro genesis block for a chain.
 
-    :param arbitrum_chain_or_chain_id: ArbitrumNetwork or chain ID int
-    :return: Nitro genesis block number (e.g. 22207817 for Arbitrum One)
+    Returns the block number where the Nitro upgrade was activated for a chain.
+    For Arbitrum One this is ARB1_NITRO_GENESIS_L2_BLOCK, for others it's 0.
+
+    Args:
+        arbitrum_chain_or_chain_id: Either an ArbitrumNetwork or chain ID
+
+    Returns:
+        The Nitro genesis block number
     """
     chain_id = (
         arbitrum_chain_or_chain_id.chainId
         if isinstance(arbitrum_chain_or_chain_id, ArbitrumNetwork)
         else arbitrum_chain_or_chain_id
     )
-
-    # Only Arbitrum One had a distinct pre-Nitro period;
-    # all others started on Nitro from block 0.
     return ARB1_NITRO_GENESIS_L2_BLOCK if chain_id == 42161 else 0
 
 
-def get_multicall_address(provider_or_chain_id: Union[SignerOrProvider, int]) -> str:
-    """
-    Returns the multicall contract address for a chain or for the chain
-    indicated by the given provider.
+def get_multicall_address(
+    provider_or_chain_id: Union[SignerOrProvider, Web3, int]
+) -> HexAddress:
+    """Gets the multicall contract address for a chain.
 
-    If not found, attempts to see if any chain references this chain as parent
-    and returns the parent's multicall address.
+    Looks up the multicall address in the chain's token bridge configuration.
+    If not found, checks if any chain references this as a parent and returns
+    that chain's parent multicall address.
 
-    :param provider_or_chain_id: Either an int chain ID or a SignerOrProvider
-    :return: The multicall address (string).
-    :raises ValueError if chain not recognized
+    Args:
+        provider_or_chain_id: Either a chain ID or provider
+
+    Returns:
+        The multicall contract address
+
+    Raises:
+        ValueError: If the chain is not recognized
     """
     chain_id = (
         provider_or_chain_id
@@ -578,27 +706,31 @@ def map_l2_network_to_arbitrum_network(l2_network: Dict[str, Any]) -> ArbitrumNe
 
 
 def assert_arbitrum_network_has_token_bridge(network: ArbitrumNetwork) -> None:
-    """
-    Asserts that the given ArbitrumNetwork has a valid TokenBridge object.
-    Used for network calls that require bridging info.
+    """Asserts that a network has token bridge configuration.
 
-    :param network: The ArbitrumNetwork
-    :raises ArbSdkError: If 'network.tokenBridge' is None or missing
+    Args:
+        network: The ArbitrumNetwork to check
+
+    Raises:
+        ArbSdkError: If the network does not have a token bridge configuration
     """
     if not network or not network.tokenBridge:
         raise ArbSdkError(
-            f"The ArbitrumNetwork object with chainId {network.chainId} is missing "
-            "the token bridge contracts addresses. Please provide them in 'tokenBridge'."
+            f"Network {network.name} does not have token bridge configuration"
         )
 
 
 def is_arbitrum_network_native_token_ether(network: ArbitrumNetwork) -> bool:
-    """
-    Checks if a network uses ETH as its native/gas token.
-    If 'nativeToken' is unset or AddressZero, it's ETH-based.
+    """Checks if a network uses ETH as its native token.
 
-    :param network: The ArbitrumNetwork
-    :return: True if ETH-based, False if a custom ERC20 is used as the gas token.
+    A network uses ETH as its native token if nativeToken is None or ADDRESS_ZERO.
+    Otherwise, it uses an ERC20 token from the parent chain.
+
+    Args:
+        network: The ArbitrumNetwork to check
+
+    Returns:
+        True if the network uses ETH as its native token, False otherwise
     """
     return (network.nativeToken is None) or (network.nativeToken == ADDRESS_ZERO)
 

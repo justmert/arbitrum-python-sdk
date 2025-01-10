@@ -1,23 +1,40 @@
-from typing import Any, List
+from typing import Any, List, Union, Callable, Dict, TypeVar, Optional
+from decimal import Decimal
 
 from eth_utils import int_to_big_endian
 from web3 import Web3
+from web3.types import Wei
 
 from src.lib.data_entities.constants import ARB_ADDRESS_TABLE_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.utils.helper import load_contract
 
-address_to_index_memo = {}
+# Type definitions
+PrimitiveType = Union[str, int, bool, Wei, Decimal]
+PrimitiveOrArray = Union[PrimitiveType, List[PrimitiveType]]
+BytesSize = Union[1, 4, 8, 16, 32]
+AddressIndexMemo = Dict[str, int]
+
+# Global memo for address indices
+address_to_index_memo: AddressIndexMemo = {}
 
 
-def get_address_index(address: str, provider) -> int:
+def get_address_index(address: str, provider: Any) -> int:
     """
     Check if an address is registered in the Arbitrum address table contract.
-    Return its index if found, or -1 if not registered.
 
-    :param address: The Ethereum address to look up
-    :param provider: Web3 (or wrapper) connected to L2
-    :return: Index if found, else -1
+    This function checks the ArbAddressTable contract to see if an address is registered.
+    If found, returns its index. Results are memoized to avoid redundant contract calls.
+
+    Args:
+        address: The Ethereum address to look up
+        provider: Web3 provider connected to L2
+
+    Returns:
+        int: The index if address is registered, -1 if not registered
+
+    Note:
+        The function caches results in address_to_index_memo to optimize repeated lookups
     """
     if address in address_to_index_memo:
         return address_to_index_memo[address]
@@ -38,21 +55,27 @@ def get_address_index(address: str, provider) -> int:
         return -1
 
 
-def arg_serializer_constructor(provider):
+def arg_serializer_constructor(provider: Any) -> Callable[[List[PrimitiveOrArray]], bytes]:
     """
-    Creates a function that can serialize parameters by
-    looking up each address in the Arbitrum address table
-    to see if it is registered.
+    Create a function for serializing parameters using the Arbitrum address table.
 
-    :param provider: Web3 provider or wrapper
-    :return: A function that takes a list of primitive or array-of-primitive items
-             and returns a serialized byte array
+    This constructor creates a closure over a provider that can be used to serialize
+    parameters according to the Arbitrum byte serialization schema.
+
+    Args:
+        provider: Web3 provider or wrapper connected to L2
+
+    Returns:
+        Callable: A function that takes a list of primitives or arrays and returns serialized bytes
+
+    Example:
+        >>> provider = Web3(Web3.HTTPProvider('...'))
+        >>> serializer = arg_serializer_constructor(provider)
+        >>> result = serializer(['0x123...', 42, True])
     """
-
-    def serialize_params_with_index(params: List[Any]) -> bytes:
+    def serialize_params_with_index(params: List[PrimitiveOrArray]) -> bytes:
         def address_to_index(address: str) -> int:
             return get_address_index(address, provider)
-
         return serialize_params(params, address_to_index)
 
     return serialize_params_with_index
@@ -60,15 +83,30 @@ def arg_serializer_constructor(provider):
 
 def is_address_type(value: Any) -> bool:
     """
-    Check if 'value' is a string that is a valid Ethereum address.
+    Check if a value is a valid Ethereum address.
+
+    Args:
+        value: Any value to check
+
+    Returns:
+        bool: True if value is a string and valid Ethereum address, False otherwise
     """
     return isinstance(value, str) and Web3.is_address(value)
 
 
-def to_uint(val: Any, bytes_size: int) -> bytes:
+def to_uint(val: Union[PrimitiveType, int], bytes_size: BytesSize) -> bytes:
     """
-    Convert a numeric or boolean to big-endian with specified size (in bytes).
-    For booleans, True -> 1, False -> 0
+    Convert a value to a big-endian byte representation with specified size.
+
+    Args:
+        val: Value to convert (numeric or boolean)
+        bytes_size: Size of the resulting byte array (1, 4, 8, 16, or 32)
+
+    Returns:
+        bytes: Big-endian representation of the value
+
+    Note:
+        Booleans are converted to 1 (True) or 0 (False)
     """
     if isinstance(val, bool):
         val = 1 if val else 0
@@ -76,90 +114,95 @@ def to_uint(val: Any, bytes_size: int) -> bytes:
     return int_to_big_endian(as_int).rjust(bytes_size, b"\0")
 
 
-def format_primitive(value: Any) -> bytes:
+def format_primitive(value: PrimitiveType) -> bytes:
     """
-    Format a single primitive value (address, bool, number) into a 32-byte representation by default.
-    (In TS, we used `BigNumber` or Ethers serialization.)
+    Format a primitive value according to the Arbitrum byte serialization schema.
+
+    This function handles the following types:
+    - Ethereum addresses (as 20-byte values)
+    - Booleans (as 1 = True, 0 = False)
+    - Numbers (as 32-byte big-endian values)
+
+    Args:
+        value: The primitive value to format
+
+    Returns:
+        bytes: Formatted byte representation
+
+    Raises:
+        ArbSdkError: If the value type is not supported
     """
     if is_address_type(value):
-        # In TS code we might store the actual address, or do partial checks.
-        # Here we just hex-encode an address or do a 32-byte numeric
-        # We'll do an "address as 20 bytes" or as a 32-byte for the numeric type,
-        # but the original code uses 32 for everything except for the specialized address approach.
-        # We'll mimic "address is returned as 20 bytes" or a 32-later approach.
-        # For simplicity, let's store it as a 32 byte with the leading 20 bytes as the actual address.
-        # But TS code just calls 'formatPrimative(...) -> toUint(value, 32)' if numeric.
-        # For addresses it directly returns the address as string in many places.
-        # We'll store the address as a 32 byte hex: 12 leading 0 bytes + 20 bytes of address
-        # or just return the checksummed address.
-        # The original TS code actually calls 'formatPrimative' -> but the 'address' path is separate.
-        # We'll do a fallback approach: raise error or return the raw address?
         return Web3.to_bytes(hexstr=value)  # raw 20 bytes
-    elif isinstance(value, bool) or isinstance(value, int) or (isinstance(value, str) and value.isdigit()):
-        # numeric
+    elif isinstance(value, (bool, int)) or (isinstance(value, str) and value.isdigit()):
         return to_uint(value, 32)
     else:
         raise ArbSdkError("Unsupported type for format_primitive()")
 
 
 def serialize_params(
-    params: List[Any],
-    address_to_index=lambda addr: -1,
+    params: List[PrimitiveOrArray],
+    address_to_index: Callable[[str], int] = lambda addr: -1
 ) -> bytes:
     """
-    Recursively parse a list of primitive or array-of-primitive items
-    and return a concatenated byte array according to the
-    Arbitrum "byte serialization" schema.
+    Serialize parameters according to the Arbitrum byte serialization schema.
 
-    :param params: The list of items to serialize (can be nested lists)
-    :param address_to_index: A function that returns the address table index if any
-    :return: The final byte array
+    Schema for address arrays:
+    - 1 byte: array length
+    - 1 byte: is-registered flag (1 = all registered, 0 = not all registered)
+    - For each address:
+        - If registered: 4 bytes (index)
+        - If not registered: 20 bytes (full address)
+
+    Schema for non-address arrays:
+    - 1 byte: array length
+    - Concatenated items (variable length)
+
+    Schema for single address:
+    - 1 byte: is-registered flag
+    - 4 or 20 bytes: index or address
+
+    Args:
+        params: List of values to serialize (can include nested lists)
+        address_to_index: Function to get address table index (-1 if not registered)
+
+    Returns:
+        bytes: Serialized parameter data
+
+    Example:
+        >>> serialize_params(['0x123...', [42, 43], True])
     """
     formatted_parts: List[bytes] = []
 
     for param in params:
         if isinstance(param, list):
-            # array
             array_length = len(param)
-            # 1-byte length
             formatted_parts.append(to_uint(array_length, 1))
 
-            # if first item is an address, we check if all are registered
             if array_length > 0 and is_address_type(param[0]):
-                indices = []
-                for addr in param:
-                    idx = address_to_index(addr)
-                    indices.append(idx)
+                indices = [address_to_index(addr) for addr in param]
 
                 if all(i > -1 for i in indices):
-                    # all addresses are registered
                     formatted_parts.append(to_uint(1, 1))
-                    # each is a 4-byte index
                     for idx in indices:
                         formatted_parts.append(to_uint(idx, 4))
                 else:
-                    # not all are registered
                     formatted_parts.append(to_uint(0, 1))
                     for addr in param:
                         formatted_parts.append(format_primitive(addr))
             else:
-                # Non-address array items
                 for item in param:
                     formatted_parts.append(format_primitive(item))
         else:
-            # single item
             if is_address_type(param):
-                # check if registered
                 idx = address_to_index(param)
                 if idx > -1:
-                    # 1 + 4 bytes
                     formatted_parts.append(to_uint(1, 1))
                     formatted_parts.append(to_uint(idx, 4))
                 else:
                     formatted_parts.append(to_uint(0, 1))
                     formatted_parts.append(format_primitive(param))
             else:
-                # numeric, bool, or big string
                 formatted_parts.append(format_primitive(param))
 
     return b"".join(formatted_parts)

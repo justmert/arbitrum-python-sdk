@@ -1,52 +1,78 @@
-from enum import Enum
+"""Message data entities for Arbitrum SDK.
+
+This module defines the data structures and enums used for handling messages
+between L1 and L2 chains in the Arbitrum protocol.
+"""
+
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import Optional
+
+from eth_typing import HexStr
+from web3.types import Wei
 
 
+@dataclass
 class RetryableMessageParams:
-    """
-    The components of a submit retryable message (Arbitrum).
-    Typically parsed from the events emitted by the Inbox contract
-    on the parent chain when creating a retryable ticket.
+    """The components of a submit retryable message.
+
+    This class represents the parameters needed to create a retryable ticket
+    on Arbitrum's L2. These parameters are typically parsed from events emitted
+    by the Inbox contract on L1.
+
+    Attributes:
+        destAddress: Destination address for L2 message
+        l2CallValue: Call value in L2 message
+        l1Value: Value sent at L1
+        maxSubmissionFee: Max gas deducted from L2 balance to cover base submission fee
+        excessFeeRefundAddress: L2 address to credit (gaslimit x gasprice - execution cost)
+        callValueRefundAddress: Address to credit l2CallValue on L2 if retryable txn
+            times out or gets cancelled
+        gasLimit: Max gas deducted from user's L2 balance to cover L2 execution
+        maxFeePerGas: Gas price for L2 execution
+        data: Calldata for the L2 message
     """
 
-    def __init__(
-        self,
-        dest_address: str,
-        l2_call_value: int,
-        l1_value: int,
-        max_submission_fee: int,
-        excess_fee_refund_address: str,
-        call_value_refund_address: str,
-        gas_limit: int,
-        max_fee_per_gas: int,
-        data: str,
-    ):
-        """
-        :param dest_address: Destination address for the L2 message
-        :param l2_call_value: The call value in the L2 message
-        :param l1_value: The total value sent at L1
-                         (usually covers max_submission_fee + execution cost + l2_call_value if ETH-based)
-        :param max_submission_fee: The maximum cost to cover the base submission fee on L2
-        :param excess_fee_refund_address: The L2 address to credit leftover fees after execution
-        :param call_value_refund_address: The L2 address to receive l2CallValue if this message times out/cancelled
-        :param gas_limit: The maximum gas used by L2 execution
-        :param max_fee_per_gas: The gas price for L2 execution
-        :param data: The calldata for the L2 contract function
-        """
-        self.dest_address = dest_address
-        self.l2_call_value = l2_call_value
-        self.l1_value = l1_value
-        self.max_submission_fee = max_submission_fee
-        self.excess_fee_refund_address = excess_fee_refund_address
-        self.call_value_refund_address = call_value_refund_address
-        self.gas_limit = gas_limit
-        self.max_fee_per_gas = max_fee_per_gas
-        self.data = data
+    destAddress: HexStr
+    l2CallValue: Wei
+    l1Value: Wei
+    maxSubmissionFee: Wei
+    excessFeeRefundAddress: HexStr
+    callValueRefundAddress: HexStr
+    gasLimit: Wei
+    maxFeePerGas: Wei
+    data: HexStr
+
+    def __post_init__(self) -> None:
+        """Validate and convert input types after initialization."""
+        # Convert address strings to checksum format
+        from web3 import Web3
+        self.destAddress = Web3.to_checksum_address(self.destAddress)
+        self.excessFeeRefundAddress = Web3.to_checksum_address(self.excessFeeRefundAddress)
+        self.callValueRefundAddress = Web3.to_checksum_address(self.callValueRefundAddress)
+
+        # Ensure Wei values are integers
+        self.l2CallValue = Wei(int(self.l2CallValue))
+        self.l1Value = Wei(int(self.l1Value))
+        self.maxSubmissionFee = Wei(int(self.maxSubmissionFee))
+        self.gasLimit = Wei(int(self.gasLimit))
+        self.maxFeePerGas = Wei(int(self.maxFeePerGas))
+
+        # # Ensure data is hex string
+        # if not self.data.startswith('0x'):
+        #     self.data = HexStr('0x' + self.data)
 
 
 class InboxMessageKind(Enum):
-    """
-    The message kind for L1<->L2 messages as defined in Arbitrum's
-    nitro/contracts/src/libraries/MessageTypes.sol
+    """The inbox message kind for L1<->L2 messages.
+
+    These values are defined in the Arbitrum Nitro protocol at:
+    https://github.com/OffchainLabs/nitro/blob/master/contracts/src/libraries/MessageTypes.sol
+
+    Attributes:
+        L1MessageType_submitRetryableTx: Represents a retryable ticket submission (value: 9)
+        L1MessageType_ethDeposit: Represents an ETH deposit from L1 to L2 (value: 12)
+        L2MessageType_signedTx: Represents a signed transaction on L2 (value: 4)
     """
 
     L1MessageType_submitRetryableTx = 9
@@ -55,13 +81,17 @@ class InboxMessageKind(Enum):
 
 
 class ChildToParentMessageStatus(Enum):
-    """
-    The status of an L2->L1 outgoing message:
-    UNCONFIRMED: sendTxToL1 called, but assertion not yet confirmed
-    CONFIRMED: assertion confirmed, message not yet executed
-    EXECUTED: message has been executed (terminal state)
+    """Status of an L2->L1 outgoing message.
+
+    This enum represents the possible states of a message sent from L2 to L1
+    through ArbSys.sendTxToL1.
+
+    Attributes:
+        UNCONFIRMED: ArbSys.sendTxToL1 called, but assertion not yet confirmed
+        CONFIRMED: Assertion for outgoing message confirmed, but message not yet executed
+        EXECUTED: Outgoing message executed (terminal state)
     """
 
-    UNCONFIRMED = 1
-    CONFIRMED = 2
-    EXECUTED = 3
+    UNCONFIRMED = auto()
+    CONFIRMED = auto()
+    EXECUTED = auto()

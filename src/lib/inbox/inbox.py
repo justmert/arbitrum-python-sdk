@@ -19,7 +19,6 @@ from src.lib.utils.lib import (
 )
 from src.lib.utils.multicall import MultiCaller
 
-
 class InboxTools:
     """
     Tools for interacting with the Inbox and Bridge contracts on Arbitrum networks.
@@ -93,114 +92,179 @@ class InboxTools:
         to_addr = child_transaction_request.get("to")
         return to_addr == "0x" or not to_addr or to_addr == ADDRESS_ZERO
 
-    def estimate_arbitrum_gas(self, child_tx_request: Dict[str, Any], child_provider: Web3):
-        """
-        Estimate the gas usage for a child transaction using
-        nodeInterface.gasEstimateComponents (Arbitrum's method).
+    def estimate_arbitrum_gas(
+        self,
+        child_tx_request: Dict[str, Any],
+        child_provider: Web3
+    ) -> Dict[str, Any]:
+        """Estimate gas components for an Arbitrum transaction.
 
-        :param child_tx_request: Minimal fields like 'to', 'data', 'from', 'value', etc.
-        :param child_provider: A Web3 object connected to the child chain
-        :return: A dict with the fields from gasEstimateComponents plus 'gasEstimateForChild'
+        We should use nodeInterface to get the gas estimate because we
+        are making a delayed inbox message which doesn't need parent calldata
+        gas fee part.
+
+        Args:
+            child_tx_request: Transaction parameters for the child chain
+            child_provider: Web3 provider for the child chain
+
+        Returns:
+            Gas components including estimates for L1 and L2 portions
+
+        Raises:
+            ArbSdkError: If gas estimation fails
         """
+        # Load NodeInterface contract
         node_interface = load_contract(
             provider=child_provider,
             contract_name="NodeInterface",
             address=NODE_INTERFACE_ADDRESS,
         )
+
+        # Check if contract creation
         contract_creation = self.is_contract_creation(child_tx_request)
 
-        # nodeInterface.gasEstimateComponents(
-        #   address destAddr,
-        #   bool isContractCreation,
-        #   bytes calldata calldataForL2,
-        # ) payable returns (gasEstimate, gasEstimateForL1, baseFee, l1BaseFeeEstimate)
+        # Prepare call parameters
         tx_params = {
             "from": child_tx_request["from"],
             "value": child_tx_request.get("value", 0),
         }
+
+        # Call gasEstimateComponents
         result = node_interface.functions.gasEstimateComponents(
-            child_tx_request["to"] if child_tx_request.get("to", None) else ADDRESS_ZERO,
+            child_tx_request.get("to") if child_tx_request.get("to") else ADDRESS_ZERO,
             contract_creation,
-            child_tx_request["data"],
+            child_tx_request.get("data", "0x"),
         ).call(tx_params)
 
         # Format the output
-        formatted = format_contract_output(node_interface, "gasEstimateComponents", result)
-        gas_estimate_for_child = formatted["gasEstimate"] - formatted["gasEstimateForL1"]
-        return {**formatted, "gasEstimateForChild": gas_estimate_for_child}
+        formatted = format_contract_output(
+            node_interface,
+            "gasEstimateComponents",
+            result
+        )
 
-    def get_force_includable_block_range(self, block_number_range_size: int) -> Dict[str, int]:
+        # Calculate child gas estimate
+        gas_estimate_for_child = (
+            formatted["gasEstimate"] - formatted["gasEstimateForL1"]
+        )
+
+        return {
+            "gasEstimate": formatted["gasEstimate"],
+            "gasEstimateForL1": formatted["gasEstimateForL1"],
+            "baseFee": formatted["baseFee"],
+            "l1BaseFeeEstimate": formatted["l1BaseFeeEstimate"],
+            "gasEstimateForChild": gas_estimate_for_child
+        }
+
+    def get_force_includable_block_range(
+        self,
+        block_number_range_size: int
+    ) -> Dict[str, int]:
+        """Get block range where delayed messages can be force-included.
+
+        Uses SequencerInbox.maxTimeVariation() to determine when messages
+        become eligible for forced inclusion.
+
+        Args:
+            block_number_range_size: Number of blocks to look back from
+                the first eligible block
+
+        Returns:
+            Dict containing fromBlock and toBlock numbers
         """
-        Determine a block range in which delayed messages have become eligible for forced inclusion.
-        Uses SequencerInbox.maxTimeVariation() and the current block to figure out a range.
+        # Track L1 block number if parent is Arbitrum
+        current_l1_block_number = None
 
-        :param block_number_range_size: The number of blocks to look backward from the 'first eligible block'
-        :return: A dict { 'endBlock': <int>, 'startBlock': <int> }
-        """
-        # Possibly the L1 block number if the parent chain is itself Arbitrum
-        current_l1_block_number: Optional[int] = None
-
+        # Load sequencer inbox contract
         sequencer_inbox = load_contract(
             provider=self.parent_provider,
             contract_name="SequencerInbox",
             address=self.child_chain.ethBridge.sequencerInbox,
         )
 
+        # Check if parent chain is Arbitrum
         is_parent_chain_arbitrum = is_arbitrum_chain(self.parent_provider)
 
         if is_parent_chain_arbitrum:
             # Use ArbitrumProvider to fetch the 'latest' block on the parent side
-            arb_provider = ArbitrumProvider(self.parent_provider)
-            current_arb_block = arb_provider.get_block("latest")
+            arb_provider = self.parent_provider
+            current_arb_block = arb_provider.eth.get_block("latest")
             current_l1_block_number = current_arb_block["l1BlockNumber"]
 
+        # Setup multicall for batch requests
         multicall = MultiCaller.from_provider(self.parent_provider)
         multicall_input = [
             {
                 "targetAddr": sequencer_inbox.address,
                 "encoder": lambda: sequencer_inbox.encode_function_data("maxTimeVariation"),
-                "decoder": lambda return_data: sequencer_inbox.decode_function_result("maxTimeVariation", return_data)[
-                    0
-                ],
+                "decoder": lambda return_data: sequencer_inbox.decode_function_result(
+                    "maxTimeVariation",
+                    return_data
+                )[0],
             },
             multicall.get_block_number_input(),
             multicall.get_current_block_timestamp_input(),
         ]
 
+        # Get max time variation and current block info
         [max_time_variation, current_block_number, current_block_timestamp] = multicall.multi_call(
-            multicall_input, True
+            multicall_input,
+            True
         )
 
-        # If parent is Arbitrum, we use current_l1_block_number, else we use the actual block number
+        # If parent is Arbitrum, use L1 block number, else use actual block number
         block_number = current_l1_block_number if is_parent_chain_arbitrum else current_block_number
 
-        # 'delayBlocks' / 'delaySeconds' from the contract
+        # Calculate first eligible block based on delay parameters
         first_eligible_block_number = block_number - max_time_variation["delayBlocks"]
         first_eligible_timestamp = current_block_timestamp - max_time_variation["delaySeconds"]
 
-        first_eligible_block = self.find_first_block_below(first_eligible_block_number, first_eligible_timestamp)
+        # Find first eligible block
+        first_eligible_block = self.find_first_block_below(
+            first_eligible_block_number,
+            first_eligible_timestamp
+        )
+
         return {
-            "endBlock": first_eligible_block.number,
             "startBlock": first_eligible_block.number - block_number_range_size,
+            "endBlock": first_eligible_block.number,
         }
 
     def get_events_and_increase_range(
-        self, bridge_contract, search_range_blocks: int, max_search_range_blocks: int, range_multiplier: int
+        self,
+        bridge_contract,
+        search_range_blocks: int,
+        max_search_range_blocks: int,
+        range_multiplier: int
     ) -> List[Dict[str, Any]]:
-        """
-        Recursively fetches 'MessageDelivered' events from the bridge contract within a certain block range,
-        expanding the search range if none are found until it hits maxSearchRangeBlocks.
+        """Recursively fetch MessageDelivered events.
 
-        :param bridge_contract: Loaded contract for the Bridge
-        :param search_range_blocks: Current search range size
-        :param max_search_range_blocks: Maximum allowed range
-        :param range_multiplier: Factor to multiply by each iteration
-        :return: List of events found (or empty if none)
+        Look for force includable events in the search range blocks. If no events
+        are found, the search range is increased incrementally up to the max
+        search range blocks.
+
+        Args:
+            bridge_contract: Bridge contract instance
+            search_range_blocks: Initial block range to search
+            max_search_range_blocks: Maximum block range to search
+            range_multiplier: Factor to multiply range by on each iteration
+
+        Returns:
+            List of MessageDelivered events found
+
+        Raises:
+            ArbSdkError: If no events found within max range
         """
+        # Initialize event fetcher
         event_fetcher = EventFetcher(self.parent_provider)
+        
+        # Cap search range at maximum
         capped_search_range = min(search_range_blocks, max_search_range_blocks)
+        
+        # Get block range for search
         block_range = self.get_force_includable_block_range(capped_search_range)
 
+        # Setup event filter
         argument_filters = {}
         events = event_fetcher.get_events(
             contract_factory=bridge_contract,
@@ -213,12 +277,20 @@ class InboxTools:
             },
         )
 
+        # Return events if found
         if events:
             return events
+
+        # If at max range and no events, return empty list
         if capped_search_range == max_search_range_blocks:
             return []
+
+        # Otherwise increase range and try again
         return self.get_events_and_increase_range(
-            bridge_contract, search_range_blocks * range_multiplier, max_search_range_blocks, range_multiplier
+            bridge_contract,
+            search_range_blocks * range_multiplier,
+            max_search_range_blocks,
+            range_multiplier
         )
 
     def get_force_includable_event(
@@ -227,54 +299,74 @@ class InboxTools:
         start_search_range_blocks: int = 100,
         range_multiplier: int = 2,
     ) -> Optional[Dict[str, Any]]:
-        """
-        Find the 'latest' message that can be forcibly included on L1.
+        """Find the event of the latest message that can be force included.
 
-        :param max_search_range_blocks: Max blocks to look back (defaults ~3 days)
-        :param start_search_range_blocks: Starting block range to search
-        :param range_multiplier: Factor to multiply search range each iteration
-        :return: A dict containing info about the event + 'delayedAcc', or None if none found
+        Args:
+            max_search_range_blocks: Max blocks to look back (~3 days default)
+            start_search_range_blocks: Initial block range to search
+            range_multiplier: Factor to multiply range by on each iteration
+
+        Returns:
+            ForceInclusionParams if a forceable message is found, None otherwise
         """
+        # Load bridge contract
         bridge_contract = load_contract(
             provider=self.parent_provider,
             contract_name="Bridge",
             address=self.child_chain.ethBridge.bridge,
         )
 
+        # Get events with increasing range if needed
         events = self.get_events_and_increase_range(
-            bridge_contract, start_search_range_blocks, max_search_range_blocks, range_multiplier
+            bridge_contract,
+            start_search_range_blocks,
+            max_search_range_blocks,
+            range_multiplier,
         )
+
         if not events:
             return None
 
-        # The last event is the 'latest' message
-        event_info = events[-1]
+        # Get latest event
+        latest_event = events[-1]
 
+        # Check if already read
         sequencer_inbox = load_contract(
             provider=self.parent_provider,
             contract_name="SequencerInbox",
             address=self.child_chain.ethBridge.sequencerInbox,
         )
         total_delayed_read = sequencer_inbox.functions.totalDelayedMessagesRead().call()
-        if total_delayed_read > event_info["event"]["messageIndex"]:
+        if total_delayed_read > latest_event["event"]["messageIndex"]:
             # Already read, no force inclusion needed
             return None
 
-        delayed_acc = bridge_contract.functions.delayedInboxAccs(event_info["event"]["messageIndex"]).call()
+        # Get delayed accumulator
+        delayed_acc = bridge_contract.functions.delayedInboxAccs(
+            latest_event["event"]["messageIndex"]
+        ).call()
 
-        return {**event_info, "delayedAcc": delayed_acc}
+        return {**latest_event, "delayedAcc": delayed_acc}
 
     def force_include(
-        self, message_delivered_event: Optional[Dict[str, Any]] = None, overrides: Optional[Dict[str, Any]] = None
-    ):
-        """
-        Force-includes all eligible delayed messages up to and including the provided one.
-        If no event is provided, we find the 'latest' includable event.
+        self,
+        message_delivered_event: Optional[Dict[str, Any]] = None,
+        overrides: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Force includes all eligible messages in the delayed inbox.
 
-        :param message_delivered_event: An event object from get_force_includable_event()
-                                        that is known to be eligible.
-        :param overrides: Transaction overrides dict for 'from', 'gas', etc.
-        :return: Transaction receipt if success, or None if no event is eligible
+        The inbox contract doesn't allow a message to be force-included
+        until after a delay period has been completed.
+
+        Args:
+            message_delivered_event: Event and accumulator from get_force_includable_event
+            overrides: Optional transaction parameter overrides
+
+        Returns:
+            Transaction receipt if successful, None if no event to include
+
+        Raises:
+            ArbSdkError: If force inclusion fails
         """
         sequencer_inbox = load_contract(
             provider=self.parent_provider,
@@ -304,48 +396,75 @@ class InboxTools:
 
         return self.parent_provider.eth.wait_for_transaction_receipt(tx_hash)
 
-    def send_child_signed_tx(self, signed_tx: Union[str, bytes]):
-        """
-        Send a child-chain-signed transaction via the delayed inbox on L1.
+    def send_child_signed_tx(
+        self,
+        signed_tx: Union[str, bytes]
+    ) -> Dict[str, Any]:
+        """Send a child-chain-signed transaction via the delayed inbox on L1.
+
         The childChain user signs the transaction for L2 execution,
         and we embed it in an L1 transaction that is eventually replayed on L2.
+        If it isn't included within 24 hours, you can force include it.
 
-        :param signed_tx: The child's transaction raw signature data (hex or bytes).
-        :return: Transaction receipt on L1 for sending the message
+        Args:
+            signed_tx: The child's transaction raw signature data (hex or bytes)
+
+        Returns:
+            Transaction receipt on L1 for sending the message
+
+        Example:
+            >>> # Sign and send L2 transaction via L1
+            >>> tx = {'to': '0x1234...', 'value': 1000000000000000000}
+            >>> signed = inbox_tools.sign_child_tx(tx, l2_signer)
+            >>> receipt = inbox_tools.send_child_signed_tx(signed)
         """
-        delayed_inbox = load_contract(
+        # Load inbox contract
+        inbox = load_contract(
             provider=self.parent_provider,
             contract_name="IInbox",
             address=self.child_chain.ethBridge.inbox,
         )
 
+        # Convert hex string to bytes if needed
         if isinstance(signed_tx, str):
             signed_tx_bytes = bytes.fromhex(signed_tx.replace("0x", ""))
         else:
             signed_tx_bytes = signed_tx
 
+        # Pack message type with signed tx
         message_type = InboxMessageKind.L2MessageType_signedTx.value
-        # pack: one byte for kind, then the raw signedTx
         packed_message_type = struct.pack("B", message_type)
         send_data_bytes = packed_message_type + signed_tx_bytes
 
+        # Send transaction
         tx = {
             "from": self.parent_signer.account.address,
         }
 
-        tx_hash = delayed_inbox.functions.sendL2Message(send_data_bytes).transact(tx)
+        tx_hash = inbox.functions.sendL2Message(send_data_bytes).transact(tx)
         return self.parent_provider.eth.wait_for_transaction_receipt(tx_hash)
 
-    def sign_child_tx(self, tx_request: Dict[str, Any], child_signer) -> bytes:
-        """
-        Sign a transaction for the child chain (L2).
+    def sign_child_tx(
+        self,
+        tx_request: Dict[str, Any],
+        child_signer: SignerProviderUtils
+    ) -> bytes:
+        """Sign a transaction for the child chain (L2).
+
         Typically, we then embed this signed Tx in the L1 delayed inbox message
         via send_child_signed_tx(...).
 
-        :param tx_request: A dict with fields like 'to', 'data', 'value', 'nonce', optional 'gasPrice' or EIP-1559 fields
-        :param child_signer: The child's local signer object with an account & provider (connected to L2)
-        :return: Raw signed transaction bytes
-        :raises ArbSdkError: If gas estimation fails
+        Args:
+            tx_request: A dict with fields like 'to', 'data', 'value', 'nonce',
+                optional 'gasPrice' or EIP-1559 fields
+            child_signer: The child's local signer object with an account &
+                provider (connected to L2)
+
+        Returns:
+            Raw signed transaction bytes
+
+        Raises:
+            ArbSdkError: If gas estimation fails
         """
         # clone the request
         tx = dict(tx_request)

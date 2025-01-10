@@ -1,4 +1,8 @@
+from typing import Dict, Optional, Union, Any, TypedDict
+from decimal import Decimal
+
 from web3 import Web3
+from web3.types import Wei
 
 from src.lib.data_entities.constants import NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
@@ -12,8 +16,51 @@ from src.lib.utils.lib import (
     scale_from_18_decimals_to_native_token_decimals,
 )
 
+
+# Constants for gas estimation
 DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = 300
 DEFAULT_GAS_PRICE_PERCENT_INCREASE = 500
+
+
+class PercentIncrease(TypedDict, total=False):
+    """
+    Configuration for percentage-based increases in gas parameters.
+    
+    Attributes:
+        base: If provided, will override the estimated base value
+        percentIncrease: How much to increase the base by (in percentage)
+    """
+    base: Optional[Wei]
+    percentIncrease: Optional[int]
+
+
+class GasLimitOverride(PercentIncrease):
+    """
+    Extended configuration for gas limit estimation.
+    
+    Attributes:
+        base: If provided, will override the estimated base gas limit
+        percentIncrease: How much to increase the base by (in percentage)
+        min: Minimum gas limit to enforce
+    """
+    min: Optional[Wei]
+
+
+class GasOverrides(TypedDict, total=False):
+    """
+    Configuration for overriding gas estimation parameters.
+    
+    Attributes:
+        gasLimit: Override settings for gas limit estimation
+        maxSubmissionFee: Override settings for max submission fee
+        maxFeePerGas: Override settings for max fee per gas
+        deposit: Override settings for deposit amount
+    """
+    gasLimit: Optional[GasLimitOverride]
+    maxSubmissionFee: Optional[PercentIncrease]
+    maxFeePerGas: Optional[PercentIncrease]
+    deposit: Optional[Dict[str, Wei]]
+
 
 default_parent_to_child_message_estimate_options = {
     "maxSubmissionFeePercentIncrease": DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE,
@@ -24,24 +71,54 @@ default_parent_to_child_message_estimate_options = {
 
 class ParentToChildMessageGasEstimator:
     """
-    Python equivalent of the updated v4 ParentToChildMessageGasEstimator (formerly L1ToL2MessageGasEstimator).
-    Estimates gas parameters (gas limit, maxFeePerGas, maxSubmissionCost, deposit) for sending
-    Parent->Child retryable transactions in Arbitrum.
+    Gas estimator for parent-to-child messages in Arbitrum.
+    
+    This class provides functionality to estimate gas parameters for sending
+    retryable transactions from the parent chain to the child chain. It handles:
+    
+    - Gas limit estimation
+    - Max fee per gas estimation
+    - Submission cost estimation
+    - Deposit amount calculation
+    
+    The estimator includes safety margins to account for price fluctuations and
+    ensures transactions have sufficient gas for execution.
     """
 
-    def __init__(self, child_provider):
+    def __init__(self, child_provider: Web3) -> None:
         """
-        :param child_provider: A web3 provider connected to the child chain
+        Initialize the gas estimator.
+        
+        Args:
+            child_provider: Web3 provider connected to the child chain
         """
         self.child_provider = child_provider
 
-    def percent_increase(self, num: int, increase: int) -> int:
+    def percent_increase(self, num: Wei, increase: int) -> Wei:
         """
-        Utility function: increases `num` by `increase` percent.
+        Increase a number by a percentage.
+        
+        Args:
+            num: Base number to increase
+            increase: Percentage to increase by
+            
+        Returns:
+            Original number increased by the specified percentage
         """
         return num + (num * increase // 100)
 
-    def apply_submission_price_defaults(self, max_submission_fee_options=None):
+    def apply_submission_price_defaults(
+        self, max_submission_fee_options: Optional[PercentIncrease] = None
+    ) -> PercentIncrease:
+        """
+        Apply default values for submission price parameters.
+        
+        Args:
+            max_submission_fee_options: Optional overrides for submission fee calculation
+            
+        Returns:
+            Dictionary with base and percentIncrease values, using defaults where not specified
+        """
         base = max_submission_fee_options.get("base") if max_submission_fee_options else None
         percent_increase = (
             max_submission_fee_options["percentIncrease"]
@@ -50,7 +127,18 @@ class ParentToChildMessageGasEstimator:
         )
         return {"base": base, "percentIncrease": percent_increase}
 
-    def apply_max_fee_per_gas_defaults(self, max_fee_per_gas_options=None):
+    def apply_max_fee_per_gas_defaults(
+        self, max_fee_per_gas_options: Optional[PercentIncrease] = None
+    ) -> PercentIncrease:
+        """
+        Apply default values for max fee per gas parameters.
+        
+        Args:
+            max_fee_per_gas_options: Optional overrides for max fee per gas calculation
+            
+        Returns:
+            Dictionary with base and percentIncrease values, using defaults where not specified
+        """
         base = max_fee_per_gas_options.get("base") if max_fee_per_gas_options else None
         percent_increase = (
             max_fee_per_gas_options["percentIncrease"]
@@ -59,26 +147,57 @@ class ParentToChildMessageGasEstimator:
         )
         return {"base": base, "percentIncrease": percent_increase}
 
-    def apply_gas_limit_defaults(self, gas_limit_defaults=None):
+    def apply_gas_limit_defaults(
+        self, gas_limit_defaults: Optional[GasLimitOverride] = None
+    ) -> GasLimitOverride:
+        """
+        Apply default values for gas limit parameters.
+        
+        Args:
+            gas_limit_defaults: Optional overrides for gas limit calculation
+            
+        Returns:
+            Dictionary with base, percentIncrease, and min values, using defaults where not specified
+        """
         base = gas_limit_defaults.get("base") if gas_limit_defaults else None
         percent_increase = (
             gas_limit_defaults["percentIncrease"]
             if gas_limit_defaults and "percentIncrease" in gas_limit_defaults
             else default_parent_to_child_message_estimate_options["gasLimitPercentIncrease"]
         )
-        min_gas_limit = gas_limit_defaults["min"] if gas_limit_defaults and "min" in gas_limit_defaults else 0
+        min_gas_limit = gas_limit_defaults["min"] if gas_limit_defaults and "min" in gas_limit_defaults else Wei(0)
         return {"base": base, "percentIncrease": percent_increase, "min": min_gas_limit}
 
     def estimate_submission_fee(
         self,
-        parent_provider,
-        parent_base_fee: int,
+        parent_provider: Web3,
+        parent_base_fee: Wei,
         call_data_size: int,
-        options=None,
-    ) -> int:
+        options: Optional[PercentIncrease] = None,
+    ) -> Wei:
         """
-        Return the fee (in wei) of submitting a new retryable transaction with a given call data size.
-        This is analogous to `calculateRetryableSubmissionFee(...)`.
+        Estimate the submission fee for a retryable ticket.
+        
+        This method calculates the fee required to submit a new retryable transaction
+        with the given call data size. The fee is used to cover the cost of storing
+        the retryable ticket on the child chain.
+        
+        Args:
+            parent_provider: Web3 provider for the parent chain
+            parent_base_fee: Current base fee on the parent chain
+            call_data_size: Size of the call data in bytes
+            options: Optional overrides for fee calculation
+            
+        Returns:
+            Estimated submission fee in wei
+            
+        Example:
+            >>> estimator = ParentToChildMessageGasEstimator(child_provider)
+            >>> fee = estimator.estimate_submission_fee(
+            ...     parent_provider,
+            ...     Wei(1000000000),  # 1 gwei
+            ...     100,  # 100 bytes of call data
+            ... )
         """
         defaulted_options = self.apply_submission_price_defaults(options)
         network = get_arbitrum_network(self.child_provider)
@@ -92,19 +211,33 @@ class ParentToChildMessageGasEstimator:
         # If user did not supply a custom base, fetch from chain
         base = defaulted_options.get("base")
         if base is None:
-            base = inbox.functions.calculateRetryableSubmissionFee(call_data_size, parent_base_fee).call()
+            base = inbox.functions.calculateRetryableSubmissionFee(
+                call_data_size, parent_base_fee
+            ).call()
 
-        return self.percent_increase(base, defaulted_options["percentIncrease"])
+        return Wei(self.percent_increase(base, defaulted_options["percentIncrease"]))
 
-    def estimate_retryable_ticket_gas_limit(self, retryable_data: dict, sender_deposit: int = None) -> int:
+    def estimate_retryable_ticket_gas_limit(
+        self, 
+        retryable_data: Dict[str, Any],
+        sender_deposit: Optional[Wei] = None
+    ) -> Wei:
         """
-        Estimate the child-chain gas required to create and execute a retryable transaction.
-
-        :param retryable_data: {
-          "from", "to", "l2CallValue", "excessFeeRefundAddress",
-          "callValueRefundAddress", "data"
-        }
-        :param sender_deposit: The deposit to pass with the transaction (in wei).
+        Estimate the gas limit required for a retryable ticket.
+        
+        This method estimates the amount of gas needed on the child chain to create
+        and execute a retryable transaction. It accounts for both the gas needed to
+        create the ticket and the gas needed for the actual execution.
+        
+        Args:
+            retryable_data: Dictionary containing the retryable transaction parameters
+            sender_deposit: Optional deposit amount from the sender
+            
+        Returns:
+            Estimated gas limit in wei
+            
+        Raises:
+            ArbSdkError: If the gas estimation fails
         """
         if sender_deposit is None:
             sender_deposit = Web3.to_wei(1, "ether") + retryable_data["l2CallValue"]
@@ -126,32 +259,65 @@ class ParentToChildMessageGasEstimator:
             retryable_data["data"],
         ).estimate_gas()
 
-    def estimate_max_fee_per_gas(self, options=None) -> int:
+    def estimate_max_fee_per_gas(self, options: Optional[PercentIncrease] = None) -> Wei:
         """
-        Provides an estimate for the child chain maxFeePerGas, adding a margin for volatility.
+        Estimate the max fee per gas for a retryable ticket.
+        
+        This method calculates the maximum fee per gas that can be paid for a
+        retryable transaction. It includes a safety margin to account for price
+        fluctuations.
+        
+        Args:
+            options: Optional overrides for max fee per gas calculation
+            
+        Returns:
+            Estimated max fee per gas in wei
         """
         defaults = self.apply_max_fee_per_gas_defaults(options)
         base = defaults.get("base")
         if base is None:
             base = self.child_provider.eth.gas_price  # current child chain gas price
 
-        return self.percent_increase(base, defaults["percentIncrease"])
+        return Wei(self.percent_increase(base, defaults["percentIncrease"]))
 
     @staticmethod
-    def is_valid(estimates: dict, re_estimates: dict) -> bool:
+    def is_valid(estimates: Dict[str, Wei], re_estimates: Dict[str, Wei]) -> bool:
         """
-        Validate that `estimates` remain safe if compared to fresh `re_estimates` from chain.
-        We want to ensure maxFeePerGas & maxSubmissionCost are not underestimates.
+        Validate that the estimates remain safe if compared to fresh re-estimates from chain.
+        
+        Args:
+            estimates: Original estimates
+            re_estimates: Re-estimated values
+            
+        Returns:
+            True if the original estimates are still safe, False otherwise
         """
         return (
             estimates["maxFeePerGas"] >= re_estimates["maxFeePerGas"]
             and estimates["maxSubmissionCost"] >= re_estimates["maxSubmissionCost"]
         )
 
-    def estimate_all(self, retryable_estimate_data: dict, parent_base_fee: int, parent_provider, options=None) -> dict:
+    def estimate_all(
+        self, 
+        retryable_estimate_data: Dict[str, Any], 
+        parent_base_fee: Wei, 
+        parent_provider: Web3, 
+        options: Optional[GasOverrides] = None
+    ) -> Dict[str, Wei]:
         """
-        Get gas limit, gas price, submission cost, and deposit needed for a Parent->Child message.
-        Merges logic from the updated TS code.
+        Estimate all gas parameters for a retryable ticket.
+        
+        This method estimates the gas limit, max fee per gas, submission cost, and
+        deposit amount required for a retryable transaction.
+        
+        Args:
+            retryable_estimate_data: Dictionary containing the retryable transaction parameters
+            parent_base_fee: Current base fee on the parent chain
+            parent_provider: Web3 provider for the parent chain
+            options: Optional overrides for gas estimation parameters
+            
+        Returns:
+            Dictionary containing the estimated gas parameters
         """
         if options is None:
             options = {}
@@ -205,23 +371,25 @@ class ParentToChildMessageGasEstimator:
             "deposit": deposit,
         }
 
-    def populate_function_params(self, data_func, parent_provider, gas_overrides=None):
+    def populate_function_params(
+        self, 
+        data_func, 
+        parent_provider: Web3, 
+        gas_overrides: Optional[GasOverrides] = None
+    ):
         """
-        Transactions that send a Parent->Child message use a two-call approach:
-        1) Call with a "dummy" set of gas params to trigger an error containing the real RetryableData.
-        2) Parse that error to get the actual data needed for the final call.
-
-        :param data_func: A function that takes partial gas params and returns a transaction request
-          dict with shape { "to", "from", "value", "data" }.
-        :param parent_provider: The web3 provider for the parent chain
-        :param gas_overrides: Dict of overrides for gas limit, fee, submission cost, deposit
-        :return: {
-            "estimates": ParentToChildMessageGasParams,
-            "retryable": dict,
-            "data": bytes,
-            "to": str,
-            "value": int
-        }
+        Populate function parameters for a retryable ticket.
+        
+        This method generates the necessary parameters for a retryable transaction,
+        including the gas limit, max fee per gas, submission cost, and deposit amount.
+        
+        Args:
+            data_func: Function that generates the transaction data
+            parent_provider: Web3 provider for the parent chain
+            gas_overrides: Optional overrides for gas estimation parameters
+            
+        Returns:
+            Dictionary containing the populated function parameters
         """
         if gas_overrides is None:
             gas_overrides = {}
