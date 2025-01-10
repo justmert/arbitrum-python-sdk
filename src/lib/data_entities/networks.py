@@ -391,7 +391,7 @@ def get_arbitrum_network_by_provider(
     return get_arbitrum_network_by_chain_id(SignerProviderUtils.get_provider_or_throw(provider).eth.chain_id)
 
 
-def get_native_token(bridge: str, provider: Union[SignerOrProvider, Web3]) -> HexAddress:
+def get_native_token(bridge: HexAddress, provider: Union[SignerOrProvider, Web3]) -> HexAddress:
     """Gets the native token address from a bridge contract.
 
     Attempts to call nativeToken() on the bridge contract. Returns ADDRESS_ZERO
@@ -411,13 +411,13 @@ def get_native_token(bridge: str, provider: Union[SignerOrProvider, Web3]) -> He
             contract_name="IERC20Bridge",
             address=bridge,
         )
-        return bridge_contract.functions.nativeToken().call()
-    except Exception:
-        return ADDRESS_ZERO
+        return cast(HexAddress, bridge_contract.functions.nativeToken().call())
+    except:
+        return cast(HexAddress, ADDRESS_ZERO)
 
 
 def get_arbitrum_network_information_from_rollup(
-    rollup_address: str,
+    rollup_address: HexAddress,
     parent_provider: Union[SignerOrProvider, Web3]
 ) -> Dict[str, Any]:
     """Gets network information from a rollup contract.

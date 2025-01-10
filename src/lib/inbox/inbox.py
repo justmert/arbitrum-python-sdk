@@ -8,7 +8,7 @@ from src.lib.data_entities.constants import ADDRESS_ZERO, NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.message import InboxMessageKind
 from src.lib.data_entities.networks import ArbitrumNetwork
-from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import format_contract_output, load_contract
@@ -27,7 +27,7 @@ class InboxTools:
     sending child-signed transactions, etc.
     """
 
-    def __init__(self, parent_signer, child_chain: ArbitrumNetwork):
+    def __init__(self, parent_signer: SignerOrProvider, child_chain: ArbitrumNetwork) -> None:
         """
         :param parent_signer: A Python 'signer' object that includes 'account' & 'provider'
         :param child_chain: The ArbitrumNetwork object describing L2 chain config

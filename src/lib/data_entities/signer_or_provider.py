@@ -1,15 +1,9 @@
-from typing import Optional, Union, Dict, Any, overload
-
+from typing import Optional, Union, Dict, Any, overload, cast, Literal
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from eth_typing import HexStr, BlockNumber, Hash32
+from eth_typing import HexStr, BlockNumber, Hash32, Address, ChecksumAddress
 from web3 import Web3
-from web3.types import TxParams, TxReceipt
-from typing import Optional, Union, Dict, Any, List, cast
-from eth_typing import Address, BlockNumber, HexStr, Hash32, ChecksumAddress
-from eth_account.signers.local import LocalAccount
-from web3 import Web3
-from web3.types import TxParams, Wei, BlockData, ENS, TxData
+from web3.types import TxParams, TxReceipt, BlockData, ENS, TxData, Wei
 from hexbytes import HexBytes
 from src.lib.data_entities.errors import ArbSdkError, MissingProviderArbSdkError
 
@@ -71,7 +65,7 @@ class SignerOrProvider:
         """
         if not self.account:
             raise AttributeError("No account set")
-        return self.account.address
+        return cast(HexStr, self.account.address)
 
     @property
     def address(self) -> HexStr:
@@ -99,7 +93,7 @@ class SignerOrProvider:
         """
         if not self.account:
             raise AttributeError("No account set")
-        return self.account.sign_message(message)
+        return cast(bytes, self.account.sign_message(message))
 
     def sign_transaction(self, transaction: TxParams) -> bytes:
         """Sign a transaction using the signer account.
@@ -115,7 +109,7 @@ class SignerOrProvider:
         """
         if not self.account:
             raise AttributeError("No account set")
-        return self.account.sign_transaction(transaction)
+        return cast(bytes, self.account.sign_transaction(transaction))
 
     def get_chain_id(self) -> int:
         """Get the chain ID of the connected network.
@@ -143,17 +137,17 @@ class SignerOrProvider:
         return self.get_chain_id()
 
     @overload
-    def get_balance(self) -> int:
+    def get_balance(self) -> Wei:
         ...
 
     @overload
-    def get_balance(self, block_identifier: Union[BlockNumber, str]) -> int:
+    def get_balance(self, block_identifier: Union[BlockNumber, str]) -> Wei:
         ...
 
     def get_balance(
         self,
         block_identifier: Optional[Union[BlockNumber, str]] = None
-    ) -> int:
+    ) -> Wei:
         """Get the balance of the signer account.
 
         Args:
@@ -170,10 +164,13 @@ class SignerOrProvider:
             raise AttributeError("No provider set")
         if not self.account:
             raise AttributeError("No account set")
-        return self.provider.eth.get_balance(self.address, block_identifier)
+        address = cast(Union[Address, ChecksumAddress, ENS], self.address)
+        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'], 
+                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        return self.provider.eth.get_balance(address, block)
 
     @property
-    def balance(self) -> int:
+    def balance(self) -> Wei:
         """The current balance of the signer account.
 
         Returns:
@@ -190,7 +187,14 @@ class SignerOrProvider:
         :param block_identifier: The block identifier to get the nonce at a specific block.
         :return: The nonce of the signer account.
         """
-        return self.provider.eth.get_transaction_count(self.address, block_identifier)
+        if not self.provider:
+            raise AttributeError("No provider set")
+        if not self.account:
+            raise AttributeError("No account set")
+        address = cast(Union[Address, ChecksumAddress, ENS], self.address)
+        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
+                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        return self.provider.eth.get_transaction_count(address, block)
 
     @property
     def nonce(self) -> int:
@@ -205,6 +209,8 @@ class SignerOrProvider:
         Get the gas price of the provider.
         :return: The gas price of the provider.
         """
+        if not self.provider:
+            raise AttributeError("No provider set")
         return self.provider.eth.gas_price
 
     def estimate_gas(self, transaction: TxParams, block_identifier: Optional[Union[BlockNumber, str]] = None) -> int:
@@ -213,30 +219,43 @@ class SignerOrProvider:
         :param transaction: The transaction to estimate the gas for.
         :return: The estimated gas for the transaction.
         """
-        return self.provider.eth.estimate_gas(transaction, block_identifier)
+        if not self.provider:
+            raise AttributeError("No provider set")
+        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
+                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        return self.provider.eth.estimate_gas(transaction, block)
 
     def get_block_number(self) -> int:
         """
         Get the block number of the provider.
         :return: The block number of the provider.
         """
+        if not self.provider:
+            raise AttributeError("No provider set")
         return self.provider.eth.block_number
 
-    def get_block(self, block_identifier: Optional[Union[BlockNumber, str]] = None) -> Dict[str, Any]:
+    def get_block(self, block_identifier: Optional[Union[BlockNumber, str]] = None) -> BlockData:
         """
         Get the block information.
         :param block_identifier: The block identifier to get the block information.
         :return: The block information.
         """
-        return self.provider.eth.get_block(block_identifier)
+        if not self.provider:
+            raise AttributeError("No provider set")
+        block = cast(Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
+                         BlockNumber, Hash32, HexStr, HexBytes, int], 
+                    block_identifier if block_identifier is not None else 'latest')
+        return cast(BlockData, self.provider.eth.get_block(block))
 
-    def get_transaction(self, transaction_hash: Hash32) -> Dict[str, Any]:
+    def get_transaction(self, transaction_hash: Hash32) -> TxData:
         """
         Get the transaction information.
         :param transaction_hash: The transaction hash to get the transaction information.
         :return: The transaction information.
         """
-        return self.provider.eth.get_transaction(transaction_hash)
+        if not self.provider:
+            raise AttributeError("No provider set")
+        return cast(TxData, self.provider.eth.get_transaction(transaction_hash))
 
     def get_transaction_receipt(self, transaction_hash: Hash32) -> TxReceipt:
         """
@@ -244,6 +263,8 @@ class SignerOrProvider:
         :param transaction_hash: The transaction hash to get the transaction receipt.
         :return: The transaction receipt.
         """
+        if not self.provider:
+            raise AttributeError("No provider set")
         return self.provider.eth.get_transaction_receipt(transaction_hash)
 
     def send_transaction(self, transaction: TxParams) -> Hash32:
@@ -252,7 +273,10 @@ class SignerOrProvider:
         :param transaction: The transaction to send.
         :return: The transaction hash.
         """
-        return self.provider.eth.send_transaction(transaction)
+        if not self.provider:
+            raise AttributeError("No provider set")
+        result = self.provider.eth.send_transaction(transaction)
+        return cast(Hash32, result)
 
     def call(
         self,
@@ -264,7 +288,11 @@ class SignerOrProvider:
         :param transaction: The transaction to call.
         :return: The result of the call.
         """
-        return self.provider.eth.call(transaction, block_identifier)
+        if not self.provider:
+            raise AttributeError("No provider set")
+        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
+                         BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        return self.provider.eth.call(transaction, block)
 
     def get_code(self, address: HexStr, block_identifier: Optional[Union[BlockNumber, str]] = None) -> bytes:
         """
@@ -272,7 +300,12 @@ class SignerOrProvider:
         :param address: The address to get the code for.
         :return: The code of the address.
         """
-        return self.provider.eth.get_code(address, block_identifier)
+        if not self.provider:
+            raise AttributeError("No provider set")
+        addr = cast(Union[Address, ChecksumAddress, ENS], address)
+        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
+                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        return self.provider.eth.get_code(addr, block)
 
     def get_transaction_count(self, address: HexStr, block_identifier: Optional[Union[BlockNumber, str]] = None) -> int:
         """
@@ -280,7 +313,12 @@ class SignerOrProvider:
         :param address: The address to get the transaction count for.
         :return: The transaction count of the address.
         """
-        return self.get_nonce(address, block_identifier)
+        if not self.provider:
+            raise AttributeError("No provider set")
+        addr = cast(Union[Address, ChecksumAddress, ENS], address)
+        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
+                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        return self.provider.eth.get_transaction_count(addr, block)
 
 
 class SignerProviderUtils:
@@ -336,8 +374,10 @@ class SignerProviderUtils:
         Returns:
             The LocalAccount signer if available, None otherwise
         """
-        if isinstance(signer_or_provider, (LocalAccount, Account)):
+        if isinstance(signer_or_provider, LocalAccount):
             return signer_or_provider
+        if isinstance(signer_or_provider, Account):
+            return cast(LocalAccount, signer_or_provider)
         if isinstance(signer_or_provider, SignerOrProvider):
             return signer_or_provider.account
         return None

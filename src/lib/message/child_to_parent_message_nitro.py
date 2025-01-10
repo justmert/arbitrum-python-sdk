@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from eth_typing import BlockNumber
 from web3 import Web3
@@ -9,14 +9,16 @@ from src.lib.data_entities.constants import ARB_SYS_ADDRESS, NODE_INTERFACE_ADDR
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.message import ChildToParentMessageStatus
 from src.lib.data_entities.networks import get_arbitrum_network
-from src.lib.data_entities.signer_or_provider import SignerProviderUtils
+from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
 from src.lib.utils.arb_provider import ArbitrumProvider
-from src.lib.utils.event_fetcher import EventFetcher
-from src.lib.utils.helper import format_contract_output, load_contract
+from src.lib.utils.event_fetcher import FetchedEvent, EventFetcher
+from src.lib.utils.helper import CaseDict, format_contract_output, load_contract
 from src.lib.utils.lib import (
     get_block_ranges_for_l1_block,
     is_arbitrum_chain,
 )
+import web3.main
+from web3.datastructures import AttributeDict
 
 # Same constants you had before, now referencing child->parent
 ASSERTION_CREATED_PADDING = 50
@@ -174,7 +176,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     Read-only logic for child->parent messages in Nitro. Replaces L2ToL1MessageReaderNitro.
     """
 
-    def __init__(self, parent_provider, event):
+    def __init__(self, parent_provider:     web3.main.Web3, event: CaseDict) -> None:
         super().__init__(event)
         self.parent_provider = parent_provider
         self.send_root_hash = None
@@ -183,7 +185,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         self.outbox_address = None
         self.l1_batch_number = None
 
-    def get_outbox_proof(self, child_provider):
+    def get_outbox_proof(self, child_provider:     web3.main.Web3) -> List[bytes]:
         """
         Equivalent to getOutboxProof in the TS code. Constructs a proof to execute the message.
         
@@ -217,7 +219,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         )
         return outbox_proof_params["proof"]
 
-    def has_executed(self, child_provider) -> bool:
+    def has_executed(self, child_provider:     web3.main.Web3) -> bool:
         """
         Checks if the message is already executed by calling Outbox.isSpent(position).
         
@@ -235,7 +237,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         )
         return outbox_contract.functions.isSpent(self.event["position"]).call()
 
-    def status(self, child_provider) -> ChildToParentMessageStatus:
+    def status(self, child_provider:     web3.main.Web3) -> ChildToParentMessageStatus:
         """
         Returns the status of this message (UNCONFIRMED, CONFIRMED, or EXECUTED).
         
@@ -253,7 +255,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         executed = self.has_executed(child_provider)
         return ChildToParentMessageStatus.EXECUTED if executed else ChildToParentMessageStatus.CONFIRMED
 
-    def parse_node_created_assertion(self, fetched_event):
+    def parse_node_created_assertion(self, fetched_event: FetchedEvent) -> Dict[str, Dict[str, bytes]]:
         """
         For a classic RollupUserLogic NodeCreated event.
         Replaces parseNodeCreatedAssertion from TS code.
@@ -304,7 +306,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         # We'll look for 'assertionHash' or 'challengeManager' or do a simpler check here:
         return "assertionHash" in fetched_event["event"]
 
-    def get_block_from_assertion_log(self, child_provider, fetched_event=None):
+    def get_block_from_assertion_log(self, child_provider:     web3.main.Web3, fetched_event: Optional[FetchedEvent]=None) -> AttributeDict:
         """
         Merges logic from getBlockFromNodeLog + getBlockFromAssertionLog in TS.
         
@@ -475,7 +477,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                 pass
         return self.l1_batch_number
 
-    def get_send_props(self, child_provider):
+    def get_send_props(self, child_provider:     web3.main.Web3) -> Dict[str, Optional[Union[int, str, bool]]]:
         """
         Merges logic from getSendProps in TS: checks whether the node is confirmed or not.
         If so, we store sendRootSize, sendRootHash, sendRootConfirmed, etc.
@@ -652,11 +654,11 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
     Replaces L2ToL1MessageWriterNitro.
     """
 
-    def __init__(self, parent_signer, event, parent_provider=None):
+    def __init__(self, parent_signer: SignerOrProvider, event: CaseDict, parent_provider: None=None) -> None:
         super().__init__(parent_provider if parent_provider else parent_signer.provider, event)
         self.parent_signer = parent_signer
 
-    def execute(self, child_provider, overrides=None):
+    def execute(self, child_provider:     web3.main.Web3, overrides: None=None) -> AttributeDict:
         """
         Executes the Child->Parent message on the parent chain once the outbox entry is confirmed.
         Throws if message is not yet CONFIRMED.

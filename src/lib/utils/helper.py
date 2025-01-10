@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional, Tuple, Union, cast, TypeVar, Iterator
+from typing import Any, Dict, List, Optional, Tuple, Union, cast, TypeVar, Iterator, Type, overload
+from typing_extensions import TypedDict
 import json
 from pathlib import Path
 import rlp
@@ -11,7 +12,7 @@ from hexbytes import HexBytes
 from web3 import Web3
 from web3.contract import Contract
 from web3.types import ABI, AccessList, Nonce, Wei, TxParams, TxData, TxReceipt, BlockData
-
+from eth_account.datastructures import SignedTransaction
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
 
@@ -39,7 +40,7 @@ def format_contract_output(contract: Contract, function_name: str, output: Any) 
     if not func_abi:
         raise ValueError(f"Function {function_name} not found in contract ABI")
 
-    def format_output(abi_outputs: List[Dict[str, Any]], output_values: Any) -> Union[Dict[str, Any], Any]:
+    def format_output(abi_outputs: List[Dict[str, Any]], output_values: List[Any]) -> Union[Dict[str, Any], Any]:
         if not isinstance(abi_outputs, list) or not abi_outputs:
             return output_values
         if len(abi_outputs) == 1 and abi_outputs[0].get("type", "").startswith("tuple") and not abi_outputs[0].get("name"):
@@ -61,7 +62,7 @@ def format_contract_output(contract: Contract, function_name: str, output: Any) 
 
         return formatted_output
 
-    return format_output(func_abi.get("outputs", []), output)
+    return format_output(func_abi.get("outputs", []), [output] if not isinstance(output, (list, tuple)) else output)
 
 
 def to_checksum_address(address: Union[str, HexAddress]) -> ChecksumAddress:
@@ -83,26 +84,44 @@ def get_contract_address(sender_address: Union[str, HexAddress], nonce: Nonce) -
     return Web3.to_checksum_address(contract_address)
 
 
-def parse_raw_tx(raw_tx: bytes) -> TxReceipt:
+class RawTxReceipt(TypedDict):
+    blockHash: HexBytes
+    blockNumber: BlockNumber
+    contractAddress: Optional[ChecksumAddress]
+    cumulativeGasUsed: int
+    effectiveGasPrice: Wei
+    from_: ChecksumAddress
+    gasUsed: int
+    logs: List[Any]
+    logsBloom: HexBytes
+    root: Optional[HexStr]
+    status: int
+    to: ChecksumAddress
+    transactionHash: HexBytes
+    transactionIndex: int
+
+def parse_raw_tx(raw_tx: bytes) -> RawTxReceipt:
     tx = parse_raw_tx_pyevm(raw_tx)
-    receipt: TxReceipt = {
+    tx_dict = tx.as_dict()
+    
+    receipt: RawTxReceipt = {
         "blockHash": HexBytes(""),
         "blockNumber": cast(BlockNumber, 0),
         "contractAddress": None,
         "cumulativeGasUsed": 0,
         "effectiveGasPrice": cast(Wei, 0),
-        "from": Web3.to_checksum_address(encode_hex(tx.sender)),
+        "from_": Web3.to_checksum_address(encode_hex(tx_dict["sender"])),
         "gasUsed": 0,
         "logs": [],
         "logsBloom": HexBytes(""),
-        "root": None,
+        "root": cast(HexStr, ""),
         "status": 1,
         "to": (
             Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
-            if (tx.to.hex() == "0x" or tx.to.hex() == "")
-            else Web3.to_checksum_address(tx.to)
+            if (not tx_dict.get("to") or tx_dict["to"] == b"")
+            else Web3.to_checksum_address(encode_hex(tx_dict["to"]))
         ),
-        "transactionHash": HexBytes(tx.hash),
+        "transactionHash": HexBytes(tx_dict["hash"]),
         "transactionIndex": 0,
     }
     return receipt
@@ -176,7 +195,8 @@ def create_contract_instance(contract_name: str) -> Contract:
     """
     abi, _ = load_contract_data(contract_name)
     w3 = Web3()  # Dummy Web3 instance for ABI decoding
-    return w3.eth.contract(abi=abi)
+    contract = w3.eth.contract(abi=abi)
+    return cast(Contract, contract)
 
 
 def load_contract(
@@ -201,17 +221,21 @@ def load_contract(
     if provider is None:
         return create_contract_instance(contract_name)
 
-    provider = get_normalized_provider(provider)
+    web3_provider = get_normalized_provider(provider)
+    if web3_provider is None:
+        raise ContractLoadError("No valid provider found")
+        
     abi, bytecode = load_contract_data(contract_name)
 
     if address is not None:
         contract_address = normalize_contract_address(address)
-        return provider.eth.contract(address=contract_address, abi=abi)
+        contract = web3_provider.eth.contract(address=contract_address, abi=abi)
+        return cast(Contract, contract)
 
-    return provider.eth.contract(abi=abi, bytecode=bytecode) if bytecode else provider.eth.contract(abi=abi)
+    contract = web3_provider.eth.contract(abi=abi, bytecode=bytecode) if bytecode else web3_provider.eth.contract(abi=abi)
+    return cast(Contract, contract)
 
 
-# ------
 def deploy_abi_contract(
     provider: Union[Web3, SignerOrProvider],
     deployer: SignerOrProvider,
@@ -219,39 +243,29 @@ def deploy_abi_contract(
     constructor_args: Optional[List[Any]] = None,
     **tx_params: Any,
 ) -> Contract:
-    """
-    Deploy a contract
+    web3_provider = get_normalized_provider(provider)
+    if web3_provider is None:
+        raise ContractLoadError("No valid provider found")
 
-    Args:
-        provider: Web3 provider
-        deployer: Account to deploy from
-        contract_name: Name of the contract
-        constructor_args: Constructor arguments
-        tx_params: Additional transaction parameters
-
-    Returns:
-        Deployed contract instance
-
-    Raises:
-        ContractLoadError: If deployment fails
-    """
-    provider = get_normalized_provider(provider)
-    deployer_address = deployer.account.address if isinstance(deployer, SignerOrProvider) else deployer.address
+    if not deployer.account:
+        raise ContractLoadError("No deployer account found")
+    deployer_address = deployer.account.address
 
     abi, bytecode = load_contract_data(contract_name)
     if not bytecode:
         raise ContractLoadError(f"No bytecode found for contract: {contract_name}")
 
-    contract = provider.eth.contract(abi=abi, bytecode=bytecode)
+    contract = web3_provider.eth.contract(abi=abi, bytecode=bytecode)
 
     try:
         tx_params = {"from": deployer_address, **tx_params}
-
         constructor_args = constructor_args or []
         tx_hash = contract.constructor(*constructor_args).transact(tx_params)
-        tx_receipt = provider.eth.wait_for_transaction_receipt(tx_hash)
-
-        return provider.eth.contract(address=tx_receipt.contractAddress, abi=abi)
+        tx_receipt = web3_provider.eth.wait_for_transaction_receipt(tx_hash)
+        if not tx_receipt.contractAddress:
+            raise ContractLoadError("Contract deployment failed: no contract address in receipt")
+        deployed_contract = web3_provider.eth.contract(address=tx_receipt.contractAddress, abi=abi)
+        return cast(Contract, deployed_contract)
     except Exception as e:
         raise ContractLoadError(f"Contract deployment failed: {str(e)}") from e
 
@@ -261,7 +275,12 @@ def is_contract_deployed(provider: Web3, address: Union[str, HexAddress]) -> boo
     return bytecode != "0x" and len(bytecode) > 2
 
 
-def sign_and_sent_raw_transaction(signer: SignerOrProvider, tx: TxData) -> TxReceipt:
+def sign_and_sent_raw_transaction(signer: SignerOrProvider, tx: TxParams) -> TxReceipt:
+    if not signer.provider:
+        raise ValueError("No provider found in signer")
+    if not signer.account:
+        raise ValueError("No account found in signer")
+
     if "gasPrice" not in tx:
         if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
             pass
@@ -274,14 +293,11 @@ def sign_and_sent_raw_transaction(signer: SignerOrProvider, tx: TxData) -> TxRec
     if "chainId" not in tx:
         tx["chainId"] = signer.provider.eth.chain_id
 
-    gas_estimate = signer.provider.eth.estimate_gas(tx)
-
+    gas_estimate = signer.provider.eth.estimate_gas(cast(TxParams, tx))
     tx["gas"] = gas_estimate
 
     signed_tx = signer.account.sign_transaction(tx)
-
     tx_hash = signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-
     tx_receipt = signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
     return tx_receipt
