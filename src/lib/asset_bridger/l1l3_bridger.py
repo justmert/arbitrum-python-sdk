@@ -43,11 +43,12 @@ from src.lib.utils.helper import (
 
 class TeleportationType:
     """
-    Python equivalent of the TypeScript enum TeleportationType
-    describing the type of teleportation:
-      - Standard: Teleporting to an ETH-fee L3
-      - OnlyGasToken: Teleporting the fee token to a custom-fee L3
-      - NonGasTokenToCustomGas: Teleporting a non-fee token to a custom-fee L3
+    Enum-like class for teleportation types.
+
+    Attributes:
+        Standard: Standard teleportation
+        OnlyGasToken: Teleportation of only gas token
+        NonGasTokenToCustomGas: Teleportation of non-gas token to custom gas
     """
 
     Standard = 0
@@ -57,12 +58,11 @@ class TeleportationType:
 
 class RetryableGasValues:
     """
-    Python representation of:
-      type RetryableGasValues = {
-        gasLimit: BigNumber
-        maxSubmissionFee: BigNumber
-      }
-    Treated here as simple integers.
+    Gas values for retryable transactions.
+
+    Attributes:
+        gasLimit: Gas limit
+        maxSubmissionFee: Maximum submission fee
     """
 
     def __init__(self, gas_limit: int, max_submission_fee: int):
@@ -72,11 +72,11 @@ class RetryableGasValues:
 
 class TeleporterRetryableGasOverride:
     """
-    Python representation of:
-      type TeleporterRetryableGasOverride = {
-        gasLimit?: PercentIncrease & { min?: BigNumber }
-        maxSubmissionFee?: PercentIncrease
-      }
+    Gas overrides for teleporter retryable transactions.
+
+    Attributes:
+        gasLimit: Gas limit override
+        maxSubmissionFee: Maximum submission fee override
     """
 
     def __init__(
@@ -90,11 +90,11 @@ class TeleporterRetryableGasOverride:
 
 class TokenApproveParams:
     """
-    Python representation of:
-      type TokenApproveParams = {
-        erc20L1Address: string
-        amount?: BigNumber
-      }
+    Parameters for token approval.
+
+    Attributes:
+        erc20L1Address: ERC20 L1 address
+        amount: Amount to approve
     """
 
     def __init__(self, erc20_l1_address: str, amount: Optional[int] = None):
@@ -104,12 +104,12 @@ class TokenApproveParams:
 
 class TxRequestParams:
     """
-    Python representation of:
-      export type TxRequestParams = {
-        txRequest: PickedTransactionRequest
-        l1Signer: Signer
-        overrides?: PayableOverrides
-      }
+    Parameters for transaction requests.
+
+    Attributes:
+        txRequest: Transaction request
+        l1Signer: L1 signer
+        overrides: Transaction overrides
     """
 
     def __init__(self, tx_request: Dict[str, Any], l1_signer: Any, overrides: Optional[Dict[str, Any]] = None):
@@ -120,11 +120,11 @@ class TxRequestParams:
 
 class DepositRequestResult:
     """
-    Python representation of:
-      export type DepositRequestResult = {
-        txRequest: PickedTransactionRequest
-        gasTokenAmount: BigNumber
-      }
+    Result of a deposit request.
+
+    Attributes:
+        txRequest: Transaction request
+        gasTokenAmount: Gas token amount
     """
 
     def __init__(self, tx_request: Dict[str, Any], gas_token_amount: int):
@@ -134,16 +134,16 @@ class DepositRequestResult:
 
 class Erc20L1L3DepositRequestRetryableOverrides:
     """
-    Python representation of:
-      export type Erc20L1L3DepositRequestRetryableOverrides = {
-        l1GasPrice?: PercentIncrease
-        l2GasPrice?: PercentIncrease
-        l3GasPrice?: PercentIncrease
-        l2ForwarderFactoryRetryableGas?: TeleporterRetryableGasOverride
-        l1l2GasTokenBridgeRetryableGas?: TeleporterRetryableGasOverride
-        l1l2TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
-        l2l3TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
-      }
+    Overrides for ERC20 L1->L3 deposit retryable transactions.
+
+    Attributes:
+        l1GasPrice: L1 gas price override
+        l2GasPrice: L2 gas price override
+        l3GasPrice: L3 gas price override
+        l2ForwarderFactoryRetryableGas: L2 forwarder factory retryable gas override
+        l1l2GasTokenBridgeRetryableGas: L1->L2 gas token bridge retryable gas override
+        l1l2TokenBridgeRetryableGas: L1->L2 token bridge retryable gas override
+        l2l3TokenBridgeRetryableGas: L2->L3 token bridge retryable gas override
     """
 
     def __init__(
@@ -167,16 +167,16 @@ class Erc20L1L3DepositRequestRetryableOverrides:
 
 class Erc20L1L3DepositRequestParams:
     """
-    Python representation of:
-      export type Erc20L1L3DepositRequestParams = {
-        erc20L1Address: string
-        amount: BigNumber
-        l2Provider: Provider
-        l3Provider: Provider
-        skipGasToken?: boolean
-        destinationAddress?: string
-        retryableOverrides?: Erc20L1L3DepositRequestRetryableOverrides
-      }
+    Parameters for ERC20 L1->L3 deposit requests.
+
+    Attributes:
+        erc20L1Address: ERC20 L1 address
+        amount: Amount to deposit
+        l2Provider: L2 provider
+        l3Provider: L3 provider
+        skipGasToken: Skip gas token
+        destinationAddress: Destination address
+        retryableOverrides: Retryable overrides
     """
 
     def __init__(
@@ -200,8 +200,12 @@ class Erc20L1L3DepositRequestParams:
 
 class TxReference:
     """
-    Pythonic approach to represent 'TxReference' from TS:
-      type TxReference = { txHash: string } | { tx: ... } | { txReceipt: ... }
+    Reference to a transaction.
+
+    Attributes:
+        txHash: Transaction hash
+        tx: Transaction
+        txReceipt: Transaction receipt
     """
 
     def __init__(
@@ -217,8 +221,12 @@ class TxReference:
 
 class GetL1L3DepositStatusParams(TxReference):
     """
-    Python representation of:
-      export type GetL1L3DepositStatusParams = { l1Provider: Provider; l2Provider: Provider; l3Provider: Provider } & TxReference
+    Parameters for getting L1->L3 deposit status.
+
+    Attributes:
+        l1Provider: L1 provider
+        l2Provider: L2 provider
+        l3Provider: L3 provider
     """
 
     def __init__(
@@ -238,15 +246,15 @@ class GetL1L3DepositStatusParams(TxReference):
 
 class Erc20L1L3DepositStatus:
     """
-    Python representation of:
-      export type Erc20L1L3DepositStatus = {
-        l1l2TokenBridgeRetryable: ParentToChildMessageReader
-        l1l2GasTokenBridgeRetryable: ParentToChildMessageReader | undefined
-        l2ForwarderFactoryRetryable: ParentToChildMessageReader
-        l2l3TokenBridgeRetryable: ParentToChildMessageReader | undefined
-        l2ForwarderFactoryRetryableFrontRan: boolean
-        completed: boolean
-      }
+    Status of an ERC20 L1->L3 deposit.
+
+    Attributes:
+        l1l2TokenBridgeRetryable: L1->L2 token bridge retryable status
+        l1l2GasTokenBridgeRetryable: L1->L2 gas token bridge retryable status
+        l2ForwarderFactoryRetryable: L2 forwarder factory retryable status
+        l2l3TokenBridgeRetryable: L2->L3 token bridge retryable status
+        l2ForwarderFactoryRetryableFrontRan: L2 forwarder factory retryable front ran
+        completed: Deposit completed
     """
 
     def __init__(
@@ -268,16 +276,16 @@ class Erc20L1L3DepositStatus:
 
 class EthL1L3DepositRequestParams:
     """
-    Python representation of:
-      export type EthL1L3DepositRequestParams = {
-        amount: BigNumberish
-        l2Provider: Provider
-        l3Provider: Provider
-        destinationAddress?: string
-        l2RefundAddress?: string
-        l2TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
-        l3TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
-      }
+    Parameters for ETH L1->L3 deposit requests.
+
+    Attributes:
+        amount: Amount to deposit
+        l2Provider: L2 provider
+        l3Provider: L3 provider
+        destinationAddress: Destination address
+        l2RefundAddress: L2 refund address
+        l2TicketGasOverrides: L2 ticket gas overrides
+        l3TicketGasOverrides: L3 ticket gas overrides
     """
 
     def __init__(
@@ -301,12 +309,12 @@ class EthL1L3DepositRequestParams:
 
 class EthL1L3DepositStatus:
     """
-    Python representation of:
-      export type EthL1L3DepositStatus = {
-        l2Retryable: ParentToChildMessageReader
-        l3Retryable: ParentToChildMessageReader | undefined
-        completed: boolean
-      }
+    Status of an ETH L1->L3 deposit.
+
+    Attributes:
+        l2Retryable: L2 retryable status
+        l3Retryable: L3 retryable status
+        completed: Deposit completed
     """
 
     def __init__(
@@ -327,14 +335,14 @@ class EthL1L3DepositStatus:
 
 class BaseL1L3Bridger:
     """
-    Python equivalent of the TypeScript 'BaseL1L3Bridger' class,
-    which provides base functionality for bridging from L1 to L3.
+    Base class for L1->L3 bridgers.
     """
 
     def __init__(self, l3_network: ArbitrumNetwork):
         """
-        :param l3_network: The ArbitrumNetwork describing the L3 chain.
-        :raises ArbSdkError: If we cannot find the L2 network for l3_network.parentChainId
+        Initialize the bridger.
+
+        :param l3_network: The L3 network
         """
         potential_l2 = None
         for net in get_arbitrum_networks():
@@ -355,32 +363,36 @@ class BaseL1L3Bridger:
 
     def _check_l1_network(self, sop: SignerOrProvider):
         """
-        Ensure the signer/provider is on the expected L1 chainId.
+        Check if the signer/provider is on the expected L1 chain.
         """
         SignerProviderUtils.check_network_matches(sop, self.l1Network["chainId"])
 
     def _check_l2_network(self, sop: SignerOrProvider):
         """
-        Ensure the signer/provider is on the expected L2 chainId.
+        Check if the signer/provider is on the expected L2 chain.
         """
         SignerProviderUtils.check_network_matches(sop, self.l2Network.chainId)
 
     def _check_l3_network(self, sop: SignerOrProvider):
         """
-        Ensure the signer/provider is on the expected L3 chainId.
+        Check if the signer/provider is on the expected L3 chain.
         """
         SignerProviderUtils.check_network_matches(sop, self.l3Network.chainId)
 
     def _percent_increase(self, num: int, increase: int) -> int:
         """
-        :param num: The base integer
+        Calculate the percent increase.
+
+        :param num: The base number
         :param increase: The percent to increase by
         """
         return num + (num * increase) // 100
 
     def _get_tx_hash_from_tx_ref(self, tx_ref: Union[Dict[str, Any], "TxReference"]) -> str:
         """
-        Utility to retrieve the transaction hash from a TxReference-like object.
+        Get the transaction hash from a transaction reference.
+
+        :param tx_ref: The transaction reference
         """
         if "txHash" in tx_ref:
             return tx_ref["txHash"]
@@ -393,8 +405,10 @@ class BaseL1L3Bridger:
         self, tx_ref: Union[Dict[str, Any], "TxReference"], provider: Web3
     ) -> ParentContractCallTransaction:
         """
-        If 'tx' key is present, return that.
-        Otherwise fetch from chain and monkey-patch.
+        Get the transaction from a transaction reference.
+
+        :param tx_ref: The transaction reference
+        :param provider: The provider
         """
         if "tx" in tx_ref:
             return tx_ref["tx"]
@@ -408,8 +422,10 @@ class BaseL1L3Bridger:
         self, tx_ref: Union[Dict[str, Any], "TxReference"], provider: Web3
     ) -> ParentContractCallTransactionReceipt:
         """
-        If 'txReceipt' key is present, return that.
-        Otherwise fetch from chain by transaction hash.
+        Get the transaction receipt from a transaction reference.
+
+        :param tx_ref: The transaction reference
+        :param provider: The provider
         """
         if "txReceipt" in tx_ref:
             return tx_ref["txReceipt"]
@@ -426,7 +442,7 @@ class BaseL1L3Bridger:
 
 class Erc20L1L3Bridger(BaseL1L3Bridger):
     """
-    Python version of the Erc20L1L3Bridger from l1l3Bridger.ts
+    Erc20 L1->L3 bridger.
     """
 
     def __init__(self, l3_network: ArbitrumNetwork):
@@ -459,7 +475,10 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
 
     def get_gas_token_on_l1(self, l1_provider: Web3, l2_provider: Web3) -> str:
         """
-        Equivalent to getGasTokenOnL1 in TS
+        Get the gas token on L1.
+
+        :param l1_provider: The L1 provider
+        :param l2_provider: The L2 provider
         """
         if not self.l2GasTokenAddress:
             raise ArbSdkError("L3 uses ETH for gas")
@@ -549,7 +568,9 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
 
     def get_approve_token_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Return a transaction request to approve tokens for teleportation.
+        Get the approve token request.
+
+        :param params: The parameters
         """
         erc20_address = params["erc20L1Address"]
         amount = params.get("amount")
@@ -584,7 +605,9 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
 
     def get_approve_gas_token_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Return a tx request to approve the L3's fee token for teleportation.
+        Get the approve gas token request.
+
+        :param params: The parameters
         """
         amount = params.get("amount")
         fee_token_l1 = self.get_gas_token_on_l1(params["l1Provider"], params["l2Provider"])
@@ -616,7 +639,9 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
 
     def get_deposit_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Equivalent to getDepositRequest in TS
+        Get the deposit request.
+
+        :param params: The parameters
         """
         assert_arbitrum_network_has_token_bridge(self.l2Network)
         assert_arbitrum_network_has_token_bridge(self.l3Network)
@@ -1130,7 +1155,6 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
     def _get_l1_to_l2_messages(
         self, l1_tx_receipt: ParentContractCallTransactionReceipt, l2_provider: Web3
     ) -> Dict[str, Optional[ParentToChildMessageReader]]:
-
         l1l2_messages: List[ParentToChildMessageReader] = l1_tx_receipt.get_parent_to_child_messages(l2_provider)
 
         if len(l1l2_messages) == 2:

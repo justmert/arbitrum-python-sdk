@@ -1,0 +1,4 @@
+sphinx>=7.1.2
+furo>=2024.8.6
+sphinx-autodoc-typehints>=2.0.1
+myst-parser>=3.0.1

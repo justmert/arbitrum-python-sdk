@@ -1,0 +1,1490 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" />
+
+    <!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>src.lib.asset_bridger.erc20_bridger - Arbitrum Python SDK documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../../index.html"><div class="brand">Arbitrum Python SDK  documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../../index.html">
+  
+  
+  <span class="sidebar-brand-text">Arbitrum Python SDK  documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="simple">
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for src.lib.asset_bridger.erc20_bridger</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Generic</span>
+
+<span class="kn">from</span> <span class="nn">eth_abi</span> <span class="kn">import</span> <span class="n">encode</span>
+<span class="kn">from</span> <span class="nn">eth_typing</span> <span class="kn">import</span> <span class="n">Address</span><span class="p">,</span> <span class="n">HexStr</span>
+<span class="kn">from</span> <span class="nn">web3</span> <span class="kn">import</span> <span class="n">Web3</span>
+<span class="kn">from</span> <span class="nn">web3.contract</span> <span class="kn">import</span> <span class="n">Contract</span>
+<span class="kn">from</span> <span class="nn">web3.exceptions</span> <span class="kn">import</span> <span class="n">ContractLogicError</span>
+<span class="kn">from</span> <span class="nn">web3.types</span> <span class="kn">import</span> <span class="n">TxParams</span><span class="p">,</span> <span class="n">Wei</span><span class="p">,</span> <span class="n">Nonce</span>
+
+<span class="kn">from</span> <span class="nn">src.lib.asset_bridger.asset_bridger</span> <span class="kn">import</span> <span class="n">AssetBridger</span>
+<span class="kn">from</span> <span class="nn">src.lib.data_entities.constants</span> <span class="kn">import</span> <span class="n">DISABLED_GATEWAY</span>
+<span class="kn">from</span> <span class="nn">src.lib.data_entities.errors</span> <span class="kn">import</span> <span class="n">ArbSdkError</span><span class="p">,</span> <span class="n">MissingProviderArbSdkError</span>
+<span class="kn">from</span> <span class="nn">src.lib.data_entities.networks</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">assert_arbitrum_network_has_token_bridge</span><span class="p">,</span>
+    <span class="n">get_arbitrum_network</span><span class="p">,</span>
+    <span class="n">ArbitrumNetwork</span><span class="p">,</span>
+    <span class="n">TokenBridge</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">src.lib.data_entities.retryable_data</span> <span class="kn">import</span> <span class="n">RetryableDataTools</span>
+<span class="kn">from</span> <span class="nn">src.lib.data_entities.signer_or_provider</span> <span class="kn">import</span> <span class="n">SignerProviderUtils</span>
+<span class="kn">from</span> <span class="nn">src.lib.data_entities.transaction_request</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">is_child_to_parent_transaction_request</span><span class="p">,</span>
+    <span class="n">is_parent_to_child_transaction_request</span><span class="p">,</span>
+    <span class="n">ParentToChildTransactionRequest</span><span class="p">,</span>
+    <span class="n">ChildToParentTransactionRequest</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">src.lib.message.child_transaction</span> <span class="kn">import</span> <span class="n">ChildTransactionReceipt</span>
+<span class="kn">from</span> <span class="nn">src.lib.message.parent_to_child_message_gas_estimator</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ParentToChildMessageGasEstimator</span><span class="p">,</span>
+    <span class="n">GasOverrides</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">src.lib.message.parent_transaction</span> <span class="kn">import</span> <span class="n">ParentTransactionReceipt</span>
+<span class="kn">from</span> <span class="nn">src.lib.utils.calldata</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_erc20_parent_address_from_parent_to_child_tx_request</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">src.lib.utils.event_fetcher</span> <span class="kn">import</span> <span class="n">EventFetcher</span>
+<span class="kn">from</span> <span class="nn">src.lib.utils.helper</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CaseDict</span><span class="p">,</span>
+    <span class="n">create_contract_instance</span><span class="p">,</span>
+    <span class="n">is_contract_deployed</span><span class="p">,</span>
+    <span class="n">load_contract</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">src.lib.utils.lib</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_native_token_decimals</span><span class="p">,</span>
+    <span class="n">is_arbitrum_chain</span><span class="p">,</span>
+    <span class="n">scale_from_18_decimals_to_native_token_decimals</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">DepositParams</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;DepositParams&#39;</span><span class="p">)</span>
+<span class="n">WithdrawParams</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;WithdrawParams&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Erc20Bridger"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger">[docs]</a><span class="k">class</span> <span class="nc">Erc20Bridger</span><span class="p">(</span><span class="n">AssetBridger</span><span class="p">[</span><span class="n">DepositParams</span><span class="p">,</span> <span class="n">WithdrawParams</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bridger for moving ERC20 tokens between parent and child chains.</span>
+
+<span class="sd">    This class provides functionality for bridging ERC20 tokens between a parent chain</span>
+<span class="sd">    (typically Ethereum mainnet) and a child chain (an Arbitrum chain). It handles</span>
+<span class="sd">    token approvals, deposits, withdrawals, and gateway interactions.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        MAX_APPROVAL (int): Maximum approval amount (2^256 - 1)</span>
+<span class="sd">        MIN_CUSTOM_DEPOSIT_GAS_LIMIT (int): Minimum gas limit for custom token deposits</span>
+<span class="sd">        child_network (ArbitrumNetwork): Network configuration for the child chain</span>
+<span class="sd">        tokenBridge (TokenBridge): Token bridge configuration</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">MAX_APPROVAL</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">256</span> <span class="o">-</span> <span class="mi">1</span>  <span class="c1"># Equivalent of ethers MaxUint256</span>
+    <span class="n">MIN_CUSTOM_DEPOSIT_GAS_LIMIT</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">275000</span>
+
+<div class="viewcode-block" id="Erc20Bridger.__init__"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">child_network</span><span class="p">:</span> <span class="n">ArbitrumNetwork</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the ERC20 bridger.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            child_network: ArbitrumNetwork instance containing chain configuration</span>
+<span class="sd">                including chain IDs and token bridge details.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ArbSdkError: If child_network lacks token bridge configuration</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">child_network</span><span class="p">)</span>
+        <span class="n">assert_arbitrum_network_has_token_bridge</span><span class="p">(</span><span class="n">child_network</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">child_network</span> <span class="o">=</span> <span class="n">child_network</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span> <span class="o">=</span> <span class="n">child_network</span><span class="o">.</span><span class="n">tokenBridge</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.from_provider"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.from_provider">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_provider</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">child_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Erc20Bridger&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create an Erc20Bridger instance from a child chain provider.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            child_provider: Web3 provider connected to the child chain</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Erc20Bridger: New bridger instance configured for the detected network</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ArbSdkError: If network detection fails or network is not supported</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">child_network</span> <span class="o">=</span> <span class="n">get_arbitrum_network</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">child_network</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_parent_gateway_address"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_parent_gateway_address">[docs]</a>    <span class="k">def</span> <span class="nf">get_parent_gateway_address</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">erc20_parent_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Address</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the parent chain gateway address for a token.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            erc20_parent_address: Address of the ERC20 token on parent chain</span>
+<span class="sd">            parent_provider: Web3 provider for parent chain</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Address: Gateway contract address that handles this token</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ArbSdkError: If network validation fails or gateway lookup fails</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">parent_provider</span><span class="p">)</span>
+        <span class="n">parent_gateway_router</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L1GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentGatewayRouter</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">parent_gateway_router</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">getGateway</span><span class="p">(</span><span class="n">erc20_parent_address</span><span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_child_gateway_address"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_child_gateway_address">[docs]</a>    <span class="k">def</span> <span class="nf">get_child_gateway_address</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">erc20_parent_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span> <span class="n">child_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Address</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the child chain gateway address for a token.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            erc20_parent_address: Address of the ERC20 token on parent chain</span>
+<span class="sd">            child_provider: Web3 provider for child chain</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Address: Gateway contract address that handles this token</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ArbSdkError: If network validation fails or gateway lookup fails</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_child_network</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+        <span class="n">child_gateway_router</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">child_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L2GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">childGatewayRouter</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">child_gateway_router</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">getGateway</span><span class="p">(</span><span class="n">erc20_parent_address</span><span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_approve_gas_token_request"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_approve_gas_token_request">[docs]</a>    <span class="k">def</span> <span class="nf">get_approve_gas_token_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TxParams</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a transaction request for approving the custom gas token to be spent by the relevant gateway</span>
+<span class="sd">        on the parent chain. If the chain uses ETH natively, this is unnecessary and will error.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: A dict with &#39;erc20ParentAddress&#39;, &#39;parentProvider&#39;, &#39;amount&#39; (optional), etc.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict representing a transaction request with &#39;to&#39;, &#39;data&#39;, and &#39;value&#39;</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If chain uses ETH as its native/gas token</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token_is_eth</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Chain uses ETH as its native/gas token&quot;</span><span class="p">)</span>
+
+        <span class="n">tx_request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_approve_token_request</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="c1"># Overwrite the &#39;to&#39; field to be the native token address</span>
+        <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">tx_request</span><span class="p">,</span> <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token</span><span class="p">}</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.approve_gas_token"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.approve_gas_token">[docs]</a>    <span class="k">def</span> <span class="nf">approve_gas_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ParentTransactionReceipt</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Approves the custom gas token to be spent by the relevant gateway on the parent chain.</span>
+<span class="sd">        This only applies if the chain does NOT use ETH natively.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: Dictionary that can either be:</span>
+<span class="sd">                1) ApproveParams with &#39;erc20ParentAddress&#39; and &#39;parentSigner&#39;</span>
+<span class="sd">                2) Or a transaction request dict with &#39;txRequest&#39;, &#39;parentSigner&#39;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Transaction receipt object from the parent chain</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If chain uses ETH as its native/gas token</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token_is_eth</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Chain uses ETH as its native/gas token&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Build or retrieve the transaction request</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_approve_params</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+            <span class="c1"># For the standard &quot;approve gas token&quot; flow</span>
+            <span class="n">approve_gas_token_request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_approve_gas_token_request</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+                    <span class="s2">&quot;parentProvider&quot;</span><span class="p">:</span> <span class="n">SignerProviderUtils</span><span class="o">.</span><span class="n">get_provider_or_throw</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># If user provided a custom transaction request</span>
+            <span class="n">approve_gas_token_request</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;txRequest&quot;</span><span class="p">]</span>
+
+        <span class="n">transaction</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">approve_gas_token_request</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;overrides&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+        <span class="p">}</span>
+
+        <span class="c1"># If &#39;from&#39; is missing, fill it in from the signer&#39;s address</span>
+        <span class="k">if</span> <span class="s2">&quot;from&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">transaction</span><span class="p">:</span>
+            <span class="n">transaction</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span>
+
+        <span class="n">tx_hash</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">send_transaction</span><span class="p">(</span><span class="n">transaction</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">wait_for_transaction_receipt</span><span class="p">(</span><span class="n">tx_hash</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_approve_token_request"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_approve_token_request">[docs]</a>    <span class="k">def</span> <span class="nf">get_approve_token_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TxParams</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a transaction request to approve an ERC20 token for deposit.</span>
+<span class="sd">        The tokens will be approved for whichever gateway the router returns.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: A dict with &#39;erc20ParentAddress&#39;, &#39;parentProvider&#39;, optional &#39;amount&#39;, etc.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A transaction request dict with &#39;to&#39;, &#39;data&#39;, &#39;value&#39; = 0</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gateway_address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_parent_gateway_address</span><span class="p">(</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">],</span>
+            <span class="n">SignerProviderUtils</span><span class="o">.</span><span class="n">get_provider_or_throw</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentProvider&quot;</span><span class="p">]),</span>
+        <span class="p">)</span>
+
+        <span class="n">i_erc20_interface</span> <span class="o">=</span> <span class="n">create_contract_instance</span><span class="p">(</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;ERC20&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">i_erc20_interface</span><span class="o">.</span><span class="n">encodeABI</span><span class="p">(</span>
+            <span class="n">fn_name</span><span class="o">=</span><span class="s2">&quot;approve&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">gateway_address</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_APPROVAL</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">],</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.is_approve_params"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.is_approve_params">[docs]</a>    <span class="k">def</span> <span class="nf">is_approve_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper to check whether &#39;params&#39; is a standard &#39;ApproveParams&#39;</span>
+<span class="sd">        (which includes &#39;erc20ParentAddress&#39;) vs. a custom txRequest.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;erc20ParentAddress&quot;</span> <span class="ow">in</span> <span class="n">params</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.approve_token"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.approve_token">[docs]</a>    <span class="k">def</span> <span class="nf">approve_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ParentTransactionReceipt</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Approves the ERC20 token on the parent chain for bridging.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: A dictionary that can either be standard &#39;ApproveParams&#39;</span>
+<span class="sd">                       or contain a pre-built &#39;txRequest&#39;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Transaction receipt from the parent chain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_approve_params</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+            <span class="n">approve_request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_approve_token_request</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+                    <span class="s2">&quot;parentProvider&quot;</span><span class="p">:</span> <span class="n">SignerProviderUtils</span><span class="o">.</span><span class="n">get_provider_or_throw</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">approve_request</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;txRequest&quot;</span><span class="p">]</span>
+
+        <span class="n">transaction</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">approve_request</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;overrides&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="s2">&quot;from&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">transaction</span><span class="p">:</span>
+            <span class="n">transaction</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span>
+
+        <span class="n">tx_hash</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">send_transaction</span><span class="p">(</span><span class="n">transaction</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">wait_for_transaction_receipt</span><span class="p">(</span><span class="n">tx_hash</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_withdrawal_events"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_withdrawal_events">[docs]</a>    <span class="k">def</span> <span class="nf">get_withdrawal_events</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">child_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">,</span>
+        <span class="n">gateway_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span>
+        <span class="n">filter_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">parent_token_address</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Address</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">from_address</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Address</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">to_address</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Address</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the child network events (WithdrawalInitiated) created by a token withdrawal.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            child_provider: Web3 provider for the child chain</span>
+<span class="sd">            gateway_address: Address of the child gateway</span>
+<span class="sd">            filter_dict: {&#39;fromBlock&#39;: X, &#39;toBlock&#39;: Y}, specifying the block range</span>
+<span class="sd">            parent_token_address: Optional filter for a specific parent token</span>
+<span class="sd">            from_address: Optional filter for the &quot;from&quot; address</span>
+<span class="sd">            to_address: Optional filter for the &quot;to&quot; address</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A list of event objects including &#39;txHash&#39; for each withdrawal event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_child_network</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+        <span class="n">event_fetcher</span> <span class="o">=</span> <span class="n">EventFetcher</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+
+        <span class="c1"># We can extend argument_filters if needed</span>
+        <span class="n">argument_filters</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># from_address, to_address, or parent_token_address can be further applied, but</span>
+        <span class="c1"># for now we fetch all, then filter in Python for parent_token_address.</span>
+
+        <span class="n">events</span> <span class="o">=</span> <span class="n">event_fetcher</span><span class="o">.</span><span class="n">get_events</span><span class="p">(</span>
+            <span class="n">contract_factory</span><span class="o">=</span><span class="s2">&quot;L2ArbitrumGateway&quot;</span><span class="p">,</span>
+            <span class="n">event_name</span><span class="o">=</span><span class="s2">&quot;WithdrawalInitiated&quot;</span><span class="p">,</span>
+            <span class="n">argument_filters</span><span class="o">=</span><span class="n">argument_filters</span><span class="p">,</span>
+            <span class="nb">filter</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="n">gateway_address</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">filter_dict</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+        <span class="n">events</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;txHash&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">[</span><span class="s2">&quot;transactionHash&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">a</span><span class="p">[</span><span class="s2">&quot;event&quot;</span><span class="p">]}</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">events</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">parent_token_address</span><span class="p">:</span>
+            <span class="n">events</span> <span class="o">=</span> <span class="p">[</span><span class="n">ev</span> <span class="k">for</span> <span class="n">ev</span> <span class="ow">in</span> <span class="n">events</span> <span class="k">if</span> <span class="n">ev</span><span class="p">[</span><span class="s2">&quot;l1Token&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">parent_token_address</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+        <span class="c1"># from_address / to_address filtering can be added as needed</span>
+        <span class="k">return</span> <span class="n">events</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.looks_like_weth_gateway"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.looks_like_weth_gateway">[docs]</a>    <span class="k">def</span> <span class="nf">looks_like_weth_gateway</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">potential_weth_gateway_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Ad-hoc check to see if the given address is a WETH gateway.</span>
+<span class="sd">        We attempt to read the &#39;l1Weth()&#39; method. If that fails with a call exception, it&#39;s not WETH.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">potential_weth_gateway</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+                <span class="n">provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span>
+                <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L1WethGateway&quot;</span><span class="p">,</span>
+                <span class="n">address</span><span class="o">=</span><span class="n">potential_weth_gateway_address</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">potential_weth_gateway</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">l1Weth</span><span class="p">()</span><span class="o">.</span><span class="n">call</span><span class="p">()</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">ContractLogicError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">err</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.is_weth_gateway"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.is_weth_gateway">[docs]</a>    <span class="k">def</span> <span class="nf">is_weth_gateway</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gateway_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a provided gateway address is the WETH gateway.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gateway_address: The suspected WETH gateway address</span>
+<span class="sd">            parent_provider: Web3 provider for the parent chain</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weth_address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">child_network</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentWethGateway</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">child_network</span><span class="o">.</span><span class="n">isCustom</span><span class="p">:</span>
+            <span class="c1"># For custom networks, do a direct runtime check</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">looks_like_weth_gateway</span><span class="p">(</span><span class="n">gateway_address</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># If it&#39;s not custom, compare directly to the known WETH gateway address</span>
+            <span class="k">if</span> <span class="n">weth_address</span> <span class="o">==</span> <span class="n">gateway_address</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_child_token_contract"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_child_token_contract">[docs]</a>    <span class="k">def</span> <span class="nf">get_child_token_contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">child_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">,</span> <span class="n">child_token_addr</span><span class="p">:</span> <span class="n">Address</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Contract</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a contract object pointing to the child ERC20 token.</span>
+<span class="sd">        Does not validate the contract code to confirm it&#39;s indeed an ERC20.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">child_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L2GatewayToken&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="n">child_token_addr</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_parent_token_contract"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_parent_token_contract">[docs]</a>    <span class="k">def</span> <span class="nf">get_parent_token_contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">,</span> <span class="n">parent_token_addr</span><span class="p">:</span> <span class="n">Address</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Contract</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a contract object pointing to the parent ERC20 token.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;ERC20&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="n">parent_token_addr</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_child_erc20_address"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_child_erc20_address">[docs]</a>    <span class="k">def</span> <span class="nf">get_child_erc20_address</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">erc20_parent_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Address</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Given a parent chain token address, compute the corresponding child chain ERC20 token address.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            erc20_parent_address: The parent chain token address</span>
+<span class="sd">            parent_provider: A Web3 provider for the parent chain</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The corresponding child chain address</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">parent_provider</span><span class="p">)</span>
+
+        <span class="n">parent_gateway_router</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L1GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentGatewayRouter</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">parent_gateway_router</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">calculateL2TokenAddress</span><span class="p">(</span><span class="n">erc20_parent_address</span><span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_parent_erc20_address"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_parent_erc20_address">[docs]</a>    <span class="k">def</span> <span class="nf">get_parent_erc20_address</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">erc20_child_chain_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span> <span class="n">child_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Address</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Given a child chain ERC20 token address, compute the corresponding parent chain token address.</span>
+<span class="sd">        Also verify that the child chain router agrees on this mapping.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            erc20_child_chain_address: The address of the token on the child chain</span>
+<span class="sd">            child_provider: Web3 provider for the child chain</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The corresponding address on the parent chain</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ArbSdkError if the child token does not match the computed parent token</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_child_network</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+
+        <span class="c1"># If this is the child WETH address, we can short-circuit</span>
+        <span class="k">if</span> <span class="n">erc20_child_chain_address</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">child_network</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">childWeth</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">child_network</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentWeth</span>
+
+        <span class="n">arb_erc20</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">child_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L2GatewayToken&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="n">erc20_child_chain_address</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">parent_address</span> <span class="o">=</span> <span class="n">arb_erc20</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">l1Address</span><span class="p">()</span><span class="o">.</span><span class="n">call</span><span class="p">()</span>
+
+        <span class="n">child_gateway_router</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">child_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L2GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">childGatewayRouter</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">child_address</span> <span class="o">=</span> <span class="n">child_gateway_router</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">calculateL2TokenAddress</span><span class="p">(</span><span class="n">parent_address</span><span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">child_address</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="n">erc20_child_chain_address</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">ArbSdkError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unexpected parent address. Parent address from token is not registered to &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the provided child address. </span><span class="si">{</span><span class="n">parent_address</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">child_address</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">erc20_child_chain_address</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">parent_address</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.is_deposit_disabled"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.is_deposit_disabled">[docs]</a>    <span class="k">def</span> <span class="nf">is_deposit_disabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_token_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether the deposit for this token has been disabled on the parent router.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            parent_token_address: The parent&#39;s ERC20 address</span>
+<span class="sd">            parent_provider: Parent chain provider</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            True if the token is disabled, False otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">parent_provider</span><span class="p">)</span>
+        <span class="n">parent_gateway_router</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L1GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentGatewayRouter</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">parent_gateway_router</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">l1TokenToGateway</span><span class="p">(</span><span class="n">parent_token_address</span><span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span> <span class="o">==</span> <span class="n">DISABLED_GATEWAY</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.apply_defaults"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.apply_defaults">[docs]</a>    <span class="k">def</span> <span class="nf">apply_defaults</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Ensures default addresses for &#39;excessFeeRefundAddress&#39;, &#39;callValueRefundAddress&#39;,</span>
+<span class="sd">        &#39;destinationAddress&#39; are set to &#39;from&#39; if not otherwise specified.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+            <span class="s2">&quot;excessFeeRefundAddress&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="n">params</span><span class="p">[</span><span class="s2">&quot;excessFeeRefundAddress&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;excessFeeRefundAddress&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;callValueRefundAddress&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="n">params</span><span class="p">[</span><span class="s2">&quot;callValueRefundAddress&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;callValueRefundAddress&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;destinationAddress&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="n">params</span><span class="p">[</span><span class="s2">&quot;destinationAddress&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;destinationAddress&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span>
+            <span class="p">),</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_deposit_request_call_value"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_deposit_request_call_value">[docs]</a>    <span class="k">def</span> <span class="nf">get_deposit_request_call_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deposit_params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Wei</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the ETH callValue needed for a deposit, if the chain uses ETH as its gas token.</span>
+<span class="sd">        Otherwise, returns 0 because fees are handled differently.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token_is_eth</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_deposit_request_outbound_transfer_inner_data"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_deposit_request_outbound_transfer_inner_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_deposit_request_outbound_transfer_inner_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deposit_params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">decimals</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HexStr</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds the &#39;innerData&#39; argument for the gateway&#39;s outboundTransfer/outboundTransferCustomRefund calls.</span>
+<span class="sd">        If the chain uses ETH natively, we pass [maxSubmissionCost, &#39;0x&#39;].</span>
+<span class="sd">        Otherwise, also pack the fee inside.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token_is_eth</span><span class="p">:</span>
+            <span class="c1"># For a chain that uses an ERC-20 gas token, we pass three fields:</span>
+            <span class="c1"># [maxSubmissionCost, &quot;0x&quot;, tokenTotalFee]</span>
+            <span class="n">fee_wei</span> <span class="o">=</span> <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">]</span>
+            <span class="n">encoded_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solidity_encode</span><span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;uint256&quot;</span><span class="p">,</span> <span class="s2">&quot;bytes&quot;</span><span class="p">,</span> <span class="s2">&quot;uint256&quot;</span><span class="p">],</span>
+                <span class="p">[</span>
+                    <span class="nb">int</span><span class="p">(</span><span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">]),</span>
+                    <span class="s2">&quot;0x&quot;</span><span class="p">,</span>
+                    <span class="n">scale_from_18_decimals_to_native_token_decimals</span><span class="p">(</span>
+                        <span class="n">amount</span><span class="o">=</span><span class="n">fee_wei</span><span class="p">,</span>
+                        <span class="n">decimals</span><span class="o">=</span><span class="n">decimals</span><span class="p">,</span>
+                    <span class="p">),</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">encoded_values</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># For an ETH chain, only [maxSubmissionCost, &quot;0x&quot;] is needed</span>
+            <span class="n">encoded_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solidity_encode</span><span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;uint256&quot;</span><span class="p">,</span> <span class="s2">&quot;bytes&quot;</span><span class="p">],</span>
+                <span class="p">[</span>
+                    <span class="nb">int</span><span class="p">(</span><span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">]),</span>
+                    <span class="s2">&quot;0x&quot;</span><span class="p">,</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">encoded_values</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_deposit_request"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_deposit_request">[docs]</a>    <span class="k">def</span> <span class="nf">get_deposit_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ParentToChildTransactionRequest</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructs the deposit (parent-&gt;child) bridging transaction data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          params:</span>
+<span class="sd">            {</span>
+<span class="sd">            &#39;from&#39;, &#39;parentProvider&#39;, &#39;childProvider&#39;,</span>
+<span class="sd">            &#39;erc20ParentAddress&#39;, &#39;amount&#39;, optional &#39;excessFeeRefundAddress&#39;,</span>
+<span class="sd">            &#39;callValueRefundAddress&#39;, &#39;destinationAddress&#39;, &#39;maxSubmissionCost&#39;,</span>
+<span class="sd">            &#39;retryableGasOverrides&#39;, ...</span>
+<span class="sd">          }</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A ParentToChildTransactionRequest dict with &#39;txRequest&#39;, &#39;retryableData&#39;, &#39;isValid()&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentProvider&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_child_network</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;childProvider&quot;</span><span class="p">])</span>
+
+        <span class="n">defaulted_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_defaults</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="n">amount</span> <span class="o">=</span> <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;amount&quot;</span><span class="p">]</span>
+        <span class="n">destination_address</span> <span class="o">=</span> <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;destinationAddress&quot;</span><span class="p">]</span>
+        <span class="n">erc20_parent_address</span> <span class="o">=</span> <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">]</span>
+        <span class="n">parent_provider</span> <span class="o">=</span> <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;parentProvider&quot;</span><span class="p">]</span>
+        <span class="n">child_provider</span> <span class="o">=</span> <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;childProvider&quot;</span><span class="p">]</span>
+        <span class="n">retryable_gas_overrides</span> <span class="o">=</span> <span class="n">defaulted_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;retryableGasOverrides&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">retryable_gas_overrides</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">retryable_gas_overrides</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Possibly apply a custom min gas limit if this is the &quot;custom&quot; gateway</span>
+        <span class="n">parent_gateway_address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_parent_gateway_address</span><span class="p">(</span><span class="n">erc20_parent_address</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">parent_gateway_address</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentCustomGateway</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;gasLimit&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">retryable_gas_overrides</span><span class="p">:</span>
+                <span class="n">retryable_gas_overrides</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="s2">&quot;min&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">retryable_gas_overrides</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">]:</span>
+                <span class="n">retryable_gas_overrides</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">][</span><span class="s2">&quot;min&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">MIN_CUSTOM_DEPOSIT_GAS_LIMIT</span>
+
+        <span class="n">decimals</span> <span class="o">=</span> <span class="n">get_native_token_decimals</span><span class="p">(</span>
+            <span class="n">parent_provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span>
+            <span class="n">child_network</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">child_network</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">deposit_func</span><span class="p">(</span><span class="n">deposit_params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TxParams</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            This local function returns the L1 transaction data for the deposit call on the L1GatewayRouter.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">inner_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_deposit_request_outbound_transfer_inner_data</span><span class="p">(</span><span class="n">deposit_params</span><span class="p">,</span> <span class="n">decimals</span><span class="p">)</span>
+
+            <span class="c1"># Load the L1GatewayRouter ABI interface</span>
+            <span class="n">i_gateway_router</span> <span class="o">=</span> <span class="n">create_contract_instance</span><span class="p">(</span>
+                <span class="c1"># provider=parent_provider,</span>
+                <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L1GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="c1"># If user specified a non-default &#39;excessFeeRefundAddress&#39;</span>
+            <span class="k">if</span> <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;excessFeeRefundAddress&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]:</span>
+
+                <span class="c1"># outboundTransferCustomRefund</span>
+                <span class="n">function_data</span> <span class="o">=</span> <span class="n">i_gateway_router</span><span class="o">.</span><span class="n">encodeABI</span><span class="p">(</span>
+                    <span class="n">fn_name</span><span class="o">=</span><span class="s2">&quot;outboundTransferCustomRefund&quot;</span><span class="p">,</span>
+                    <span class="n">args</span><span class="o">=</span><span class="p">[</span>
+                        <span class="n">erc20_parent_address</span><span class="p">,</span>
+                        <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;excessFeeRefundAddress&quot;</span><span class="p">],</span>
+                        <span class="n">destination_address</span><span class="p">,</span>
+                        <span class="n">amount</span><span class="p">,</span>
+                        <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">],</span>
+                        <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">],</span>
+                        <span class="n">inner_data</span><span class="p">,</span>
+                    <span class="p">],</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Standard outboundTransfer</span>
+                <span class="n">function_data</span> <span class="o">=</span> <span class="n">i_gateway_router</span><span class="o">.</span><span class="n">encodeABI</span><span class="p">(</span>
+                    <span class="n">fn_name</span><span class="o">=</span><span class="s2">&quot;outboundTransfer&quot;</span><span class="p">,</span>
+                    <span class="n">args</span><span class="o">=</span><span class="p">[</span>
+                        <span class="n">erc20_parent_address</span><span class="p">,</span>
+                        <span class="n">destination_address</span><span class="p">,</span>
+                        <span class="n">amount</span><span class="p">,</span>
+                        <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">],</span>
+                        <span class="n">deposit_params</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">],</span>
+                        <span class="n">inner_data</span><span class="p">,</span>
+                    <span class="p">],</span>
+                <span class="p">)</span>
+
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">function_data</span><span class="p">,</span>
+                <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentGatewayRouter</span><span class="p">,</span>
+                <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">defaulted_params</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_deposit_request_call_value</span><span class="p">(</span><span class="n">deposit_params</span><span class="p">),</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Use our ParentToChildMessageGasEstimator to figure out the final gas parameters</span>
+        <span class="n">gas_estimator</span> <span class="o">=</span> <span class="n">ParentToChildMessageGasEstimator</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+
+        <span class="n">estimates</span> <span class="o">=</span> <span class="n">gas_estimator</span><span class="o">.</span><span class="n">populate_function_params</span><span class="p">(</span>
+            <span class="n">deposit_func</span><span class="p">,</span>
+            <span class="n">parent_provider</span><span class="p">,</span>
+            <span class="n">retryable_gas_overrides</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">is_valid</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="c1"># Re-fetch estimates to see if they&#39;ve changed</span>
+            <span class="n">re_estimates</span> <span class="o">=</span> <span class="n">gas_estimator</span><span class="o">.</span><span class="n">populate_function_params</span><span class="p">(</span>
+                <span class="n">deposit_func</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">,</span> <span class="n">retryable_gas_overrides</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">ParentToChildMessageGasEstimator</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">estimates</span><span class="p">[</span><span class="s2">&quot;estimates&quot;</span><span class="p">],</span> <span class="n">re_estimates</span><span class="p">[</span><span class="s2">&quot;estimates&quot;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">CaseDict</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;txRequest&quot;</span><span class="p">:</span> <span class="n">CaseDict</span><span class="p">(</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentGatewayRouter</span><span class="p">,</span>
+                        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">estimates</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">estimates</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span>
+                    <span class="p">}</span>
+                <span class="p">),</span>
+                <span class="s2">&quot;retryableData&quot;</span><span class="p">:</span> <span class="n">CaseDict</span><span class="p">({</span><span class="o">**</span><span class="n">estimates</span><span class="p">[</span><span class="s2">&quot;retryable&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">estimates</span><span class="p">[</span><span class="s2">&quot;estimates&quot;</span><span class="p">]}),</span>
+                <span class="s2">&quot;isValid&quot;</span><span class="p">:</span> <span class="n">is_valid</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.deposit"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.deposit">[docs]</a>    <span class="k">def</span> <span class="nf">deposit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ParentTransactionReceipt</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute a token deposit from the parent chain to the child chain.</span>
+<span class="sd">        If the user has not provided a prebuilt transaction, we build it via get_deposit_request().</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: Erc20DepositParams (with &#39;parentSigner&#39;, &#39;childProvider&#39;, &#39;erc20ParentAddress&#39;, etc.)</span>
+<span class="sd">                       OR a pre-built ParentToChildTxReqAndSignerProvider</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A ParentContractCallTransaction receipt-like object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Safety check: the TS code disallows overriding &#39;value&#39; in this call; do the same</span>
+        <span class="k">if</span> <span class="s2">&quot;overrides&quot;</span> <span class="ow">in</span> <span class="n">params</span> <span class="ow">and</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;overrides&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">&quot;value&quot;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;overrides&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="n">ArbSdkError</span><span class="p">(</span><span class="s2">&quot;Parent call value should be set through l1CallValue param&quot;</span><span class="p">)</span>
+
+        <span class="n">parent_provider</span> <span class="o">=</span> <span class="n">SignerProviderUtils</span><span class="o">.</span><span class="n">get_provider_or_throw</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">])</span>
+
+        <span class="c1"># If it&#39;s an actual &quot;ParentToChildTransactionRequest&quot;, we can skip building the deposit.</span>
+        <span class="n">erc20_parent_address</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">get_erc20_parent_address_from_parent_to_child_tx_request</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_parent_to_child_transaction_request</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Check if the token is fully registered</span>
+        <span class="n">is_registered</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_registered</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">:</span> <span class="n">erc20_parent_address</span><span class="p">,</span>
+                <span class="s2">&quot;parentProvider&quot;</span><span class="p">:</span> <span class="n">parent_provider</span><span class="p">,</span>
+                <span class="s2">&quot;childProvider&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;childProvider&quot;</span><span class="p">],</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_registered</span><span class="p">:</span>
+            <span class="n">parent_chain_id</span> <span class="o">=</span> <span class="n">parent_provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">chain_id</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Token </span><span class="si">{</span><span class="n">erc20_parent_address</span><span class="si">}</span><span class="s2"> on chain </span><span class="si">{</span><span class="n">parent_chain_id</span><span class="si">}</span><span class="s2"> is not registered on the gateways&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Build or retrieve the deposit transaction</span>
+        <span class="k">if</span> <span class="n">is_parent_to_child_transaction_request</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+            <span class="n">token_deposit</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">token_deposit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_deposit_request</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+                    <span class="s2">&quot;parentProvider&quot;</span><span class="p">:</span> <span class="n">parent_provider</span><span class="p">,</span>
+                    <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+
+        <span class="n">transaction</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">token_deposit</span><span class="p">[</span><span class="s2">&quot;txRequest&quot;</span><span class="p">],</span>
+            <span class="o">**</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;overrides&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="s2">&quot;from&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">transaction</span><span class="p">:</span>
+            <span class="n">transaction</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span>
+
+        <span class="n">tx_hash</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">send_transaction</span><span class="p">(</span><span class="n">transaction</span><span class="p">)</span>
+        <span class="n">tx_receipt</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">wait_for_transaction_receipt</span><span class="p">(</span><span class="n">tx_hash</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ParentTransactionReceipt</span><span class="o">.</span><span class="n">monkey_patch_contract_call_wait</span><span class="p">(</span><span class="n">tx_receipt</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.get_withdrawal_request"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.get_withdrawal_request">[docs]</a>    <span class="k">def</span> <span class="nf">get_withdrawal_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ChildToParentTransactionRequest</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the arguments for calling the token withdrawal function from the child chain.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: Erc20WithdrawParams + &#39;from&#39;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ChildToParentTransactionRequest dict with &#39;txRequest&#39; + optional &#39;estimateParentGasLimit&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">to_address</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;destinationAddress&quot;</span><span class="p">]</span>
+
+        <span class="c1"># # We either have childProvider or childSigner</span>
+        <span class="c1"># if &quot;childProvider&quot; in params:</span>
+        <span class="c1">#     provider = params[&quot;childProvider&quot;]</span>
+        <span class="c1"># elif &quot;childSigner&quot; in params:</span>
+        <span class="c1">#     provider = params[&quot;childSigner&quot;].provider</span>
+
+        <span class="c1"># Create function data for L2GatewayRouter.outboundTransfer</span>
+        <span class="n">router_interface</span> <span class="o">=</span> <span class="n">create_contract_instance</span><span class="p">(</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L2GatewayRouter&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">function_data</span> <span class="o">=</span> <span class="n">router_interface</span><span class="o">.</span><span class="n">encodeABI</span><span class="p">(</span>
+            <span class="n">fn_name</span><span class="o">=</span><span class="s2">&quot;outboundTransfer&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">],</span>
+                <span class="n">to_address</span><span class="p">,</span>
+                <span class="n">params</span><span class="p">[</span><span class="s2">&quot;amount&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;0x&quot;</span><span class="p">,</span>
+            <span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">estimate_parent_gas_limit</span><span class="p">(</span><span class="n">parent_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            For display, we do a rough estimate of how many parent chain gas is needed</span>
+<span class="sd">            once the L2-&gt;L1 message is executed.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="n">is_arbitrum_chain</span><span class="p">(</span><span class="n">parent_provider</span><span class="p">):</span>
+                <span class="c1"># Hardcode for possible L3 scenario</span>
+                <span class="k">return</span> <span class="mi">8_000_000</span>
+
+            <span class="n">parent_gateway_address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_parent_gateway_address</span><span class="p">(</span>
+                <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">],</span>
+                <span class="n">parent_provider</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">is_weth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_weth_gateway</span><span class="p">(</span><span class="n">parent_gateway_address</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">190000</span> <span class="k">if</span> <span class="n">is_weth</span> <span class="k">else</span> <span class="mi">160000</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;txRequest&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">function_data</span><span class="p">,</span>
+                <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">childGatewayRouter</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;estimateParentGasLimit&quot;</span><span class="p">:</span> <span class="n">estimate_parent_gas_limit</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.withdraw"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.withdraw">[docs]</a>    <span class="k">def</span> <span class="nf">withdraw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ChildTransactionReceipt</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Withdraw tokens from the child network back to the parent chain.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          - Erc20WithdrawParams + childSigner</span>
+<span class="sd">          - OR ChildToParentTxReqAndSigner</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A ChildContractTransaction receipt-like object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">SignerProviderUtils</span><span class="o">.</span><span class="n">signer_has_provider</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;childSigner&quot;</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="n">MissingProviderArbSdkError</span><span class="p">(</span><span class="s2">&quot;childSigner&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_child_network</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;childSigner&quot;</span><span class="p">])</span>
+
+        <span class="c1"># If user gave us a full &quot;ChildToParentTransactionRequest&quot;, no need to build</span>
+        <span class="k">if</span> <span class="n">is_child_to_parent_transaction_request</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+            <span class="n">withdrawal_request</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">withdrawal_request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_withdrawal_request</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+                    <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;childSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+
+        <span class="n">tx</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">withdrawal_request</span><span class="p">[</span><span class="s2">&quot;txRequest&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;overrides&quot;</span><span class="p">,</span> <span class="p">{})}</span>
+        <span class="k">if</span> <span class="s2">&quot;from&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tx</span><span class="p">:</span>
+            <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;childSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span>
+
+        <span class="n">tx_hash</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;childSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">send_transaction</span><span class="p">(</span><span class="n">tx</span><span class="p">)</span>
+        <span class="n">tx_receipt</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;childSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">wait_for_transaction_receipt</span><span class="p">(</span><span class="n">tx_hash</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ChildTransactionReceipt</span><span class="o">.</span><span class="n">monkey_patch_wait</span><span class="p">(</span><span class="n">tx_receipt</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger.is_registered"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger.is_registered">[docs]</a>    <span class="k">def</span> <span class="nf">is_registered</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Checks if the token has been properly registered on both the parent and child gateways.</span>
+<span class="sd">        Useful for tokens using a custom gateway.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: {</span>
+<span class="sd">              &quot;erc20ParentAddress&quot;: str,</span>
+<span class="sd">              &quot;parentProvider&quot;: Web3,</span>
+<span class="sd">              &quot;childProvider&quot;: Web3</span>
+<span class="sd">            }</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool - True if the token is fully registered, False otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parent_standard_gateway_address_from_chain_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentErc20Gateway</span>
+        <span class="n">parent_gateway_address_from_parent_gateway_router</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_parent_gateway_address</span><span class="p">(</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentProvider&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># If it&#39;s the standard gateway, we assume it&#39;s fine</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">parent_standard_gateway_address_from_chain_config</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="o">==</span> <span class="n">parent_gateway_address_from_parent_gateway_router</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="c1"># Otherwise, we check the L2 token addresses from both parent and child router</span>
+        <span class="n">child_token_address_from_parent_gateway_router</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_child_erc20_address</span><span class="p">(</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">],</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentProvider&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">child_gateway_address_from_child_router</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_child_gateway_address</span><span class="p">(</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">],</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;childProvider&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">l2_erc20_gateway</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;childProvider&quot;</span><span class="p">],</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L2ERC20Gateway&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="n">child_gateway_address_from_child_router</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">child_token_address_from_child_gateway</span> <span class="o">=</span> <span class="n">l2_erc20_gateway</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">calculateL2TokenAddress</span><span class="p">(</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">child_token_address_from_parent_gateway_router</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">child_token_address_from_child_gateway</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Erc20Bridger._solidity_encode"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.Erc20Bridger._solidity_encode">[docs]</a>    <span class="k">def</span> <span class="nf">_solidity_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">types</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">values</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">HexStr</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Helper for ABI-encoding arbitrary fields for calls like outboundTransfer.</span>
+<span class="sd">        Using eth_abi.encode(...) under the hood.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert &quot;0x&quot; strings to empty bytes if needed</span>
+        <span class="n">processed_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">val</span> <span class="k">if</span> <span class="n">val</span> <span class="o">!=</span> <span class="s2">&quot;0x&quot;</span> <span class="k">else</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">values</span><span class="p">]</span>
+        <span class="n">encoded_values</span> <span class="o">=</span> <span class="n">encode</span><span class="p">(</span><span class="n">types</span><span class="p">,</span> <span class="n">processed_values</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">encoded_values</span></div></div>
+
+
+<div class="viewcode-block" id="AdminErc20Bridger"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.AdminErc20Bridger">[docs]</a><span class="k">class</span> <span class="nc">AdminErc20Bridger</span><span class="p">(</span><span class="n">Erc20Bridger</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extended bridging class with admin functionality for registering custom tokens,</span>
+<span class="sd">    setting gateways, etc.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="AdminErc20Bridger.percent_increase"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.AdminErc20Bridger.percent_increase">[docs]</a>    <span class="k">def</span> <span class="nf">percent_increase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">increase</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">num</span> <span class="o">+</span> <span class="p">(</span><span class="n">num</span> <span class="o">*</span> <span class="n">increase</span><span class="p">)</span> <span class="o">//</span> <span class="mi">100</span></div>
+
+<div class="viewcode-block" id="AdminErc20Bridger.get_approve_gas_token_for_custom_token_registration_request"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.AdminErc20Bridger.get_approve_gas_token_for_custom_token_registration_request">[docs]</a>    <span class="k">def</span> <span class="nf">get_approve_gas_token_for_custom_token_registration_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TxParams</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Similar to get_approve_gas_token_request, but used specifically for custom token registration.</span>
+<span class="sd">        The difference is that we approve the parent token address itself to spend the gas token.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token_is_eth</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Chain uses ETH as its native/gas token&quot;</span><span class="p">)</span>
+
+        <span class="n">i_erc20_interface</span> <span class="o">=</span> <span class="n">create_contract_instance</span><span class="p">(</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;ERC20&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">i_erc20_interface</span><span class="o">.</span><span class="n">encodeABI</span><span class="p">(</span>
+            <span class="n">fn_name</span><span class="o">=</span><span class="s2">&quot;approve&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">params</span><span class="p">[</span><span class="s2">&quot;erc20ParentAddress&quot;</span><span class="p">],</span>
+                <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_APPROVAL</span><span class="p">,</span>
+            <span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span>
+            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="AdminErc20Bridger.approve_gas_token_for_custom_token_registration"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.AdminErc20Bridger.approve_gas_token_for_custom_token_registration">[docs]</a>    <span class="k">def</span> <span class="nf">approve_gas_token_for_custom_token_registration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ParentTransactionReceipt</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Approves the custom gas token for the given custom token&#39;s registration transaction.</span>
+<span class="sd">        This is needed so we can pay fees using the custom gas token if the chain doesn&#39;t use ETH natively.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token_is_eth</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Chain uses ETH as its native/gas token&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_approve_params</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+            <span class="n">approve_gas_token_request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_approve_gas_token_for_custom_token_registration_request</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+                    <span class="s2">&quot;parentProvider&quot;</span><span class="p">:</span> <span class="n">SignerProviderUtils</span><span class="o">.</span><span class="n">get_provider_or_throw</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">approve_gas_token_request</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;txRequest&quot;</span><span class="p">]</span>
+
+        <span class="n">transaction</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">approve_gas_token_request</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;overrides&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="s2">&quot;from&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">transaction</span><span class="p">:</span>
+            <span class="n">transaction</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span>
+
+        <span class="n">tx_hash</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">send_transaction</span><span class="p">(</span><span class="n">transaction</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">wait_for_transaction_receipt</span><span class="p">(</span><span class="n">tx_hash</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AdminErc20Bridger.register_custom_token"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.AdminErc20Bridger.register_custom_token">[docs]</a>    <span class="k">def</span> <span class="nf">register_custom_token</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">parent_token_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span>
+        <span class="n">child_token_address</span><span class="p">:</span> <span class="n">Address</span><span class="p">,</span>
+        <span class="n">parent_signer</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">child_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ParentTransactionReceipt</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Register a custom (non-standard) token on Arbitrum. The token must already be deployed on both parent &amp; child.</span>
+<span class="sd">        The parent token must implement ICustomToken, and the child token must implement IArbToken.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            parent_token_address: Address of the parent token contract on the parent chain</span>
+<span class="sd">            child_token_address: Address of the child token contract on the child chain</span>
+<span class="sd">            parent_signer: The signer object on the parent chain with permission to call registerTokenOnL2</span>
+<span class="sd">            child_provider: A Web3 provider connected to the child chain</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A ParentTransactionReceipt object for the transaction</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">SignerProviderUtils</span><span class="o">.</span><span class="n">signer_has_provider</span><span class="p">(</span><span class="n">parent_signer</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">MissingProviderArbSdkError</span><span class="p">(</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">parent_signer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_child_network</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+
+        <span class="n">parent_provider</span> <span class="o">=</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">provider</span>
+        <span class="n">parent_sender_address</span> <span class="o">=</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span>
+
+        <span class="c1"># Load interfaces for the parent&#39;s ICustomToken &amp; child&#39;s IArbToken</span>
+        <span class="n">parent_token</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;ICustomToken&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="n">parent_token_address</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">child_token</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">child_provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;IArbToken&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="n">child_token_address</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Ensure deployed</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_contract_deployed</span><span class="p">(</span><span class="n">parent_provider</span><span class="p">,</span> <span class="n">parent_token</span><span class="o">.</span><span class="n">address</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Parent token is not deployed.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_contract_deployed</span><span class="p">(</span><span class="n">child_provider</span><span class="p">,</span> <span class="n">child_token</span><span class="o">.</span><span class="n">address</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Child token is not deployed.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check allowance for paying fees (if chain uses custom token for gas)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token_is_eth</span><span class="p">:</span>
+            <span class="n">native_token_contract</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+                <span class="n">provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span>
+                <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;ERC20&quot;</span><span class="p">,</span>
+                <span class="n">address</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">native_token</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">allowance</span> <span class="o">=</span> <span class="n">native_token_contract</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">allowance</span><span class="p">(</span>
+                <span class="n">parent_sender_address</span><span class="p">,</span>
+                <span class="n">parent_token</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span>
+
+            <span class="n">max_fee_per_gas_on_child</span> <span class="o">=</span> <span class="n">child_provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">max_priority_fee</span>
+            <span class="n">max_fee_per_gas_on_child_with_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">percent_increase</span><span class="p">(</span><span class="n">max_fee_per_gas_on_child</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+            <span class="c1"># Hardcode ~60k gas</span>
+            <span class="n">estimated_gas_fee</span> <span class="o">=</span> <span class="mi">60000</span> <span class="o">*</span> <span class="n">max_fee_per_gas_on_child_with_buffer</span>
+
+            <span class="k">if</span> <span class="n">allowance</span> <span class="o">&lt;</span> <span class="n">estimated_gas_fee</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Insufficient allowance. Please increase spending for: owner - </span><span class="si">{</span><span class="n">parent_sender_address</span><span class="si">}</span><span class="s2">, &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;spender - </span><span class="si">{</span><span class="n">parent_token</span><span class="o">.</span><span class="n">address</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Check the child&#39;s reported parent address</span>
+        <span class="n">parent_address_from_child</span> <span class="o">=</span> <span class="n">child_token</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">l1Address</span><span class="p">()</span><span class="o">.</span><span class="n">call</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">parent_address_from_child</span> <span class="o">!=</span> <span class="n">parent_token_address</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArbSdkError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Child token does not have parent address set. Found </span><span class="si">{</span><span class="n">parent_address_from_child</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;expected </span><span class="si">{</span><span class="n">parent_token_address</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">native_token_decimals</span> <span class="o">=</span> <span class="n">get_native_token_decimals</span><span class="p">(</span>
+            <span class="n">parent_provider</span><span class="o">=</span><span class="n">parent_provider</span><span class="p">,</span> <span class="n">child_network</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">child_network</span>
+        <span class="p">)</span>
+        <span class="n">GasParams</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;GasParams&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">,</span> <span class="s2">&quot;gasLimit&quot;</span><span class="p">])</span>
+        <span class="n">from_address</span> <span class="o">=</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span>
+
+        <span class="k">def</span> <span class="nf">encode_func_data</span><span class="p">(</span><span class="n">set_token_gas</span><span class="p">:</span> <span class="n">GasParams</span><span class="p">,</span> <span class="n">set_gateway_gas</span><span class="p">:</span> <span class="n">GasParams</span><span class="p">,</span> <span class="n">max_fee_per_gas</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TxParams</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Build the registerTokenOnL2(...) call for parentToken, including deposit amounts</span>
+<span class="sd">            for each call (setToken call &amp; setGateways call).</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="c1"># If max_fee_per_gas is the error-triggering param, multiply by 2 to ensure it triggers for the second step</span>
+            <span class="k">if</span> <span class="n">max_fee_per_gas</span> <span class="o">==</span> <span class="n">RetryableDataTools</span><span class="o">.</span><span class="n">ErrorTriggeringParams</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">]:</span>
+                <span class="n">double_fee_per_gas</span> <span class="o">=</span> <span class="n">max_fee_per_gas</span> <span class="o">*</span> <span class="mi">2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">double_fee_per_gas</span> <span class="o">=</span> <span class="n">max_fee_per_gas</span>
+
+            <span class="n">set_token_deposit</span> <span class="o">=</span> <span class="n">set_token_gas</span><span class="o">.</span><span class="n">gasLimit</span> <span class="o">*</span> <span class="n">double_fee_per_gas</span> <span class="o">+</span> <span class="n">set_token_gas</span><span class="o">.</span><span class="n">maxSubmissionCost</span>
+            <span class="n">set_gateway_deposit</span> <span class="o">=</span> <span class="n">set_gateway_gas</span><span class="o">.</span><span class="n">gasLimit</span> <span class="o">*</span> <span class="n">double_fee_per_gas</span> <span class="o">+</span> <span class="n">set_gateway_gas</span><span class="o">.</span><span class="n">maxSubmissionCost</span>
+
+            <span class="n">encoded_data</span> <span class="o">=</span> <span class="n">parent_token</span><span class="o">.</span><span class="n">encodeABI</span><span class="p">(</span>
+                <span class="n">fn_name</span><span class="o">=</span><span class="s2">&quot;registerTokenOnL2&quot;</span><span class="p">,</span>
+                <span class="n">args</span><span class="o">=</span><span class="p">[</span>
+                    <span class="n">child_token_address</span><span class="p">,</span>
+                    <span class="n">set_token_gas</span><span class="o">.</span><span class="n">maxSubmissionCost</span><span class="p">,</span>
+                    <span class="n">set_gateway_gas</span><span class="o">.</span><span class="n">maxSubmissionCost</span><span class="p">,</span>
+                    <span class="n">set_token_gas</span><span class="o">.</span><span class="n">gasLimit</span><span class="p">,</span>
+                    <span class="n">set_gateway_gas</span><span class="o">.</span><span class="n">gasLimit</span><span class="p">,</span>
+                    <span class="n">double_fee_per_gas</span><span class="p">,</span>
+                    <span class="n">scale_from_18_decimals_to_native_token_decimals</span><span class="p">(</span>
+                        <span class="n">amount</span><span class="o">=</span><span class="n">set_token_deposit</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="n">native_token_decimals</span>
+                    <span class="p">),</span>
+                    <span class="n">scale_from_18_decimals_to_native_token_decimals</span><span class="p">(</span>
+                        <span class="n">amount</span><span class="o">=</span><span class="n">set_gateway_deposit</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="n">native_token_decimals</span>
+                    <span class="p">),</span>
+                    <span class="n">parent_sender_address</span><span class="p">,</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
+
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">encoded_data</span><span class="p">,</span>
+                <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">parent_token</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">set_token_deposit</span> <span class="o">+</span> <span class="n">set_gateway_deposit</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_token_is_eth</span> <span class="k">else</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">from_address</span><span class="p">,</span>
+            <span class="p">}</span>
+
+        <span class="n">g_estimator</span> <span class="o">=</span> <span class="n">ParentToChildMessageGasEstimator</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+
+        <span class="c1"># First call triggers the setToken logic</span>
+        <span class="n">set_token_estimates2</span> <span class="o">=</span> <span class="n">g_estimator</span><span class="o">.</span><span class="n">populate_function_params</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">encode_func_data</span><span class="p">(</span>
+                <span class="n">GasParams</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">]),</span>
+                <span class="n">GasParams</span><span class="p">(</span>
+                    <span class="n">gasLimit</span><span class="o">=</span><span class="n">RetryableDataTools</span><span class="o">.</span><span class="n">ErrorTriggeringParams</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">],</span>
+                    <span class="n">maxSubmissionCost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">p</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">],</span>
+            <span class="p">),</span>
+            <span class="n">parent_provider</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Second call triggers the setGateways logic</span>
+        <span class="n">set_gateway_estimates2</span> <span class="o">=</span> <span class="n">g_estimator</span><span class="o">.</span><span class="n">populate_function_params</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">encode_func_data</span><span class="p">(</span>
+                <span class="n">GasParams</span><span class="p">(</span>
+                    <span class="n">set_token_estimates2</span><span class="p">[</span><span class="s2">&quot;estimates&quot;</span><span class="p">][</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">],</span>
+                    <span class="n">set_token_estimates2</span><span class="p">[</span><span class="s2">&quot;estimates&quot;</span><span class="p">][</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">],</span>
+                <span class="p">),</span>
+                <span class="n">GasParams</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">]),</span>
+                <span class="n">p</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">],</span>
+            <span class="p">),</span>
+            <span class="n">parent_provider</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">register_tx</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">parent_token</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">set_gateway_estimates2</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">set_gateway_estimates2</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">tx_hash</span> <span class="o">=</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">send_transaction</span><span class="p">(</span><span class="n">register_tx</span><span class="p">)</span>
+        <span class="n">register_tx_receipt</span> <span class="o">=</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">wait_for_transaction_receipt</span><span class="p">(</span><span class="n">tx_hash</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ParentTransactionReceipt</span><span class="o">.</span><span class="n">monkey_patch_wait</span><span class="p">(</span><span class="n">register_tx_receipt</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AdminErc20Bridger.get_parent_gateway_set_events"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.AdminErc20Bridger.get_parent_gateway_set_events">[docs]</a>    <span class="k">def</span> <span class="nf">get_parent_gateway_set_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">,</span> <span class="n">filter_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the GatewaySet events on the parent chain&#39;s L1GatewayRouter within a given block range.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            parent_provider: Web3 provider for parent chain</span>
+<span class="sd">            filter_dict: {&#39;fromBlock&#39;: X, &#39;toBlock&#39;: Y}</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of the GatewaySet events</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">parent_provider</span><span class="p">)</span>
+
+        <span class="n">parent_gateway_router_address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentGatewayRouter</span>
+        <span class="n">event_fetcher</span> <span class="o">=</span> <span class="n">EventFetcher</span><span class="p">(</span><span class="n">parent_provider</span><span class="p">)</span>
+
+        <span class="n">events</span> <span class="o">=</span> <span class="n">event_fetcher</span><span class="o">.</span><span class="n">get_events</span><span class="p">(</span>
+            <span class="n">contract_factory</span><span class="o">=</span><span class="s2">&quot;L1GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="n">event_name</span><span class="o">=</span><span class="s2">&quot;GatewaySet&quot;</span><span class="p">,</span>
+            <span class="n">argument_filters</span><span class="o">=</span><span class="p">{},</span>
+            <span class="nb">filter</span><span class="o">=</span><span class="p">{</span>
+                <span class="o">**</span><span class="n">filter_dict</span><span class="p">,</span>
+                <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="n">parent_gateway_router_address</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s2">&quot;event&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">events</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="AdminErc20Bridger.get_child_gateway_set_events"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.AdminErc20Bridger.get_child_gateway_set_events">[docs]</a>    <span class="k">def</span> <span class="nf">get_child_gateway_set_events</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">child_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">,</span> <span class="n">filter_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">custom_network_child_gateway_router</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Address</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the GatewaySet events on the child chain&#39;s L2GatewayRouter within a given block range.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            child_provider: Web3 provider for child chain</span>
+<span class="sd">            filter_dict: {&#39;fromBlock&#39;: X, &#39;toBlock&#39;: Y}</span>
+<span class="sd">            custom_network_child_gateway_router: If the network is custom, we must pass the child router address</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of the GatewaySet events</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ArbSdkError if the network is custom but the router address is not provided</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">child_network</span><span class="o">.</span><span class="n">isCustom</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">custom_network_child_gateway_router</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArbSdkError</span><span class="p">(</span><span class="s2">&quot;Must supply customNetworkChildGatewayRouter for custom network &quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_child_network</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+
+        <span class="n">child_gateway_router_address</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">custom_network_child_gateway_router</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">childGatewayRouter</span>
+        <span class="p">)</span>
+        <span class="n">event_fetcher</span> <span class="o">=</span> <span class="n">EventFetcher</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+
+        <span class="n">events</span> <span class="o">=</span> <span class="n">event_fetcher</span><span class="o">.</span><span class="n">get_events</span><span class="p">(</span>
+            <span class="n">contract_factory</span><span class="o">=</span><span class="s2">&quot;L2GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="n">event_name</span><span class="o">=</span><span class="s2">&quot;GatewaySet&quot;</span><span class="p">,</span>
+            <span class="n">argument_filters</span><span class="o">=</span><span class="p">{},</span>
+            <span class="nb">filter</span><span class="o">=</span><span class="p">{</span>
+                <span class="o">**</span><span class="n">filter_dict</span><span class="p">,</span>
+                <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="n">child_gateway_router_address</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="s2">&quot;event&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">events</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="AdminErc20Bridger.set_gateways"><a class="viewcode-back" href="../../../../api.html#src.lib.asset_bridger.erc20_bridger.AdminErc20Bridger.set_gateways">[docs]</a>    <span class="k">def</span> <span class="nf">set_gateways</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">parent_signer</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">child_provider</span><span class="p">:</span> <span class="n">Web3</span><span class="p">,</span>
+        <span class="n">token_gateways</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Address</span><span class="p">]],</span>
+        <span class="n">options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GasOverrides</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ParentTransactionReceipt</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Registers or updates multiple token-&gt;gateway mappings on the parent gateway router at once (admin call).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            parent_signer: The signer on the parent chain</span>
+<span class="sd">            child_provider: Web3 provider for the child chain</span>
+<span class="sd">            token_gateways: A list of dicts with {&quot;tokenAddr&quot;: X, &quot;gatewayAddr&quot;: Y}</span>
+<span class="sd">            options: Optional GasOverrides</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A ParentContractCallTransaction receipt</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">SignerProviderUtils</span><span class="o">.</span><span class="n">signer_has_provider</span><span class="p">(</span><span class="n">parent_signer</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">MissingProviderArbSdkError</span><span class="p">(</span><span class="s2">&quot;parentSigner&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_parent_network</span><span class="p">(</span><span class="n">parent_signer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_child_network</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+
+        <span class="n">from_address</span> <span class="o">=</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span>
+
+        <span class="n">parent_gateway_router</span> <span class="o">=</span> <span class="n">load_contract</span><span class="p">(</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">parent_signer</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span>
+            <span class="n">contract_name</span><span class="o">=</span><span class="s2">&quot;L1GatewayRouter&quot;</span><span class="p">,</span>
+            <span class="n">address</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenBridge</span><span class="o">.</span><span class="n">parentGatewayRouter</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">set_gateways_func</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TxParams</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">parent_gateway_router</span><span class="o">.</span><span class="n">encodeABI</span><span class="p">(</span>
+                    <span class="n">fn_name</span><span class="o">=</span><span class="s2">&quot;setGateways&quot;</span><span class="p">,</span>
+                    <span class="n">args</span><span class="o">=</span><span class="p">[</span>
+                        <span class="p">[</span><span class="n">gw</span><span class="p">[</span><span class="s2">&quot;tokenAddr&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">gw</span> <span class="ow">in</span> <span class="n">token_gateways</span><span class="p">],</span>
+                        <span class="p">[</span><span class="n">gw</span><span class="p">[</span><span class="s2">&quot;gatewayAddr&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">gw</span> <span class="ow">in</span> <span class="n">token_gateways</span><span class="p">],</span>
+                        <span class="n">params</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">],</span>
+                        <span class="n">params</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">],</span>
+                        <span class="n">params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">],</span>
+                    <span class="p">],</span>
+                <span class="p">),</span>
+                <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">parent_gateway_router</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;gasLimit&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;maxFeePerGas&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;maxSubmissionCost&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">from_address</span><span class="p">,</span>
+            <span class="p">}</span>
+
+        <span class="n">g_estimator</span> <span class="o">=</span> <span class="n">ParentToChildMessageGasEstimator</span><span class="p">(</span><span class="n">child_provider</span><span class="p">)</span>
+        <span class="n">estimates</span> <span class="o">=</span> <span class="n">g_estimator</span><span class="o">.</span><span class="n">populate_function_params</span><span class="p">(</span>
+            <span class="n">set_gateways_func</span><span class="p">,</span>
+            <span class="n">parent_signer</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span>
+            <span class="n">options</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">transaction</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">estimates</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">estimates</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">estimates</span><span class="p">[</span><span class="s2">&quot;estimates&quot;</span><span class="p">][</span><span class="s2">&quot;deposit&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">account</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">tx_hash</span> <span class="o">=</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">send_transaction</span><span class="p">(</span><span class="n">transaction</span><span class="p">)</span>
+        <span class="n">tx_receipt</span> <span class="o">=</span> <span class="n">parent_signer</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">eth</span><span class="o">.</span><span class="n">wait_for_transaction_receipt</span><span class="p">(</span><span class="n">tx_hash</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ParentTransactionReceipt</span><span class="o">.</span><span class="n">monkey_patch_contract_call_wait</span><span class="p">(</span><span class="n">tx_receipt</span><span class="p">)</span></div></div>
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Arbitrum
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js?v=b3ba4146"></script>
+    <script src="../../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../../_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

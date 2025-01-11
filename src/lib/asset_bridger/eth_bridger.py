@@ -125,7 +125,8 @@ class EthBridger(AssetBridger[DepositParams, WithdrawParams]):
         }
 
     def approve_gas_token(self, params: Dict[str, Any]) -> ParentTransactionReceipt:
-        """Approve custom gas token for spending by the Inbox contract.
+        """
+        Approve custom gas token for spending by the Inbox contract.
 
         This method approves the custom gas token to be spent by the Inbox contract
         on the parent network. This is only necessary when the chain uses an ERC20
@@ -224,7 +225,8 @@ class EthBridger(AssetBridger[DepositParams, WithdrawParams]):
         }
 
     def deposit(self, params: Dict[str, Any]) -> ParentTransactionReceipt:
-        """Deposit ETH or custom gas token from parent to child chain.
+        """
+        Deposit ETH or custom gas token from parent to child chain.
 
         Executes a deposit transaction that moves ETH or custom gas token from the
         parent chain to the same address on the child chain. If a transaction request
@@ -318,7 +320,8 @@ class EthBridger(AssetBridger[DepositParams, WithdrawParams]):
         )
 
     def deposit_to(self, params: Dict[str, Any]) -> ParentTransactionReceipt:
-        """Deposit ETH or custom gas token to a different address on the child chain.
+        """
+        Deposit ETH or custom gas token to a different address on the child chain.
 
         Executes a deposit transaction that moves ETH or custom gas token from the
         parent chain to a different address on the child chain. If a transaction request
@@ -415,7 +418,8 @@ class EthBridger(AssetBridger[DepositParams, WithdrawParams]):
         }
 
     def withdraw(self, params: Dict[str, Any]) -> ChildTransactionReceipt:
-        """Withdraw ETH from the child chain to the parent chain.
+        """
+        Withdraw ETH from the child chain to the parent chain.
 
         Executes a withdrawal transaction that moves ETH from the child chain back to
         the parent chain. If a transaction request is not provided, one will be built

@@ -11,15 +11,27 @@ from src.lib.utils.helper import create_contract_instance, load_contract
 
 class MultiCaller:
     """
-    Python equivalent of the TypeScript `MultiCaller` class.
-    Uses a 'Multicall2' contract to perform batch calls on chain
-    and decode the results.
+    A class for making batch calls to smart contracts using the Multicall2 contract.
+
+    This class provides functionality to execute multiple contract calls in a single request,
+    reducing RPC calls and improving performance. It uses the Multicall2 contract deployed
+    on various networks.
+
+    Attributes:
+        provider: The Web3 provider instance
+        address: The address of the deployed Multicall2 contract
     """
 
     def __init__(self, provider: Union[Web3, SignerOrProvider, ArbitrumProvider], address: str):
         """
-        :param provider: A raw Web3 instance, SignerOrProvider, or ArbitrumProvider
-        :param address: The address of the deployed Multicall2 contract
+        Initialize the MultiCaller.
+
+        Args:
+            provider: A Web3 instance, SignerOrProvider, or ArbitrumProvider
+            address: The address of the deployed Multicall2 contract
+
+        Raises:
+            ArbSdkError: If the provider is invalid or no underlying provider is found
         """
         if isinstance(provider, Web3):
             self.provider = provider
@@ -37,21 +49,26 @@ class MultiCaller:
     @staticmethod
     def from_provider(provider: Union[Web3, SignerOrProvider, ArbitrumProvider]) -> "MultiCaller":
         """
-        Creates a MultiCaller by looking up the Multicall2 address
-        for the chain to which `provider` is connected.
+        Create a MultiCaller instance using the provider's network.
 
-        :param provider: A Web3, SignerOrProvider, or ArbitrumProvider
-        :return: A new MultiCaller instance
+        This method automatically looks up the Multicall2 contract address for the
+        network that the provider is connected to.
+
+        Args:
+            provider: A Web3, SignerOrProvider, or ArbitrumProvider instance
+
+        Returns:
+            A new MultiCaller instance configured for the provider's network
         """
         multicall_addr = get_multicall_address(provider)
         return MultiCaller(provider, multicall_addr)
 
     def get_block_number_input(self) -> Dict[str, Any]:
         """
-        Returns a structured call input for retrieving the current block number
-        from Multicall2.
+        Get the call input for retrieving the current block number.
 
-        :return: A dict with 'targetAddr', 'encoder', 'decoder'
+        Returns:
+            A dictionary containing the formatted call input for the Multicall2 contract
         """
         contract = create_contract_instance(
             # provider=self.provider,

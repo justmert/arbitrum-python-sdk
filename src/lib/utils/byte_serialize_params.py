@@ -1,4 +1,4 @@
-from typing import Any, List, Union, Callable, Dict, TypeVar, Optional
+from typing import Any, List, Union, Callable, Dict, TypeVar, Optional, Literal
 from decimal import Decimal
 
 from eth_utils import int_to_big_endian
@@ -12,7 +12,7 @@ from src.lib.utils.helper import load_contract
 # Type definitions
 PrimitiveType = Union[str, int, bool, Wei, Decimal]
 PrimitiveOrArray = Union[PrimitiveType, List[PrimitiveType]]
-BytesSize = Union[1, 4, 8, 16, 32]
+BytesSize = Literal[1, 4, 8, 16, 32]
 AddressIndexMemo = Dict[str, int]
 
 # Global memo for address indices
