@@ -1,5 +1,5 @@
 ERC20Bridger
-===========
+=============
 
 .. currentmodule:: src.lib.asset_bridger.erc20_bridger
 

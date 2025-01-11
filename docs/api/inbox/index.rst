@@ -2,11 +2,7 @@ Inbox
 =====
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    inbox
 
-Overview
---------
-
-The Inbox module handles inbox-related functionality for the Arbitrum protocol.

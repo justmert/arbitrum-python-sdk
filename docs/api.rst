@@ -12,7 +12,7 @@ API Reference
    api/utils/index
 
 Asset Bridger
-------------
+--------------
 
 * :doc:`asset_bridger/index </api/asset_bridger/index>`
 
@@ -22,7 +22,7 @@ Asset Bridger
   * :doc:`L1L3Bridger </api/asset_bridger/l1l3_bridger>`
 
 Data Entities
-------------
+--------------
 
 * :doc:`data_entities/index </api/data_entities/index>`
 

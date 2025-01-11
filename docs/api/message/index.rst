@@ -2,7 +2,7 @@ Message
 =======
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    child_to_parent_message
    child_to_parent_message_classic
@@ -13,8 +13,3 @@ Message
    parent_to_child_message_creator
    parent_to_child_message_gas_estimator
    parent_transaction
-
-Overview
---------
-
-The Message module provides functionality for handling cross-chain messages in Arbitrum.

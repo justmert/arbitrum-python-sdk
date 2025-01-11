@@ -1,0 +1,3 @@
+[submodule "arbitrum-python-tutorials"]
+	path = arbitrum-python-tutorials
+	url = git@github.com:justmert/arbitrum-python-tutorials.git

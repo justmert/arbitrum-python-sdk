@@ -2,7 +2,7 @@ Utils
 =====
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    arb_provider
    byte_serialize_params
@@ -11,8 +11,3 @@ Utils
    helper
    lib
    multicall
-
-Overview
---------
-
-The Utils module provides utility functions and helper classes used throughout the SDK.

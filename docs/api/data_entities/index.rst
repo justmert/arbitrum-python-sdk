@@ -2,7 +2,7 @@ Data Entities
 =============
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    address
    constants
@@ -14,8 +14,3 @@ Data Entities
    rpc
    signer_or_provider
    transaction_request
-
-Overview
---------
-
-The Data Entities module provides core data structures and types used throughout the SDK.
