@@ -202,7 +202,26 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         if "from" not in transaction:
             transaction["from"] = params["parentSigner"].account.address
 
-        tx_hash = params["parentSigner"].provider.eth.send_transaction(transaction)
+
+        if 'nonce' not in transaction:
+            transaction['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
+
+        if 'gas' not in transaction:
+            gas_estimate = params["parentSigner"].provider.eth.estimate_gas(transaction)
+            transaction['gas'] = gas_estimate
+
+        if 'gasPrice' not in transaction:
+            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+                pass
+            else:
+                transaction['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+
+        if 'chainId' not in transaction:
+            transaction['chainId'] = params["parentSigner"].provider.eth.chain_id
+
+
+        signed_tx = params["parentSigner"].account.sign_transaction(transaction)
+        tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return params["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
     def get_approve_token_request(self, params: Dict[str, Any]) -> TxParams:
@@ -266,7 +285,25 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         if "from" not in transaction:
             transaction["from"] = params["parentSigner"].account.address
 
-        tx_hash = params["parentSigner"].provider.eth.send_transaction(transaction)
+        if 'nonce' not in transaction:
+            transaction['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
+
+        if 'gas' not in transaction:
+            gas_estimate = params["parentSigner"].provider.eth.estimate_gas(transaction)
+            transaction['gas'] = gas_estimate
+
+        if 'gasPrice' not in transaction:
+            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+                pass
+            else:
+                transaction['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+
+        if 'chainId' not in transaction:
+            transaction['chainId'] = params["parentSigner"].provider.eth.chain_id
+
+
+        signed_tx = params["parentSigner"].account.sign_transaction(transaction)
+        tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return params["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
     def get_withdrawal_events(
@@ -696,7 +733,24 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         if "from" not in transaction:
             transaction["from"] = params["parentSigner"].account.address
 
-        tx_hash = params["parentSigner"].provider.eth.send_transaction(transaction)
+        if 'nonce' not in transaction:
+            transaction['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
+
+        if 'gas' not in transaction:
+            gas_estimate = params["parentSigner"].provider.eth.estimate_gas(transaction)
+            transaction['gas'] = gas_estimate
+
+        if 'gasPrice' not in transaction:
+            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+                pass
+            else:
+                transaction['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+
+        if 'chainId' not in transaction:
+            transaction['chainId'] = params["parentSigner"].provider.eth.chain_id
+
+        signed_tx = params["parentSigner"].account.sign_transaction(transaction)
+        tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         tx_receipt = params["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)
@@ -788,7 +842,24 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         if "from" not in tx:
             tx["from"] = params["childSigner"].account.address
 
-        tx_hash = params["childSigner"].provider.eth.send_transaction(tx)
+        if 'nonce' not in tx:
+            tx['nonce'] = params["childSigner"].provider.eth.get_transaction_count(params["childSigner"].account.address)
+
+        if 'gas' not in tx:
+            gas_estimate = params["childSigner"].provider.eth.estimate_gas(tx)
+            tx['gas'] = gas_estimate
+
+        if 'gasPrice' not in tx:
+            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+                pass
+            else:
+                tx['gasPrice'] = params["childSigner"].provider.eth.gas_price
+
+        if 'chainId' not in tx:
+            tx['chainId'] = params["childSigner"].provider.eth.chain_id
+
+        signed_tx = params["childSigner"].account.sign_transaction(tx)
+        tx_hash = params["childSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         tx_receipt = params["childSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return ChildTransactionReceipt.monkey_patch_wait(tx_receipt)
@@ -911,7 +982,26 @@ class AdminErc20Bridger(Erc20Bridger):
         if "from" not in transaction:
             transaction["from"] = params["parentSigner"].account.address
 
-        tx_hash = params["parentSigner"].provider.eth.send_transaction(transaction)
+
+        if 'nonce' not in transaction:
+            transaction['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
+
+        if 'gas' not in transaction:
+            gas_estimate = params["parentSigner"].provider.eth.estimate_gas(transaction)
+            transaction['gas'] = gas_estimate
+
+        if 'gasPrice' not in transaction:
+            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+                pass
+            else:
+                transaction['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+
+        if 'chainId' not in transaction:
+            transaction['chainId'] = params["parentSigner"].provider.eth.chain_id
+
+
+        signed_tx = params["parentSigner"].account.sign_transaction(transaction)
+        tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return params["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
     def register_custom_token(
@@ -1073,7 +1163,24 @@ class AdminErc20Bridger(Erc20Bridger):
             "from": parent_signer.account.address,
         }
 
-        tx_hash = parent_signer.provider.eth.send_transaction(register_tx)
+        if 'nonce' not in register_tx:
+            register_tx['nonce'] = parent_signer.provider.eth.get_transaction_count(parent_signer.account.address)
+
+        if 'gas' not in register_tx:
+            gas_estimate = parent_signer.provider.eth.estimate_gas(register_tx)
+            register_tx['gas'] = gas_estimate
+
+        if 'gasPrice' not in register_tx:
+            if 'maxPriorityFeePerGas' in register_tx or 'maxFeePerGas' in register_tx:
+                pass
+            else:
+                register_tx['gasPrice'] = parent_signer.provider.eth.gas_price
+
+        if 'chainId' not in register_tx:
+            register_tx['chainId'] = parent_signer.provider.eth.chain_id
+
+        signed_tx = parent_signer.account.sign_transaction(register_tx)
+        tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         register_tx_receipt = parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return ParentTransactionReceipt.monkey_patch_wait(register_tx_receipt)
@@ -1205,7 +1312,24 @@ class AdminErc20Bridger(Erc20Bridger):
             "from": parent_signer.account.address,
         }
 
-        tx_hash = parent_signer.provider.eth.send_transaction(transaction)
+        if 'nonce' not in transaction:
+            transaction['nonce'] = parent_signer.provider.eth.get_transaction_count(parent_signer.account.address)
+
+        if 'gas' not in transaction:
+            gas_estimate = parent_signer.provider.eth.estimate_gas(transaction)
+            transaction['gas'] = gas_estimate
+
+        if 'gasPrice' not in transaction:
+            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+                pass
+            else:
+                transaction['gasPrice'] = parent_signer.provider.eth.gas_price
+
+        if 'chainId' not in transaction:
+            transaction['chainId'] = parent_signer.provider.eth.chain_id
+
+        signed_tx = parent_signer.account.sign_transaction(transaction)
+        tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         tx_receipt = parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
         return ParentTransactionReceipt.monkey_patch_contract_call_wait(tx_receipt)

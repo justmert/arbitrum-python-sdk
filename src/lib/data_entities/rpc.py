@@ -25,7 +25,7 @@ class ArbBlockProps(TypedDict):
     l1BlockNumber: int
 
 
-class ArbBlock(ArbBlockProps, Web3Block):
+class ArbBlock(Dict[str, Any]):
     """An Arbitrum block combining standard Ethereum and Arbitrum-specific fields.
 
     This class merges standard Web3 block data (Web3Block) with Arbitrum-specific
@@ -36,7 +36,15 @@ class ArbBlock(ArbBlockProps, Web3Block):
         - All fields from ArbBlockProps
     """
 
-    pass
+    def __init__(self, block_data: Dict[str, Any]):
+        super().__init__()
+        # Copy Web3Block fields
+        for key, value in block_data.items():
+            self[key] = value
+
+        # Ensure Arbitrum-specific fields are present
+        if not all(hasattr(self, field) for field in ['sendRoot', 'sendCount', 'l1BlockNumber']):
+            raise ValueError("Missing required Arbitrum block fields")
 
 
 class ArbBlockWithTransactions(ArbBlock):
@@ -51,10 +59,15 @@ class ArbBlockWithTransactions(ArbBlock):
             in this block
     """
 
-    transactions: List[TxData]
+    def __init__(self, block_data: Dict[str, Any]):
+        super().__init__(block_data)
+        if 'transactions' not in self:
+            raise ValueError("Missing transactions field in block data")
+        if not isinstance(self['transactions'], list):
+            raise ValueError("Transactions field must be a list")
 
 
-class ArbTransactionReceipt(TxReceipt):
+class ArbTransactionReceipt(Dict[str, Any]):
     """An Ethereum transaction receipt with additional Arbitrum-specific fields.
 
     This class extends the standard Ethereum transaction receipt with fields that
@@ -71,7 +84,7 @@ class ArbTransactionReceipt(TxReceipt):
         transactionIndex (int): Integer of the transaction's index position in the block
         blockHash (Hash32): Hash of the block where this transaction was in
         blockNumber (BlockNumber): Block number where this transaction was in
-        from (HexStr): Address of the sender
+        from_ (HexStr): Address of the sender
         to (Optional[HexStr]): Address of the receiver. null when its a contract creation
         status (int): Either 1 (success) or 0 (failure)
         contractAddress (Optional[HexStr]): The contract address created, if the
@@ -79,48 +92,15 @@ class ArbTransactionReceipt(TxReceipt):
         logs (List[LogReceipt]): Array of log objects that this transaction generated
     """
 
-    def __init__(
-        self,
-        l1BlockNumber: int,
-        gasUsedForL1: int,
-        transactionHash: Hash32,
-        transactionIndex: int,
-        blockHash: Hash32,
-        blockNumber: BlockNumber,
-        from_: HexStr,
-        to: Optional[HexStr],
-        status: int,
-        contractAddress: Optional[HexStr],
-        logs: List[LogReceipt],
-        **kwargs: Any,
-    ) -> None:
-        """Initialize a new ArbTransactionReceipt.
+    def __init__(self, receipt_data: Dict[str, Any]):
+        super().__init__()
+        # Copy standard receipt fields
+        for key, value in receipt_data.items():
+            if key == 'from':
+                self['from_'] = value  # Handle Python keyword
+            else:
+                self[key] = value
 
-        Args:
-            l1BlockNumber: L1 block number used for block.number calls
-            gasUsedForL1: Gas spent on L1 computation in L2 gas units
-            transactionHash: Hash of the transaction
-            transactionIndex: Transaction's position in the block
-            blockHash: Hash of the containing block
-            blockNumber: Number of the containing block
-            from_: Address of the sender
-            to: Address of the receiver, or None for contract creation
-            status: 1 for success, 0 for failure
-            contractAddress: Created contract address, or None
-            logs: List of event logs generated
-            **kwargs: Additional receipt fields to include
-        """
-        super().__init__(
-            transactionHash=transactionHash,
-            transactionIndex=transactionIndex,
-            blockHash=blockHash,
-            blockNumber=blockNumber,
-            from_=from_,
-            to=to,
-            status=status,
-            contractAddress=contractAddress,
-            logs=logs,
-            **kwargs
-        )
-        self.l1BlockNumber = l1BlockNumber
-        self.gasUsedForL1 = gasUsedForL1
+        # Ensure Arbitrum-specific fields are present
+        if not all(field in self for field in ['l1BlockNumber', 'gasUsedForL1']):
+            raise ValueError("Missing required Arbitrum transaction receipt fields")

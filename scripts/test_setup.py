@@ -65,7 +65,9 @@ def setup_testing_env():
     except ArbSdkError:
         local_networks = get_local_networks_from_file()
         child_chain = local_networks["l3Network"] if IS_TESTING_ORBIT_CHAINS else local_networks["l2Network"]
+        print('registered!')
         set_child_chain = register_custom_arbitrum_network(child_chain)
+        print(set_child_chain)
 
     assert_arbitrum_network_has_token_bridge(set_child_chain)
 

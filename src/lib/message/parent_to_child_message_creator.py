@@ -270,9 +270,26 @@ class ParentToChildMessageCreator:
         if "from" not in tx:
             tx["from"] = self.parent_signer.account.address
 
+        if "gasPrice" not in tx:
+            if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
+                pass
+            else:
+                tx["gasPrice"] = parent_provider.eth.gas_price
+
+        if "nonce" not in tx:
+            tx["nonce"] = parent_provider.eth.get_transaction_count(self.parent_signer.account.address)
+
+        if "chainId" not in tx:
+            tx["chainId"] = parent_provider.eth.chain_id
+
+        if "gas" not in tx:
+            tx["gas"] = parent_provider.eth.estimate_gas(tx)
+
+        signed_tx = self.parent_signer.account.sign_transaction(tx)
+
         # Send the transaction on the parent chain
-        tx_hash = self.parent_signer.provider.eth.send_transaction(tx)
+        tx_hash = parent_provider.eth.send_raw_transaction(signed_tx.rawTransaction)
 
         # Wait for receipt, then wrap in a ParentTransactionReceipt
-        receipt = self.parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+        receipt = parent_provider.eth.wait_for_transaction_receipt(tx_hash)
         return ParentTransactionReceipt.monkey_patch_wait(receipt)

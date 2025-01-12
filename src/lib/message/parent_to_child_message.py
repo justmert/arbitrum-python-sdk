@@ -20,7 +20,7 @@ from src.lib.message.child_transaction import ChildTransactionReceipt
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import load_contract, to_checksum_address
 from src.lib.utils.lib import get_transaction_receipt, is_defined
-
+from enum import Enum
 
 def int_to_bytes(value: int) -> bytes:
     """
@@ -95,7 +95,7 @@ def concat(*args: Union[bytes, List[bytes], Tuple[bytes, ...]]) -> bytes:
     return b"".join(iterable)
 
 
-class ParentToChildMessageStatus:
+class ParentToChildMessageStatus(Enum):
     """
     Status enum for parent-to-child messages.
     
@@ -113,7 +113,7 @@ class ParentToChildMessageStatus:
     EXPIRED = 5
 
 
-class EthDepositMessageStatus:
+class EthDepositMessageStatus(Enum):
     """
     Status enum for ETH deposit messages.
     

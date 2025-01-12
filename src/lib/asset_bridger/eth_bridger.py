@@ -164,7 +164,24 @@ class EthBridger(AssetBridger[DepositParams, WithdrawParams]):
             "from": params["parentSigner"].account.address,
         }
 
-        tx_hash = params["parentSigner"].provider.eth.send_transaction(tx)
+        if 'nonce' not in tx:
+            tx['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
+
+        if 'gas' not in tx:
+            gas_estimate = params["parentSigner"].provider.eth.estimate_gas(tx)
+            tx['gas'] = gas_estimate
+
+        if 'gasPrice' not in tx:
+            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+                pass
+            else:
+                tx['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+
+        if 'chainId' not in tx:
+            tx['chainId'] = params["parentSigner"].provider.eth.chain_id
+
+        signed_tx = params["parentSigner"].account.sign_transaction(tx)
+        tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return params["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
     def get_deposit_request_data(self, params: Dict[str, Any]) -> bytes:
@@ -264,9 +281,26 @@ class EthBridger(AssetBridger[DepositParams, WithdrawParams]):
             "from": params["parentSigner"].account.address,
         }
 
-        tx_hash = params["parentSigner"].provider.eth.send_transaction(tx)
+        if 'nonce' not in tx:
+            tx['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
+
+        if 'gas' not in tx:
+            gas_estimate = params["parentSigner"].provider.eth.estimate_gas(tx)
+            tx['gas'] = gas_estimate
+
+        if 'gasPrice' not in tx:
+            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+                pass
+            else:
+                tx['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+
+        if 'chainId' not in tx:
+            tx['chainId'] = params["parentSigner"].provider.eth.chain_id
+
+        signed_tx = params["parentSigner"].account.sign_transaction(tx)
+        tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         tx_receipt = params["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
-        
+
         # monkeyPatchEthDepositWait => extended functionality for final wait or data decode
         return ParentTransactionReceipt.monkey_patch_eth_deposit_wait(tx_receipt)
 
@@ -444,6 +478,9 @@ class EthBridger(AssetBridger[DepositParams, WithdrawParams]):
 
         self.check_child_network(params["childSigner"])
 
+        if 'from' not in params:
+            params["from"] = params["childSigner"].account.address
+
         # If we already have a ChildToParentTransactionRequest, skip building it
         if is_child_to_parent_transaction_request(params):
             request = params
@@ -453,9 +490,26 @@ class EthBridger(AssetBridger[DepositParams, WithdrawParams]):
         tx = {
             **request["txRequest"],
             **params.get("overrides", {}),
-            "from": params["childSigner"].account.address,
         }
-        tx_hash = params["childSigner"].provider.eth.send_transaction(tx)
+        if 'nonce' not in tx:
+            tx['nonce'] = params["childSigner"].provider.eth.get_transaction_count(params["childSigner"].account.address)
+
+        if 'gas' not in tx:
+            gas_estimate = params["childSigner"].provider.eth.estimate_gas(tx)
+            tx['gas'] = gas_estimate
+
+        if 'gasPrice' not in tx:
+            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+                pass
+            else:
+                tx['gasPrice'] = params["childSigner"].provider.eth.gas_price
+
+        if 'chainId' not in tx:
+            tx['chainId'] = params["childSigner"].provider.eth.chain_id
+
+        signed_tx = params["childSigner"].account.sign_transaction(tx)
+        tx_hash = params["childSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         tx_receipt = params["childSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
+        # monkeyPatchWait => extended functionality for final wait or data decode
         return ChildTransactionReceipt.monkey_patch_wait(tx_receipt)

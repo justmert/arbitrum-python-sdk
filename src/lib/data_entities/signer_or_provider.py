@@ -6,6 +6,8 @@ from web3 import Web3
 from web3.types import TxParams, TxReceipt, BlockData, ENS, TxData, Wei
 from hexbytes import HexBytes
 from src.lib.data_entities.errors import ArbSdkError, MissingProviderArbSdkError
+from eth_account.account import Account
+from eth_account.signers.local import LocalAccount
 
 
 class SignerOrProvider:
@@ -53,6 +55,7 @@ class SignerOrProvider:
         """
         self.account = account
         self.provider = provider
+        self.eth = SignerProviderUtils.get_provider_or_throw(self.provider).eth
 
     def get_address(self) -> HexStr:
         """Get the address of the signer account.
@@ -356,11 +359,9 @@ class SignerProviderUtils:
             >>> w3 = Web3(Web3.HTTPProvider('...'))
             >>> SignerProviderUtils.is_signer(w3)  # False
         """
-        if isinstance(signer_or_provider, (LocalAccount, Account)):
-            return True
-        if isinstance(signer_or_provider, SignerOrProvider):
-            return signer_or_provider.account is not None
-        return False
+        
+        signer = SignerProviderUtils.get_signer(signer_or_provider)
+        return signer is not None
 
     @staticmethod
     def get_signer(
@@ -376,8 +377,6 @@ class SignerProviderUtils:
         """
         if isinstance(signer_or_provider, LocalAccount):
             return signer_or_provider
-        if isinstance(signer_or_provider, Account):
-            return cast(LocalAccount, signer_or_provider)
         if isinstance(signer_or_provider, SignerOrProvider):
             return signer_or_provider.account
         return None

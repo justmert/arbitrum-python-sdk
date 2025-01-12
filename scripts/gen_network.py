@@ -9,7 +9,7 @@ from eth_typing import URI
 
 from src.lib.data_entities.networks import map_l2_network_to_arbitrum_network
 from src.lib.utils.helper import CaseDict, load_contract
-from scripts import PROJECT_DIRECTORY
+from src import PROJECT_DIRECTORY
 
 env_path = os.path.join(PROJECT_DIRECTORY, ".env")
 dotenv.load_dotenv(dotenv_path=env_path)

@@ -3,33 +3,34 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "arbitrum_sdk"
-version = "0.1.0"
-description = "Arbitrum Python SDK"
-
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = false
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-ignore_missing_imports = true
-namespace_packages = true
-explicit_package_bases = true
-
-[[tool.mypy.overrides]]
-module = [
-    "web3.*",
-    "eth_utils.*",
-    "eth_typing.*",
-    "eth_abi.*",
-    "rlp.*"
+name = "arbitrum-sdk"
+version = "0.2.0"
+description = "Python library for client-side interactions with Arbitrum"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    {name = "Mert Köklü", email = "mert@yk-labs.com"}
 ]
-ignore_missing_imports = true
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9"
+]
+dependencies = [
+    "web3>=6.3.0,<7",
+    "rlp==3.0.0",
+    "eth-utils==2.3.1",
+    "python-dotenv==1.0.0",
+    "pytest>=7.4.4,<8",
+    "eth-typing>=3.5.2,<4",
+    "eth-abi>=5.1.0,<6",
+    "pyyaml==6.0.1",
+    "mock==5.1.0",
+    "addict==2.4.0",
+    "py-evm<0.11,>=0.10.0b6",
+    "mypy==1.8.0",
+    "types-setuptools"
+]
+
+[project.urls]
+Homepage = "https://github.com/justmert/arbitrum-python-sdk"

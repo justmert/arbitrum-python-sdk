@@ -686,6 +686,7 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
 
         if overrides is None:
             overrides = {}
+        
         if "from" not in overrides:
             overrides["from"] = self.parent_signer.account.address
 
@@ -700,7 +701,27 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
             self.event["callvalue"],
             self.event["data"],
         )
+        if 'nonce' not in overrides:
+            overrides['nonce'] = self.parent_signer.get_nonce()
 
-        tx_hash = execute_tx.transact(overrides)
+        if 'chainId' not in overrides:
+            overrides['chainId'] = self.parent_signer.provider.eth.chain_id
+
+        tx = execute_tx.build_transaction(overrides)
+
+        if 'gas' not in tx:
+            gas_estimate = self.parent_signer.provider.eth.estimate_gas(tx)
+            tx['gas'] = gas_estimate
+
+        if 'gasPrice' not in tx:
+            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+                pass
+            else:
+                tx['gasPrice'] = self.parent_signer.provider.eth.gas_price
+
+
+
+        signed_tx = self.parent_signer.account.sign_transaction(tx)
+        tx_hash = self.parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         tx_receipt = self.parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         return tx_receipt

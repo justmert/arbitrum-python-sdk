@@ -32,7 +32,7 @@ class InboxTools:
         :param parent_signer: A Python 'signer' object that includes 'account' & 'provider'
         :param child_chain: The ArbitrumNetwork object describing L2 chain config
         """
-        self.parent_signer = parent_signer
+        self.parent_signer = SignerProviderUtils.get_signer(parent_signer)
         self.parent_provider = SignerProviderUtils.get_provider(parent_signer)
         if not self.parent_provider:
             raise ArbSdkError("InboxTools requires a signer with a provider.")
@@ -382,7 +382,7 @@ class InboxTools:
         if overrides is None:
             overrides = {}
         if "from" not in overrides:
-            overrides["from"] = self.parent_signer.account.address
+            overrides["from"] = self.parent_signer.address
 
         # sequencerInbox.forceInclusion(...)
         tx_hash = sequencer_inbox.functions.forceInclusion(
@@ -436,18 +436,21 @@ class InboxTools:
         packed_message_type = struct.pack("B", message_type)
         send_data_bytes = packed_message_type + signed_tx_bytes
 
-        # Send transaction
-        tx = {
-            "from": self.parent_signer.account.address,
-        }
+        # Build transaction
+        tx = inbox.functions.sendL2Message(send_data_bytes).build_transaction({
+            "from": self.parent_signer.address,
+            "nonce": self.parent_provider.eth.get_transaction_count(self.parent_signer.address),
+        })
 
-        tx_hash = inbox.functions.sendL2Message(send_data_bytes).transact(tx)
+        # Sign and send transaction
+        signed_tx = self.parent_signer.sign_transaction(tx)
+        tx_hash = self.parent_provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return self.parent_provider.eth.wait_for_transaction_receipt(tx_hash)
 
     def sign_child_tx(
         self,
         tx_request: Dict[str, Any],
-        child_signer: SignerProviderUtils
+        child_signer: SignerOrProvider
     ) -> bytes:
         """Sign a transaction for the child chain (L2).
 

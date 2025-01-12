@@ -15,6 +15,7 @@ from web3.types import ABI, AccessList, Nonce, Wei, TxParams, TxData, TxReceipt,
 from eth_account.datastructures import SignedTransaction
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
+from src import PROJECT_DIRECTORY
 
 T = TypeVar('T')
 
@@ -130,7 +131,7 @@ def get_normalized_provider(provider: Union[Web3, SignerOrProvider, ArbitrumProv
     return provider
 
 
-def load_contract_data(contract_name: str) -> Tuple[ABI, Optional[HexStr]]:
+def load_contract_data(contract_name: str, custom_path: Optional[str] = None) -> Tuple[ABI, Optional[HexStr]]:
     """
     Load contract ABI and bytecode from JSON file
 
@@ -143,9 +144,10 @@ def load_contract_data(contract_name: str) -> Tuple[ABI, Optional[HexStr]]:
     Raises:
         ContractLoadError: If ABI file not found or invalid
     """
-    base_path = Path("src/lib/abi")
+    base_path = PROJECT_DIRECTORY / "src/lib/abi"
     file_path = base_path / f"{contract_name}.json"
-
+    if custom_path:
+        file_path = custom_path
     try:
         with open(file_path) as abi_file:
             contract_data = json.load(abi_file)
@@ -186,11 +188,39 @@ def create_contract_instance(contract_name: str) -> Contract:
     contract = w3.eth.contract(abi=abi)
     return cast(Contract, contract)
 
+def load_contract_by_abi(
+    contract_data: Dict[str, Any],
+    provider: Optional[Union[Web3, SignerOrProvider, ArbitrumProvider]] = None,
+    address: Optional[Union[str, Contract, Address]] = None
+):
+    abi = contract_data.get("abi")
+    if not abi:
+        raise ContractLoadError("No ABI found for contract")
+
+    bytecode = contract_data.get("bytecode", None)
+
+    if provider is None:
+        w3 = Web3()
+        contract = w3.eth.contract(abi=abi)
+        return cast(Contract, contract)
+
+    web3_provider = get_normalized_provider(provider)
+    if web3_provider is None:
+        raise ContractLoadError("No valid provider found")
+
+    if address is not None:
+        contract_address = normalize_contract_address(address)
+        contract = web3_provider.eth.contract(address=contract_address, abi=abi)
+        return cast(Contract, contract)
+
+    contract = web3_provider.eth.contract(abi=abi, bytecode=bytecode) if bytecode else web3_provider.eth.contract(abi=abi)
+    return cast(Contract, contract)
+
 
 def load_contract(
     contract_name: str,
     provider: Optional[Union[Web3, SignerOrProvider, ArbitrumProvider]] = None,
-    address: Optional[Union[str, Contract, Address]] = None,
+    address: Optional[Union[str, Contract, Address]] = None
 ) -> Contract:
     """
     Load a contract instance
