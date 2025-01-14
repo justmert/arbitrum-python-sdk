@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "arbitrum-sdk"
+name = "arbitrum-py"
 version = "0.2.0"
 description = "Python library for client-side interactions with Arbitrum"
 readme = "README.md"

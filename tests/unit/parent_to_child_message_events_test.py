@@ -2,6 +2,7 @@ import pytest
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 
+from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
 from src.lib.message.parent_transaction import ParentTransactionReceipt
 
 
@@ -275,7 +276,7 @@ def test_does_call_for_classic_events():
     status = msg.status()
 
     assert is_classic, "incorrect tx type returned by isClassic call"
-    assert status == 5, "invalid message status"
+    assert status == ParentToChildMessageStatus.EXPIRED, "invalid message status"
     assert msg.message_number == 0x064371, "incorrect message number"
     assert (
         msg.retryable_creation_id == "0xc88b1821af42b8281bbf645173e287e4ec50ef96907f5211dc7069e09af20720"

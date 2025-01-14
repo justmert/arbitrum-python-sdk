@@ -16,8 +16,8 @@ Contact
 
 I can be reached at following contacts for any questions or feedback,
 
-* Telegram: [@mertkklu](https://t.me/mertkklu)
-* Discord: mertkkl on Discord
+* Telegram: `@mertkklu <https://t.me/mertkklu>`_
+* Discord: mertkkl
 * Email: mert@yk-labs.com 
 
 
