@@ -423,7 +423,6 @@ class ParentToChildMessageReader(ParentToChildMessage):
                     "address": ARB_RETRYABLE_TX_ADDRESS,
                 },
             )
-            print("burdaki redeem_events", redeem_events)
 
             successful_redeems = []
             for e in redeem_events:

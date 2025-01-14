@@ -1,0 +1,85 @@
+Custom Gateway Bridging
+=======================
+Check out this tutorial on GitHub: `custom_gateway_bridging <https://github.com/justmert/arbitrum-python-tutorials/tree/master/tutorials/custom_gateway_bridging>`__
+
+
+When neither the standard ERC20 gateway, nor the generic-custom gateway
+are enough to fulfill the bridging requirements of a token, there is the
+possibility of creating and registering a custom gateway.
+``custom_gateway_bridging`` demonstrates how to create and register a
+custom gateway in the Arbitrum’s Token Bridge.
+
+For more info on bridging assets on Arbitrum, see our `token bridging
+docs <https://docs.arbitrum.io/build-decentralized-apps/token-bridging/token-bridge-erc20>`__.
+
+Token bridging using a custom gateway
+-------------------------------------
+
+Bridging custom tokens through a custom gateway follow a similar process
+than that of Arbitrum’s generic-custom gateway. The difference, however,
+is that during the gateway registration process, a custom gateway is
+registered instead of the generic-custom gateway.
+
+Here, we deploy a `demo custom
+token  <https://github.com/justmert/arbitrum-python-tutorials/tree/master/tutorials/custom_gateway_bridging/contracts/ParentChainToken.sol>`__ to the parent chain and a
+`demo custom token  <https://github.com/justmert/arbitrum-python-tutorials/tree/master/tutorials/custom_gateway_bridging/contracts/ChildChainToken.sol>`__ to the child
+chain. We also deploy a demo custom gateway on both `the parent
+chain  <https://github.com/justmert/arbitrum-python-tutorials/tree/master/tutorials/custom_gateway_bridging/contracts/ParentChainCustomGateway.sol>`__ and `the child
+chain  <https://github.com/justmert/arbitrum-python-tutorials/tree/master/tutorials/custom_gateway_bridging/contracts/ChildChainCustomGateway.sol>`__. We then use the
+Arbitrum router contract to register both gateways.
+
+We use the `Arbitrum
+SDK <https://github.com/justmert/arbitrum-python-sdk>`__ library to
+initiate and verify the bridging.
+
+See `exec.py  <https://github.com/justmert/arbitrum-python-tutorials/tree/master/tutorials/custom_gateway_bridging/scripts/exec.py>`__ for inline explanation.
+
+Set environment variables
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Set the values shown in ``.env-sample`` as environmental variables. To
+copy it into a ``.env`` file:
+
+.. code:: bash
+
+   cp .env-sample .env
+
+You’ll still need to edit some variables, i.e., ``PRIVATE_KEY``,
+``CHAIN_RPC``, ``PARENT_CHAIN_RPC``.
+
+Note that you can also set the environment variables in an ``.env`` file
+in the root of the monorepo, which will be available in all tutorials.
+
+Run
+~~~
+
+Install dependencies and build the contracts:
+
+.. code:: bash
+
+   chmod +x ./build.sh && ./build.sh
+
+Run the script:
+
+.. code:: bash
+
+   python3 scripts/exec.py
+
+Disclaimer
+----------
+
+The code contained within this package is meant for testing purposes
+only and does not guarantee any level of security. It has not undergone
+any formal audit or security analysis. Use it at your own risk. Any
+potential damages or security breaches occurring from the use of this
+code are not the responsibility of the author(s) or contributor(s) of
+this repository. Please exercise caution and due diligence while using
+this code in any environment.
+
+.. raw:: html
+
+   <p align="left">
+
+.. raw:: html
+
+   </p>

@@ -96,9 +96,8 @@ For more detailed usage examples and API references, please refer to the [Arbitr
   # Make sure docker is installed
   git clone -b release --recurse-submodules https://github.com/OffchainLabs/nitro-testnode.git && cd nitro-testnode
   chmod +x ./test-node.bash && && ./test-node.bash --init --tokenbridge --l3node --l3-token-bridge --blockscout --detach
-  ```
 
-  # You can fund default accounts with ETH using the following command
+  # (Optional) You can fund default accounts with ETH using the following command
   # https://docs.arbitrum.io/run-arbitrum-node/run-local-full-chain-simulation#blockscout
 
   # Send 5 ETH to the dev account in L2 network. 
