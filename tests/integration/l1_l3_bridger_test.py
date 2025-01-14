@@ -129,9 +129,11 @@ def fund_actual_l1_custom_fee_token(  # done
 
     token_contract = load_contract(provider=deployer_wallet.provider, contract_name="ERC20", address=l1_fee_token)
 
-    tx_hash = token_contract.functions.transfer(parent_signer.account.address, Web3.to_wei(10, "ether")).transact(
+    tx = token_contract.functions.transfer(parent_signer.account.address, Web3.to_wei(10, "ether")).build_transaction(
         {"from": deployer_wallet.account.address}
     )
+    signed_tx = deployer_wallet.account.sign_transaction(tx)
+    tx_hash = deployer_wallet.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
 
     deployer_wallet.provider.eth.wait_for_transaction_receipt(tx_hash)
 
@@ -381,7 +383,9 @@ class TestERC20Bridging:
             contract_name="TestERC20",
         )
 
-        tx_hash = parent_token.functions.mint().transact({"from": parent_signer.account.address})
+        tx = parent_token.functions.mint().build_transaction({"from": parent_signer.account.address})
+        signed_tx = parent_signer.account.sign_transaction(tx)
+        tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
         # Create bridger

@@ -43,7 +43,8 @@ def setup_state():
     parent_token = deploy_abi_contract(
         provider=setup["parentSigner"].provider, deployer=setup["parentSigner"].account, contract_name="TestERC20"
     )
-    tx_hash = parent_token.functions.mint().transact({"from": setup["parentSigner"].account.address})
+    tx = parent_token.functions.mint().build_transaction({"from": setup["parentSigner"].account.address})
+    tx_hash = setup["parentSigner"].provider.eth.send_transaction(tx)
     setup["parentSigner"].provider.eth.wait_for_transaction_receipt(tx_hash)
 
     setup["parentToken"] = parent_token

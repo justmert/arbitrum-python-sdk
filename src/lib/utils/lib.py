@@ -104,6 +104,7 @@ def get_transaction_receipt(
         ...     timeout=30000
         ... )
     """
+    print('confirmations:', confirmations)
     if confirmations or timeout:
         try:
             # Convert timeout from ms to seconds if provided

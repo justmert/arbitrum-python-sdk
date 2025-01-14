@@ -44,9 +44,11 @@ def test_register_custom_token(setup_state):
 
 
 def test_deposit(setup_state):
-    tx_hash = setup_state.parent_custom_token.functions.mint().transact(
+    tx = setup_state.parent_custom_token.functions.mint().build_transaction(
         {"from": setup_state.parent_signer.account.address}
     )
+    signed_tx = setup_state.parent_signer.account.sign_transaction(tx)
+    tx_hash = setup_state.parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
     setup_state.parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
     deposit_token(

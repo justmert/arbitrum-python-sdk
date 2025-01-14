@@ -589,7 +589,7 @@ class ChildToParentMessageWriterClassic(ChildToParentMessageReaderClassic):
             overrides["from"] = self.parent_signer.account.address
 
         # Submit the executeTransaction on the parent chain
-        tx_hash = outbox_contract.functions.executeTransaction(
+        tx = outbox_contract.functions.executeTransaction(
             self.batch_number,
             proof_info.proof,
             proof_info.path,
@@ -600,7 +600,10 @@ class ChildToParentMessageWriterClassic(ChildToParentMessageReaderClassic):
             proof_info.timestamp,
             proof_info.amount,
             proof_info.calldata_for_l1,
-        ).transact(overrides)
+        ).build_transaction(overrides)
+
+        signed_tx = self.parent_signer.sign_transaction(tx)
+        tx_hash = self.parent_provider.eth.send_raw_transaction(signed_tx.rawTransaction)
 
         # Wait for receipt
         receipt = self.parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)

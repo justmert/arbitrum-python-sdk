@@ -81,7 +81,7 @@ class ChildTransactionReceipt(CaseDict):
                 "logsBloom": tx.get("logsBloom"),
                 "blockHash": tx.get("blockHash"),
                 "transactionHash": tx.get("transactionHash"),
-                "logs": tx.get("logs", []),
+                "logs": tx.get("logs"),
                 "blockNumber": tx.get("blockNumber"),
                 "confirmations": tx.get("confirmations"),
                 "cumulativeGasUsed": tx.get("cumulativeGasUsed"),
@@ -120,6 +120,7 @@ class ChildTransactionReceipt(CaseDict):
         Returns:
             List of redeem scheduled events
         """
+        print("SELF.LOGSarbretryabletx: ", self.logs)
         return parse_typed_logs(
             contract_name="ArbRetryableTx",
             logs=self.logs,

@@ -161,7 +161,9 @@ def test_erc20_deposit_comparison():
         contract_name="TestERC20",
     )
 
-    tx_hash = test_token.functions.mint().transact({"from": parent_signer.account.address})
+    tx = test_token.functions.mint().build_transaction({"from": parent_signer.account.address})
+    signed_tx = parent_signer.account.sign_transaction(tx)
+    tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
     parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
     parent_token_address = test_token.address
 

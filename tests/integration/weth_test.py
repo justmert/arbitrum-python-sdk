@@ -35,8 +35,10 @@ def test_deposit_weth():
 
     parent_WETH = load_contract(provider=parent_signer.provider, address=parent_weth_address, contract_name="AeWETH")
 
-    tx = parent_WETH.functions.deposit().transact({"from": parent_signer.account.address, "value": weth_to_wrap})
-    parent_signer.provider.eth.wait_for_transaction_receipt(tx)
+    tx = parent_WETH.functions.deposit().build_transaction({"from": parent_signer.account.address, "value": weth_to_wrap})
+    signed_tx = parent_signer.account.sign_transaction(tx)
+    tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+    parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
     deposit_token(
         {
@@ -61,9 +63,10 @@ def test_deposit_weth():
     child_weth = load_contract(provider=child_signer.provider, address=child_token.address, contract_name="AeWETH")
 
     random_addr = Account.create().address
-    tx = child_weth.functions.withdrawTo(random_addr, weth_to_deposit).transact({"from": child_signer.account.address})
-
-    child_signer.provider.eth.wait_for_transaction_receipt(tx)
+    tx = child_weth.functions.withdrawTo(random_addr, weth_to_deposit).build_transaction({"from": child_signer.account.address})
+    signed_tx = child_signer.account.sign_transaction(tx)
+    tx_hash = child_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+    child_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
     after_balance = child_signer.provider.eth.get_balance(random_addr)
     assert str(after_balance) == str(weth_to_deposit)
 
@@ -86,9 +89,10 @@ def test_withdraw_weth():
         provider=child_signer.provider, address=child_chain.token_bridge.child_weth, contract_name="AeWETH"
     )
 
-    tx = child_weth.functions.deposit().transact({"from": child_signer.account.address, "value": weth_to_wrap})
-
-    rec = child_signer.provider.eth.wait_for_transaction_receipt(tx)
+    tx = child_weth.functions.deposit().build_transaction({"from": child_signer.account.address, "value": weth_to_wrap})
+    signed_tx = child_signer.account.sign_transaction(tx)
+    tx_hash = child_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+    rec = child_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
     assert rec.status == 1, "deposit txn failed"
 
     withdraw_token(

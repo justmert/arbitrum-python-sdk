@@ -177,6 +177,7 @@ class ParentToChildMessage:
             message_data["maxFeePerGas"],
             message_data["data"],
         )
+        print('!!!!! self.retryable_creation_id: ', self.retryable_creation_id)
 
     @staticmethod
     def calculate_submit_retryable_id(
@@ -329,9 +330,12 @@ class ParentToChildMessageReader(ParentToChildMessage):
             Receipt for the retryable creation transaction, or None if not found
         """
         if not self.retryable_creation_receipt:
+            print('coaaanfirmations', confirmations)
+            print('BURDAKI ID self.retryable_creation_id: ', self.retryable_creation_id)
             self.retryable_creation_receipt = get_transaction_receipt(
                 self.child_provider, self.retryable_creation_id, confirmations, timeout
             )
+            print('BU DA CIKARDIKL(AR:)', self.retryable_creation_receipt)
         return self.retryable_creation_receipt or None
 
     def get_auto_redeem_attempt(self) -> Optional[TxReceipt]:
@@ -343,10 +347,11 @@ class ParentToChildMessageReader(ParentToChildMessage):
         """
         creation_receipt = self.get_retryable_creation_receipt()
         if creation_receipt:
-
+            print('creation_receipt_icerde', creation_receipt)
             chain_receipt = ChildTransactionReceipt(creation_receipt)
 
             redeem_events = chain_receipt.get_redeem_scheduled_events()
+            print('redeem_events', redeem_events)
 
             if len(redeem_events) == 1:
                 try:
@@ -368,9 +373,11 @@ class ParentToChildMessageReader(ParentToChildMessage):
         Returns:
             Dictionary containing the successful redeem data
         """
+        print('tamam bu function')
         chainNetwork = get_arbitrum_network(self.child_provider)
         event_fetcher = EventFetcher(self.child_provider)
         creation_receipt = self.get_retryable_creation_receipt()
+        print('creation_receipt', creation_receipt)
 
         if not is_defined(creation_receipt):
             return {"status": ParentToChildMessageStatus.NOT_YET_CREATED}
@@ -379,11 +386,13 @@ class ParentToChildMessageReader(ParentToChildMessage):
             return {"status": ParentToChildMessageStatus.CREATION_FAILED}
 
         auto_redeem = self.get_auto_redeem_attempt()
-
+        print('auto_redeem', auto_redeem)
         if auto_redeem and auto_redeem.status == 1:
+            print('auto_redeem girdi')
             return {"childTxReceipt": auto_redeem, "status": ParentToChildMessageStatus.REDEEMED}
 
         if self.retryable_exists():
+            print('retryable_exists!')
             return {"status": ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD}
 
         increment = 1000
@@ -397,6 +406,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
             to_block_number = min(from_block.number + increment, max_block)
             outer_block_range = {"from": from_block.number, "to": to_block_number}
             queried_range.append(outer_block_range)
+            print('queried_range', queried_range)
 
             redeem_events = event_fetcher.get_events(
                 contract_factory="ArbRetryableTx",
@@ -408,16 +418,21 @@ class ParentToChildMessageReader(ParentToChildMessage):
                     "address": ARB_RETRYABLE_TX_ADDRESS,
                 },
             )
+            print('burdaki redeem_events', redeem_events)
 
             successful_redeems = []
             for e in redeem_events:
                 receipt = get_transaction_receipt(self.child_provider, e.event["retryTxHash"])
                 if receipt and receipt.status == 1:
                     successful_redeems.append(receipt)
-
+            print('successful_redeems', successful_redeems)
             if len(successful_redeems) > 1:
                 raise ArbSdkError(f"Unexpected number of successful redeems for ticket {self.retryable_creation_id}.")
             if len(successful_redeems) == 1:
+                print('bak tam 1: ',{
+                    "childTxReceipt": successful_redeems[0],
+                    "status": ParentToChildMessageStatus.REDEEMED,
+                } )
                 return {
                     "childTxReceipt": successful_redeems[0],
                     "status": ParentToChildMessageStatus.REDEEMED,
@@ -770,10 +785,34 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 overrides["gas"] = overrides.pop("gasLimit")
                 if not overrides["gas"]:
                     del overrides["gas"]
+                   
+            if 'nonce' not in overrides:
+                overrides['nonce'] = self.chain_signer.provider.eth.get_transaction_count(self.chain_signer.account.address)
+            
+            # ---
+            # if 'gas' not in overrides:
+            #     gas_estimate = self.chain_signer.provider.eth.estimate_gas(overrides)
+            #     overrides['gas'] = gas_estimate
 
-            redeem_tx = arb_retryable_tx.functions.redeem(self.retryable_creation_id).transact(overrides)
-            tx_receipt = self.chain_signer.provider.eth.wait_for_transaction_receipt(redeem_tx)
+            # if 'gasPrice' not in overrides:
+            #     if 'maxPriorityFeePerGas' in overrides or 'maxFeePerGas' in overrides:
+            #         pass
+            #     else:
+            #         overrides['gasPrice'] = self.chain_signer.provider.eth.gas_price
 
+            # if 'chainId' not in overrides:
+            #     overrides['chainId'] = self.chain_signer.provider.eth.chain_id
+
+            # ---
+            redeem_tx = arb_retryable_tx.functions.redeem(self.retryable_creation_id).build_transaction(overrides)
+            signed_tx = self.chain_signer.account.sign_transaction(redeem_tx)
+            tx_hash = self.chain_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+
+            tx_receipt = self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
+
+            print('AYNEN BURASI CAGIRIYOR')
+            print('SONUNDA TX_RECEIPT: ', tx_receipt)
             return ChildTransactionReceipt.to_redeem_transaction(
                 ChildTransactionReceipt.monkey_patch_wait(tx_receipt), self.child_provider
             )
@@ -813,7 +852,14 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 if not overrides["gas"]:
                     del overrides["gas"]
 
-            tx_hash = arb_retryable_tx.functions.cancel(self.retryable_creation_id).transact(overrides)
+            if 'nonce' not in overrides:
+                overrides['nonce'] = self.chain_signer.provider.eth.get_transaction_count(self.chain_signer.account.address)
+
+
+            redeem_tx = arb_retryable_tx.functions.cancel(self.retryable_creation_id).build_transaction(overrides)
+            signed_tx = self.chain_signer.account.sign_transaction(redeem_tx)
+            tx_hash = self.chain_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
             return self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         else:
             raise ArbSdkError(
@@ -851,7 +897,13 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 if not overrides["gas"]:
                     del overrides["gas"]
 
-            tx_hash = arb_retryable_tx.functions.keepalive(self.retryable_creation_id).transact(overrides)
+            if 'nonce' not in overrides:
+                overrides['nonce'] = self.chain_signer.provider.eth.get_transaction_count(self.chain_signer.account.address)
+
+            redeem_tx = arb_retryable_tx.functions.keepalive(self.retryable_creation_id).build_transaction(overrides)
+            signed_tx = self.chain_signer.account.sign_transaction(redeem_tx)
+            tx_hash = self.chain_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+
             return self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
         else:
             raise ArbSdkError(

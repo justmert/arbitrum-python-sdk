@@ -276,8 +276,14 @@ def deploy_abi_contract(
     try:
         tx_params = {"from": deployer_address, **tx_params}
         constructor_args = constructor_args or []
-        tx_hash = contract.constructor(*constructor_args).transact(tx_params)
+        
+        tx = contract.constructor(*constructor_args).build_transaction(tx_params)
+
+        signed_tx = deployer.account.sign_transaction(tx)
+        tx_hash = web3_provider.eth.send_raw_transaction(signed_tx.rawTransaction)
+        
         tx_receipt = web3_provider.eth.wait_for_transaction_receipt(tx_hash)
+        
         if not tx_receipt.contractAddress:
             raise ContractLoadError("Contract deployment failed: no contract address in receipt")
         deployed_contract = web3_provider.eth.contract(address=tx_receipt.contractAddress, abi=abi)
@@ -319,31 +325,49 @@ def sign_and_sent_raw_transaction(signer: SignerOrProvider, tx: TxParams) -> TxR
     return tx_receipt
 
 
+def snake_to_camel(name):
+    special_cases = {"erc20": "ERC20"}
+    components = name.split("_")
+    camel_case_name = components[0] + "".join(special_cases.get(x, x.title()) for x in components[1:])
+    return camel_case_name
+
+def camel_to_snake(name):
+    components = []
+    for i, char in enumerate(name):
+        if char.isupper() and i > 0:
+            components.append("_")
+        components.append(char.lower())
+    return "".join(components)
+
 class CaseDict:
-
-    SPECIAL_CASES: Dict[str, str] = {
-        "erc20": "Erc20",
-    }
-
-    def __init__(self, x: Dict[str, Any]) -> None:
+    def __init__(self, x):
         for key, value in x.items():
-            self.__setitem__(key, value)
+            self.__setattr__(key, value)
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key, value):
         self.__setattr__(key, value)
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key):
         try:
             return getattr(self, key)
         except AttributeError:
             raise KeyError(key)
 
-    def __getattr__(self, name: str) -> Any:
+    @classmethod
+    def snake_to_camel(cls, name):
+        return snake_to_camel(name)
+    
+    @classmethod
+    def camel_to_snake(cls, name):
+        return camel_to_snake(name)
+    
+    def __getattr__(self, name):
         try:
             return super().__getattribute__(name)
         except AttributeError:
             pass
-        camel_case_name = self.snake_to_camel(name)
+
+        camel_case_name = snake_to_camel(name)
         try:
             return super().__getattribute__(camel_case_name)
         except AttributeError:
@@ -351,86 +375,45 @@ class CaseDict:
 
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-    @classmethod
-    def snake_to_camel(cls, name: str) -> str:
-        components = name.split("_")
-        result = components[0]  # First component stays lowercase
-        # Process remaining components
-        for component in components[1:]:
-            # Check if component is in special cases
-            if component in CaseDict.SPECIAL_CASES:
-                result += CaseDict.SPECIAL_CASES[component]
-            else:
-                result += component.title()
-        return result
-
-    @classmethod
-    def camel_to_snake(cls, name: str) -> str:
-        # First handle special cases
-        for camel, snake in CaseDict.SPECIAL_CASES.items():
-            name = name.replace(camel, snake)
-
-        # Convert the remaining camelCase to snake_case
-        snake_case = ""
-        for i, char in enumerate(name):
-            if i > 0 and char.isupper():
-                # Check if this uppercase letter is part of a sequence of uppercase letters
-                if not name[i - 1].isupper():  # Only add underscore if previous char wasn't uppercase
-                    snake_case += "_"
-            snake_case += char.lower()
-
-        return snake_case
-
-    def get(self, key: str, default: Optional[T] = None) -> Optional[T]:
+    def get(self, key, default=None):
         return getattr(self, key, default)
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self):
         return iter(self.__dict__)
 
-    def keys(self) -> List[str]:
-        return list(self.__dict__.keys())
+    def keys(self):
+        return self.__dict__.keys()
 
-    def items(self) -> List[Tuple[str, Any]]:
-        return list(self.__dict__.items())
+    def items(self):
+        return self.__dict__.items()
 
-    def __contains__(self, key: str) -> bool:
+    def __contains__(self, key):
         return key in self.__dict__
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    def __setattr__(self, name, value):
         if isinstance(value, dict):
             value = CaseDict(value)
         elif isinstance(value, list):
             value = [CaseDict(item) if isinstance(item, dict) else item for item in value]
-        camel_case_name = self.snake_to_camel(name)
+        camel_case_name = snake_to_camel(name)
         super().__setattr__(camel_case_name, value)
 
-    def __str__(self) -> str:
-        return str(self.to_dict())
+    def to_dict(self):
+        return {k: self.convert_to_serializable(v) for k, v in self.__dict__.items() if not k.startswith("_")}
 
-    def convert_to_serializable(self, value: Any) -> Any:
-        return self._convert_value(value)
+    def __str__(self):
+        items = [f"{key}: {self.convert_to_serializable(value)}" for key, value in self.to_dict().items()]
+        return f"CaseDict({', '.join(items)})"
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert CaseDict to a regular dict for JSON serialization"""
-        result: Dict[str, Any] = {}
-        for k, v in self.__dict__.items():
-            if not k.startswith("_"):
-                result[k] = self._convert_value(v)
-        return result
-
-    def _convert_value(self, value: Any) -> Any:
-        """Helper method to convert values for serialization"""
+    def convert_to_serializable(self, value):
         if isinstance(value, CaseDict):
             return value.to_dict()
         elif isinstance(value, list):
-            return [self._convert_value(item) for item in value]
-        elif isinstance(value, dict):
-            return {k: self._convert_value(v) for k, v in value.items()}
-        elif hasattr(value, "hex"):  # Handle Web3 types like HexBytes
-            return value.hex()
+            return [self.convert_to_serializable(item) for item in value]
+        elif isinstance(value, Contract):
+            return value.address
         else:
             return value
-
 
 class CaseDictEncoder(json.JSONEncoder):
     def default(self, obj: Any) -> Any:
