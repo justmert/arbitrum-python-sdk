@@ -22,13 +22,14 @@ from src.lib.utils.helper import load_contract, to_checksum_address
 from src.lib.utils.lib import get_transaction_receipt, is_defined
 from enum import Enum
 
+
 def int_to_bytes(value: int) -> bytes:
     """
     Convert an integer to its bytes representation.
-    
+
     Args:
         value: Integer value to convert
-        
+
     Returns:
         Bytes representation of the integer
     """
@@ -38,10 +39,10 @@ def int_to_bytes(value: int) -> bytes:
 def hex_to_bytes(value: str) -> bytes:
     """
     Convert a hex string to bytes.
-    
+
     Args:
         value: Hex string (with or without '0x' prefix)
-        
+
     Returns:
         Bytes representation of the hex string
     """
@@ -51,11 +52,11 @@ def hex_to_bytes(value: str) -> bytes:
 def zero_pad(value: bytes, length: int) -> bytes:
     """
     Pad a byte string with leading zeros to reach specified length.
-    
+
     Args:
         value: Bytes to pad
         length: Desired length after padding
-        
+
     Returns:
         Zero-padded bytes
     """
@@ -65,10 +66,10 @@ def zero_pad(value: bytes, length: int) -> bytes:
 def format_number(value: int) -> bytes:
     """
     Format a number as a minimal-length byte string.
-    
+
     Args:
         value: Number to format
-        
+
     Returns:
         Minimal length bytes representation of the number
     """
@@ -81,10 +82,10 @@ def format_number(value: int) -> bytes:
 def concat(*args: Union[bytes, List[bytes], Tuple[bytes, ...]]) -> bytes:
     """
     Concatenate byte strings.
-    
+
     Args:
         *args: Either multiple byte strings or a single iterable of byte strings
-        
+
     Returns:
         Concatenated bytes
     """
@@ -98,7 +99,7 @@ def concat(*args: Union[bytes, List[bytes], Tuple[bytes, ...]]) -> bytes:
 class ParentToChildMessageStatus(Enum):
     """
     Status enum for parent-to-child messages.
-    
+
     Attributes:
         NOT_YET_CREATED (int): The retryable ticket has yet to be created
         CREATION_FAILED (int): An attempt was made to create the retryable ticket, but it failed
@@ -106,6 +107,7 @@ class ParentToChildMessageStatus(Enum):
         REDEEMED (int): The retryable ticket has been redeemed and the chain transaction has been executed
         EXPIRED (int): The message has either expired or has been canceled
     """
+
     NOT_YET_CREATED = 1
     CREATION_FAILED = 2
     FUNDS_DEPOSITED_ON_CHILD = 3
@@ -116,11 +118,12 @@ class ParentToChildMessageStatus(Enum):
 class EthDepositMessageStatus(Enum):
     """
     Status enum for ETH deposit messages.
-    
+
     Attributes:
         PENDING (int): ETH is not deposited on Chain yet
         DEPOSITED (int): ETH is deposited successfully on Chain
     """
+
     PENDING = 1
     DEPOSITED = 2
 
@@ -128,10 +131,10 @@ class EthDepositMessageStatus(Enum):
 class ParentToChildMessage:
     """
     Base class for messages sent from parent chain to child chain.
-    
+
     This class handles the core functionality for parent-to-child messages,
     including retryable ticket creation and management.
-    
+
     Args:
         chain_id: The ID of the child chain
         sender: The address of the message sender
@@ -177,7 +180,7 @@ class ParentToChildMessage:
             message_data["maxFeePerGas"],
             message_data["data"],
         )
-        print('!!!!! self.retryable_creation_id: ', self.retryable_creation_id)
+        print("!!!!! self.retryable_creation_id: ", self.retryable_creation_id)
 
     @staticmethod
     def calculate_submit_retryable_id(
@@ -197,7 +200,7 @@ class ParentToChildMessage:
     ) -> HexStr:
         """
         Calculate the unique identifier for a retryable submission.
-        
+
         Args:
             child_chain_id: ID of the child chain
             from_address: Address sending the message
@@ -212,7 +215,7 @@ class ParentToChildMessage:
             gas_limit: Gas limit
             max_fee_per_gas: Maximum fee per gas
             data: Call data
-            
+
         Returns:
             Unique identifier for the retryable submission
         """
@@ -256,7 +259,7 @@ class ParentToChildMessage:
     ) -> Union["ParentToChildMessageReader", "ParentToChildMessageWriter"]:
         """
         Create a ParentToChildMessage instance from event components.
-        
+
         Args:
             chain_signer_or_provider: Signer or provider for the chain
             chain_id: ID of the child chain
@@ -264,7 +267,7 @@ class ParentToChildMessage:
             message_number: Sequential message number
             parent_base_fee: Base fee on parent chain
             message_data: Dictionary containing message parameters
-            
+
         Returns:
             ParentToChildMessage instance
         """
@@ -291,10 +294,10 @@ class ParentToChildMessage:
 class ParentToChildMessageReader(ParentToChildMessage):
     """
     Reader class for parent-to-child messages.
-    
+
     This class extends the base ParentToChildMessage class and provides
     additional functionality for reading and managing parent-to-child messages.
-    
+
     Args:
         child_provider: Provider for the child chain
         chain_id: ID of the child chain
@@ -318,40 +321,42 @@ class ParentToChildMessageReader(ParentToChildMessage):
 
         self.retryable_creation_receipt = None
 
-    def get_retryable_creation_receipt(self, confirmations: Optional[int] = None, timeout: Optional[int] = None) -> Optional[TxReceipt]:
+    def get_retryable_creation_receipt(
+        self, confirmations: Optional[int] = None, timeout: Optional[int] = None
+    ) -> Optional[TxReceipt]:
         """
         Get the receipt for the retryable creation transaction.
-        
+
         Args:
             confirmations: Number of confirmations to wait for
             timeout: Timeout in seconds
-            
+
         Returns:
             Receipt for the retryable creation transaction, or None if not found
         """
         if not self.retryable_creation_receipt:
-            print('coaaanfirmations', confirmations)
-            print('BURDAKI ID self.retryable_creation_id: ', self.retryable_creation_id)
+            print("coaaanfirmations", confirmations)
+            print("BURDAKI ID self.retryable_creation_id: ", self.retryable_creation_id)
             self.retryable_creation_receipt = get_transaction_receipt(
                 self.child_provider, self.retryable_creation_id, confirmations, timeout
             )
-            print('BU DA CIKARDIKL(AR:)', self.retryable_creation_receipt)
+            print("BU DA CIKARDIKL(AR:)", self.retryable_creation_receipt)
         return self.retryable_creation_receipt or None
 
     def get_auto_redeem_attempt(self) -> Optional[TxReceipt]:
         """
         Get the auto-redeem attempt for the retryable creation transaction.
-        
+
         Returns:
             Receipt for the auto-redeem attempt, or None if not found
         """
         creation_receipt = self.get_retryable_creation_receipt()
         if creation_receipt:
-            print('creation_receipt_icerde', creation_receipt)
+            print("creation_receipt_icerde", creation_receipt)
             chain_receipt = ChildTransactionReceipt(creation_receipt)
 
             redeem_events = chain_receipt.get_redeem_scheduled_events()
-            print('redeem_events', redeem_events)
+            print("redeem_events", redeem_events)
 
             if len(redeem_events) == 1:
                 try:
@@ -369,15 +374,15 @@ class ParentToChildMessageReader(ParentToChildMessage):
     def get_successful_redeem(self) -> Dict[str, Any]:
         """
         Get the successful redeem for the retryable creation transaction.
-        
+
         Returns:
             Dictionary containing the successful redeem data
         """
-        print('tamam bu function')
+        print("tamam bu function")
         chainNetwork = get_arbitrum_network(self.child_provider)
         event_fetcher = EventFetcher(self.child_provider)
         creation_receipt = self.get_retryable_creation_receipt()
-        print('creation_receipt', creation_receipt)
+        print("creation_receipt", creation_receipt)
 
         if not is_defined(creation_receipt):
             return {"status": ParentToChildMessageStatus.NOT_YET_CREATED}
@@ -386,13 +391,13 @@ class ParentToChildMessageReader(ParentToChildMessage):
             return {"status": ParentToChildMessageStatus.CREATION_FAILED}
 
         auto_redeem = self.get_auto_redeem_attempt()
-        print('auto_redeem', auto_redeem)
+        print("auto_redeem", auto_redeem)
         if auto_redeem and auto_redeem.status == 1:
-            print('auto_redeem girdi')
+            print("auto_redeem girdi")
             return {"childTxReceipt": auto_redeem, "status": ParentToChildMessageStatus.REDEEMED}
 
         if self.retryable_exists():
-            print('retryable_exists!')
+            print("retryable_exists!")
             return {"status": ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD}
 
         increment = 1000
@@ -406,7 +411,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
             to_block_number = min(from_block.number + increment, max_block)
             outer_block_range = {"from": from_block.number, "to": to_block_number}
             queried_range.append(outer_block_range)
-            print('queried_range', queried_range)
+            print("queried_range", queried_range)
 
             redeem_events = event_fetcher.get_events(
                 contract_factory="ArbRetryableTx",
@@ -418,21 +423,24 @@ class ParentToChildMessageReader(ParentToChildMessage):
                     "address": ARB_RETRYABLE_TX_ADDRESS,
                 },
             )
-            print('burdaki redeem_events', redeem_events)
+            print("burdaki redeem_events", redeem_events)
 
             successful_redeems = []
             for e in redeem_events:
                 receipt = get_transaction_receipt(self.child_provider, e.event["retryTxHash"])
                 if receipt and receipt.status == 1:
                     successful_redeems.append(receipt)
-            print('successful_redeems', successful_redeems)
+            print("successful_redeems", successful_redeems)
             if len(successful_redeems) > 1:
                 raise ArbSdkError(f"Unexpected number of successful redeems for ticket {self.retryable_creation_id}.")
             if len(successful_redeems) == 1:
-                print('bak tam 1: ',{
-                    "childTxReceipt": successful_redeems[0],
-                    "status": ParentToChildMessageStatus.REDEEMED,
-                } )
+                print(
+                    "bak tam 1: ",
+                    {
+                        "childTxReceipt": successful_redeems[0],
+                        "status": ParentToChildMessageStatus.REDEEMED,
+                    },
+                )
                 return {
                     "childTxReceipt": successful_redeems[0],
                     "status": ParentToChildMessageStatus.REDEEMED,
@@ -473,9 +481,9 @@ class ParentToChildMessageReader(ParentToChildMessage):
     def is_expired(self) -> bool:
         """
         Check if the message is expired.
-        
+
         @deprecated Will be removed in v3.0.0
-        
+
         Returns:
             True if the message is expired, False otherwise
         """
@@ -484,7 +492,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
     def retryable_exists(self) -> bool:
         """
         Check if the retryable ticket exists.
-        
+
         Returns:
             True if the retryable ticket exists, False otherwise
         """
@@ -500,7 +508,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
     def status(self) -> int:
         """
         Get the status of the message.
-        
+
         Returns:
             Status of the message
         """
@@ -509,11 +517,11 @@ class ParentToChildMessageReader(ParentToChildMessage):
     def wait_for_status(self, confirmations: Optional[int] = None, timeout: Optional[int] = None) -> Dict[str, Any]:
         """
         Wait for the status of the message.
-        
+
         Args:
             confirmations: Number of confirmations to wait for
             timeout: Timeout in seconds
-            
+
         Returns:
             Dictionary containing the status data
         """
@@ -531,10 +539,10 @@ class ParentToChildMessageReader(ParentToChildMessage):
     def get_lifetime(child_provider: Any) -> int:
         """
         Get the lifetime of the retryable ticket.
-        
+
         Args:
             child_provider: Provider for the child chain
-            
+
         Returns:
             Lifetime of the retryable ticket
         """
@@ -548,7 +556,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
     def get_timeout(self) -> int:
         """
         Get the timeout of the retryable ticket.
-        
+
         Returns:
             Timeout of the retryable ticket
         """
@@ -562,7 +570,7 @@ class ParentToChildMessageReader(ParentToChildMessage):
     def get_beneficiary(self) -> str:
         """
         Get the beneficiary of the retryable ticket.
-        
+
         Returns:
             Beneficiary of the retryable ticket
         """
@@ -577,10 +585,10 @@ class ParentToChildMessageReader(ParentToChildMessage):
 class ParentToChildMessageReaderClassic:
     """
     Classic reader class for parent-to-child messages.
-    
+
     This class provides functionality for reading and managing parent-to-child messages
     in a classic manner.
-    
+
     Args:
         child_provider: Provider for the child chain
         chain_id: ID of the child chain
@@ -606,14 +614,15 @@ class ParentToChildMessageReaderClassic:
     def calculate_retryable_creation_id(chain_id: int, message_number: int) -> HexStr:
         """
         Calculate the unique identifier for a retryable creation.
-        
+
         Args:
             chain_id: ID of the child chain
             message_number: Sequential message number
-            
+
         Returns:
             Unique identifier for the retryable creation
         """
+
         def bit_flip(num: int) -> int:
             return num | 1 << 255
 
@@ -627,10 +636,10 @@ class ParentToChildMessageReaderClassic:
     def calculate_auto_redeem_id(retryable_creation_id: HexStr) -> HexStr:
         """
         Calculate the unique identifier for an auto-redeem.
-        
+
         Args:
             retryable_creation_id: Unique identifier for the retryable creation
-            
+
         Returns:
             Unique identifier for the auto-redeem
         """
@@ -644,10 +653,10 @@ class ParentToChildMessageReaderClassic:
     def calculate_chain_tx_hash(retryable_creation_id: HexStr) -> HexStr:
         """
         Calculate the unique identifier for a chain transaction.
-        
+
         Args:
             retryable_creation_id: Unique identifier for the retryable creation
-            
+
         Returns:
             Unique identifier for the chain transaction
         """
@@ -661,10 +670,10 @@ class ParentToChildMessageReaderClassic:
     def calculate_chain_derived_hash(retryable_creation_id: HexStr) -> HexStr:
         """
         Calculate the unique identifier for a chain-derived hash.
-        
+
         Args:
             retryable_creation_id: Unique identifier for the retryable creation
-            
+
         Returns:
             Unique identifier for the chain-derived hash
         """
@@ -677,14 +686,16 @@ class ParentToChildMessageReaderClassic:
         )
         return Web3.keccak(data).hex()
 
-    def get_retryable_creation_receipt(self, confirmations: Optional[int] = None, timeout: Optional[int] = None) -> Optional[TxReceipt]:
+    def get_retryable_creation_receipt(
+        self, confirmations: Optional[int] = None, timeout: Optional[int] = None
+    ) -> Optional[TxReceipt]:
         """
         Get the receipt for the retryable creation transaction.
-        
+
         Args:
             confirmations: Number of confirmations to wait for
             timeout: Timeout in seconds
-            
+
         Returns:
             Receipt for the retryable creation transaction, or None if not found
         """
@@ -697,7 +708,7 @@ class ParentToChildMessageReaderClassic:
     def status(self) -> int:
         """
         Get the status of the message.
-        
+
         Returns:
             Status of the message
         """
@@ -722,10 +733,10 @@ class ParentToChildMessageReaderClassic:
 class ParentToChildMessageWriter(ParentToChildMessageReader):
     """
     Writer class for parent-to-child messages.
-    
+
     This class extends the ParentToChildMessageReader class and provides
     additional functionality for writing and managing parent-to-child messages.
-    
+
     Args:
         chain_signer: Signer for the chain
         chain_id: ID of the child chain
@@ -760,10 +771,10 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
     def redeem(self, overrides: Optional[Dict[str, Any]] = None) -> ChildTransactionReceipt:
         """
         Redeem the retryable ticket.
-        
+
         Args:
             overrides: Overrides for the redeem transaction
-            
+
         Returns:
             Receipt for the redeem transaction
         """
@@ -785,10 +796,12 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 overrides["gas"] = overrides.pop("gasLimit")
                 if not overrides["gas"]:
                     del overrides["gas"]
-                   
-            if 'nonce' not in overrides:
-                overrides['nonce'] = self.chain_signer.provider.eth.get_transaction_count(self.chain_signer.account.address)
-            
+
+            if "nonce" not in overrides:
+                overrides["nonce"] = self.chain_signer.provider.eth.get_transaction_count(
+                    self.chain_signer.account.address
+                )
+
             # ---
             # if 'gas' not in overrides:
             #     gas_estimate = self.chain_signer.provider.eth.estimate_gas(overrides)
@@ -808,11 +821,10 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
             signed_tx = self.chain_signer.account.sign_transaction(redeem_tx)
             tx_hash = self.chain_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
 
-
             tx_receipt = self.chain_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
 
-            print('AYNEN BURASI CAGIRIYOR')
-            print('SONUNDA TX_RECEIPT: ', tx_receipt)
+            print("AYNEN BURASI CAGIRIYOR")
+            print("SONUNDA TX_RECEIPT: ", tx_receipt)
             return ChildTransactionReceipt.to_redeem_transaction(
                 ChildTransactionReceipt.monkey_patch_wait(tx_receipt), self.child_provider
             )
@@ -826,10 +838,10 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
     def cancel(self, overrides: Optional[Dict[str, Any]] = None) -> TxReceipt:
         """
         Cancel the retryable ticket.
-        
+
         Args:
             overrides: Overrides for the cancel transaction
-            
+
         Returns:
             Receipt for the cancel transaction
         """
@@ -852,9 +864,10 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 if not overrides["gas"]:
                     del overrides["gas"]
 
-            if 'nonce' not in overrides:
-                overrides['nonce'] = self.chain_signer.provider.eth.get_transaction_count(self.chain_signer.account.address)
-
+            if "nonce" not in overrides:
+                overrides["nonce"] = self.chain_signer.provider.eth.get_transaction_count(
+                    self.chain_signer.account.address
+                )
 
             redeem_tx = arb_retryable_tx.functions.cancel(self.retryable_creation_id).build_transaction(overrides)
             signed_tx = self.chain_signer.account.sign_transaction(redeem_tx)
@@ -871,10 +884,10 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
     def keep_alive(self, overrides: Optional[Dict[str, Any]] = None) -> TxReceipt:
         """
         Keep the retryable ticket alive.
-        
+
         Args:
             overrides: Overrides for the keep alive transaction
-            
+
         Returns:
             Receipt for the keep alive transaction
         """
@@ -897,8 +910,10 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
                 if not overrides["gas"]:
                     del overrides["gas"]
 
-            if 'nonce' not in overrides:
-                overrides['nonce'] = self.chain_signer.provider.eth.get_transaction_count(self.chain_signer.account.address)
+            if "nonce" not in overrides:
+                overrides["nonce"] = self.chain_signer.provider.eth.get_transaction_count(
+                    self.chain_signer.account.address
+                )
 
             redeem_tx = arb_retryable_tx.functions.keepalive(self.retryable_creation_id).build_transaction(overrides)
             signed_tx = self.chain_signer.account.sign_transaction(redeem_tx)
@@ -916,9 +931,9 @@ class ParentToChildMessageWriter(ParentToChildMessageReader):
 class EthDepositMessage:
     """
     Class for ETH deposit messages.
-    
+
     This class provides functionality for managing ETH deposit messages.
-    
+
     Args:
         child_provider: Provider for the child chain
         child_chain_id: ID of the child chain
@@ -958,14 +973,14 @@ class EthDepositMessage:
     ) -> HexStr:
         """
         Calculate the unique identifier for a deposit transaction.
-        
+
         Args:
             child_chain_id: ID of the child chain
             message_number: Sequential message number
             from_address: Address sending the message
             to_address: Destination address
             value: Value of the message
-            
+
         Returns:
             Unique identifier for the deposit transaction
         """
@@ -995,13 +1010,13 @@ class EthDepositMessage:
     ) -> "EthDepositMessage":
         """
         Create an EthDepositMessage instance from event components.
-        
+
         Args:
             child_provider: Provider for the child chain
             message_number: Sequential message number
             sender_addr: Address sending the message
             inbox_message_event_data: Event data for the inbox message
-            
+
         Returns:
             EthDepositMessage instance
         """
@@ -1020,10 +1035,10 @@ class EthDepositMessage:
     def parse_eth_deposit_data(event_data: str) -> Dict[str, Any]:
         """
         Parse the event data for an ETH deposit message.
-        
+
         Args:
             event_data: Event data for the ETH deposit message
-            
+
         Returns:
             Dictionary containing the parsed data
         """
@@ -1044,7 +1059,7 @@ class EthDepositMessage:
     def status(self) -> int:
         """
         Get the status of the message.
-        
+
         Returns:
             Status of the message
         """
@@ -1054,11 +1069,11 @@ class EthDepositMessage:
     def wait(self, confirmations: Optional[int] = None, timeout: Optional[int] = None) -> Optional[TxReceipt]:
         """
         Wait for the message to be deposited.
-        
+
         Args:
             confirmations: Number of confirmations to wait for
             timeout: Timeout in seconds
-            
+
         Returns:
             Receipt for the deposit transaction, or None if not found
         """

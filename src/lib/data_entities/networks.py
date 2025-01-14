@@ -288,9 +288,7 @@ def get_arbitrum_networks() -> List[ArbitrumNetwork]:
     return list(networks.values())
 
 
-def is_parent_network(
-    parent_chain_or_chain_id: Union[ArbitrumNetwork, int]
-) -> bool:
+def is_parent_network(parent_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> bool:
     """Determines if a chain is a parent of any other chain.
 
     A chain is considered a parent if any other chain references it as its
@@ -310,9 +308,7 @@ def is_parent_network(
     return any(net.parentChainId == parent_chain_id for net in get_arbitrum_networks())
 
 
-def get_children_for_network(
-    parent_chain_or_chain_id: Union[ArbitrumNetwork, int]
-) -> List[ArbitrumNetwork]:
+def get_children_for_network(parent_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> List[ArbitrumNetwork]:
     """Returns all child chains for a given chain.
 
     Finds all Arbitrum networks that have the specified chain as their parent.
@@ -331,9 +327,7 @@ def get_children_for_network(
     return [c for c in get_arbitrum_networks() if c.parentChainId == parent_chain_id]
 
 
-def get_arbitrum_network(
-    provider_or_chain_id: Union[SignerOrProvider, Web3, int]
-) -> Union[ArbitrumNetwork, None]:
+def get_arbitrum_network(provider_or_chain_id: Union[SignerOrProvider, Web3, int]) -> Union[ArbitrumNetwork, None]:
     """Returns the Arbitrum network for a provider or chain ID.
 
     If given a chain ID, looks up the network directly. If given a provider,
@@ -372,9 +366,7 @@ def get_arbitrum_network_by_chain_id(chain_id: int) -> ArbitrumNetwork:
     return net
 
 
-def get_arbitrum_network_by_provider(
-    provider: Union[SignerOrProvider, Web3]
-) -> ArbitrumNetwork:
+def get_arbitrum_network_by_provider(provider: Union[SignerOrProvider, Web3]) -> ArbitrumNetwork:
     """Returns an Arbitrum network for a provider.
 
     Gets the chain ID from the provider and looks up the corresponding network.
@@ -417,8 +409,7 @@ def get_native_token(bridge: HexAddress, provider: Union[SignerOrProvider, Web3]
 
 
 def get_arbitrum_network_information_from_rollup(
-    rollup_address: HexAddress,
-    parent_provider: Union[SignerOrProvider, Web3]
+    rollup_address: HexAddress, parent_provider: Union[SignerOrProvider, Web3]
 ) -> Dict[str, Any]:
     """Gets network information from a rollup contract.
 
@@ -465,8 +456,7 @@ def get_arbitrum_network_information_from_rollup(
 
 
 def register_custom_arbitrum_network(
-    network: ArbitrumNetwork,
-    options: Optional[Dict[str, bool]] = None
+    network: ArbitrumNetwork, options: Optional[Dict[str, bool]] = None
 ) -> ArbitrumNetwork:
     """Registers a custom Arbitrum network.
 
@@ -499,19 +489,14 @@ def register_custom_arbitrum_network(
     if network.chainId in networks:
         throw = options.get("throwIfAlreadyRegistered", False) if options else False
         if throw:
-            raise ArbSdkError(
-                f"Network with chain ID {network.chainId} already registered."
-            )
+            raise ArbSdkError(f"Network with chain ID {network.chainId} already registered.")
         return networks[network.chainId]
 
     networks[network.chainId] = network
     return network
 
 
-
-def dict_to_arbitrum_network_instance(
-    data: Union[Dict[str, Any], CaseDict]
-) -> ArbitrumNetwork:
+def dict_to_arbitrum_network_instance(data: Union[Dict[str, Any], CaseDict]) -> ArbitrumNetwork:
     """Converts a dictionary to an ArbitrumNetwork instance.
 
     Creates a properly typed ArbitrumNetwork instance from a dictionary,
@@ -585,9 +570,7 @@ def create_network_state_handler() -> Dict[str, Any]:
     return {"resetNetworksToDefault": reset_networks_to_default}
 
 
-def get_nitro_genesis_block(
-    arbitrum_chain_or_chain_id: Union[ArbitrumNetwork, int]
-) -> int:
+def get_nitro_genesis_block(arbitrum_chain_or_chain_id: Union[ArbitrumNetwork, int]) -> int:
     """Gets the Nitro genesis block for a chain.
 
     Returns the block number where the Nitro upgrade was activated for a chain.
@@ -607,9 +590,7 @@ def get_nitro_genesis_block(
     return ARB1_NITRO_GENESIS_L2_BLOCK if chain_id == 42161 else 0
 
 
-def get_multicall_address(
-    provider_or_chain_id: Union[SignerOrProvider, Web3, int]
-) -> HexAddress:
+def get_multicall_address(provider_or_chain_id: Union[SignerOrProvider, Web3, int]) -> HexAddress:
     """Gets the multicall contract address for a chain.
 
     Looks up the multicall address in the chain's token bridge configuration.
@@ -715,9 +696,7 @@ def assert_arbitrum_network_has_token_bridge(network: ArbitrumNetwork) -> None:
         ArbSdkError: If the network does not have a token bridge configuration
     """
     if not network or not network.tokenBridge:
-        raise ArbSdkError(
-            f"Network {network.name} does not have token bridge configuration"
-        )
+        raise ArbSdkError(f"Network {network.name} does not have token bridge configuration")
 
 
 def is_arbitrum_network_native_token_ether(network: ArbitrumNetwork) -> bool:

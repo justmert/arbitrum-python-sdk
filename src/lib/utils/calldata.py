@@ -15,6 +15,7 @@ from src.lib.utils.helper import create_contract_instance
 
 class TxRequest(TypedDict):
     """Type definition for transaction request data."""
+
     data: str
     to: str
     value: int
@@ -24,17 +25,17 @@ class TxRequest(TypedDict):
 class ParentToChildTxReqAndSigner(TypedDict):
     """
     Type definition for a parent-to-child (L1 to L2) transaction request with signer.
-    
+
     Attributes:
         txRequest: The transaction request parameters
         signer: The signer for the transaction (optional)
     """
+
     txRequest: TxRequest
     signer: Optional[Any]
 
-def get_erc20_parent_address_from_parent_to_child_tx_request(
-    tx_req: ParentToChildTxReqAndSigner
-) -> str:
+
+def get_erc20_parent_address_from_parent_to_child_tx_request(tx_req: ParentToChildTxReqAndSigner) -> str:
     """
     Extract the ERC20 parent token address from a L1->L2 transaction request.
 

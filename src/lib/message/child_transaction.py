@@ -49,13 +49,9 @@ class RedeemTransaction:
         redeem_scheduled_events = child_receipt.get_redeem_scheduled_events()
 
         if len(redeem_scheduled_events) != 1:
-            raise ArbSdkError(
-                f"Transaction is not a redeem transaction: {self.transaction['transactionHash']}"
-            )
+            raise ArbSdkError(f"Transaction is not a redeem transaction: {self.transaction['transactionHash']}")
 
-        return self.child_provider.eth.get_transaction_receipt(
-            redeem_scheduled_events[0]["retryTxHash"]
-        )
+        return self.child_provider.eth.get_transaction_receipt(redeem_scheduled_events[0]["retryTxHash"])
 
 
 class ChildTransactionReceipt(CaseDict):
@@ -121,15 +117,9 @@ class ChildTransactionReceipt(CaseDict):
             List of redeem scheduled events
         """
         print("SELF.LOGSarbretryabletx: ", self.logs)
-        return parse_typed_logs(
-            contract_name="ArbRetryableTx",
-            logs=self.logs,
-            event_name="RedeemScheduled"
-        )
+        return parse_typed_logs(contract_name="ArbRetryableTx", logs=self.logs, event_name="RedeemScheduled")
 
-    def get_child_to_parent_messages(
-        self, parent_signer_or_provider: Any
-    ) -> List[ChildToParentMessage]:
+    def get_child_to_parent_messages(self, parent_signer_or_provider: Any) -> List[ChildToParentMessage]:
         """Get child-to-parent messages from the transaction.
 
         Args:
@@ -146,8 +136,7 @@ class ChildTransactionReceipt(CaseDict):
             raise ArbSdkError("Signer not connected to provider.")
 
         return [
-            ChildToParentMessage.from_event(parent_signer_or_provider, log)
-            for log in self.get_child_to_parent_events()
+            ChildToParentMessage.from_event(parent_signer_or_provider, log) for log in self.get_child_to_parent_events()
         ]
 
     def get_batch_confirmations(self, child_provider: Any) -> int:
@@ -201,7 +190,7 @@ class ChildTransactionReceipt(CaseDict):
         return int(batch_confirmations) > confirmations
 
     @staticmethod
-    def monkey_patch_wait(contract_transaction: Dict[str, Any]) -> 'ChildTransactionReceipt':
+    def monkey_patch_wait(contract_transaction: Dict[str, Any]) -> "ChildTransactionReceipt":
         """Add wait functionality to contract transaction.
 
         Args:

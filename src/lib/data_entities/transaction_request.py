@@ -20,6 +20,7 @@ class ParentToChildMessageParams:
         callValue (Wei): The value in wei to be sent with the message
         callData (HexStr): The encoded function data to be executed
     """
+
     to: HexAddress
     callValue: Wei
     callData: HexStr
@@ -37,6 +38,7 @@ class ParentToChildMessageGasParams:
         maxFeePerGas (Wei): Maximum fee per gas unit willing to pay
         maxSubmissionCost (Wei): Maximum cost willing to pay for submission
     """
+
     gasLimit: int
     maxFeePerGas: Wei
     maxSubmissionCost: Wei
@@ -75,11 +77,7 @@ class ParentToChildTransactionRequest:
         >>> request = ParentToChildTransactionRequest(tx_request, retryable_data)
     """
 
-    def __init__(
-        self,
-        tx_request: TxParams,
-        retryable_data: Dict[str, Any]
-    ) -> None:
+    def __init__(self, tx_request: TxParams, retryable_data: Dict[str, Any]) -> None:
         """Initialize a new ParentToChildTransactionRequest.
 
         Args:
@@ -89,12 +87,10 @@ class ParentToChildTransactionRequest:
         Raises:
             ValueError: If required fields are missing from txRequest
         """
-        required_fields = {'to', 'data', 'value', 'from'}
+        required_fields = {"to", "data", "value", "from"}
         if not all(field in tx_request for field in required_fields):
-            raise ValueError(
-                f"txRequest missing required fields. Required: {required_fields}"
-            )
-        
+            raise ValueError(f"txRequest missing required fields. Required: {required_fields}")
+
         self.tx_request = tx_request
         self.retryable_data = retryable_data
 
@@ -143,11 +139,7 @@ class ChildToParentTransactionRequest:
         ... )
     """
 
-    def __init__(
-        self,
-        tx_request: TxParams,
-        estimate_parent_gas_limit: Callable[[Web3], Wei]
-    ) -> None:
+    def __init__(self, tx_request: TxParams, estimate_parent_gas_limit: Callable[[Web3], Wei]) -> None:
         """Initialize a new ChildToParentTransactionRequest.
 
         Args:
@@ -158,11 +150,9 @@ class ChildToParentTransactionRequest:
         Raises:
             ValueError: If required fields are missing from tx_request
         """
-        required_fields = {'to', 'data', 'value', 'from'}
+        required_fields = {"to", "data", "value", "from"}
         if not all(field in tx_request for field in required_fields):
-            raise ValueError(
-                f"tx_request missing required fields. Required: {required_fields}"
-            )
+            raise ValueError(f"tx_request missing required fields. Required: {required_fields}")
 
         self.tx_request = tx_request
         self.estimate_parent_gas_limit = estimate_parent_gas_limit
@@ -171,9 +161,7 @@ class ChildToParentTransactionRequest:
 T = TypeVar("T")
 
 
-def is_parent_to_child_transaction_request(
-    possible_request: Union[T, ParentToChildTransactionRequest]
-) -> bool:
+def is_parent_to_child_transaction_request(possible_request: Union[T, ParentToChildTransactionRequest]) -> bool:
     """Check if an object is a ParentToChildTransactionRequest.
 
     This function serves as both a runtime type check and a type guard
@@ -193,9 +181,7 @@ def is_parent_to_child_transaction_request(
     return is_defined(possible_request.get("txRequest", None))
 
 
-def is_child_to_parent_transaction_request(
-    possible_request: Union[T, ChildToParentTransactionRequest]
-) -> bool:
+def is_child_to_parent_transaction_request(possible_request: Union[T, ChildToParentTransactionRequest]) -> bool:
     """Check if an object is a ChildToParentTransactionRequest.
 
     This function serves as both a runtime type check and a type guard

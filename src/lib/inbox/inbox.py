@@ -3,13 +3,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from web3 import Web3
 from web3.types import BlockData
-
 from src.lib.data_entities.constants import ADDRESS_ZERO, NODE_INTERFACE_ADDRESS
 from src.lib.data_entities.errors import ArbSdkError
 from src.lib.data_entities.message import InboxMessageKind
 from src.lib.data_entities.networks import ArbitrumNetwork
 from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
-from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.event_fetcher import EventFetcher
 from src.lib.utils.helper import format_contract_output, load_contract
 from src.lib.utils.lib import (
@@ -18,6 +16,7 @@ from src.lib.utils.lib import (
     is_defined,
 )
 from src.lib.utils.multicall import MultiCaller
+
 
 class InboxTools:
     """
@@ -92,11 +91,7 @@ class InboxTools:
         to_addr = child_transaction_request.get("to")
         return to_addr == "0x" or not to_addr or to_addr == ADDRESS_ZERO
 
-    def estimate_arbitrum_gas(
-        self,
-        child_tx_request: Dict[str, Any],
-        child_provider: Web3
-    ) -> Dict[str, Any]:
+    def estimate_arbitrum_gas(self, child_tx_request: Dict[str, Any], child_provider: Web3) -> Dict[str, Any]:
         """Estimate gas components for an Arbitrum transaction.
 
         We should use nodeInterface to get the gas estimate because we
@@ -137,29 +132,20 @@ class InboxTools:
         ).call(tx_params)
 
         # Format the output
-        formatted = format_contract_output(
-            node_interface,
-            "gasEstimateComponents",
-            result
-        )
+        formatted = format_contract_output(node_interface, "gasEstimateComponents", result)
 
         # Calculate child gas estimate
-        gas_estimate_for_child = (
-            formatted["gasEstimate"] - formatted["gasEstimateForL1"]
-        )
+        gas_estimate_for_child = formatted["gasEstimate"] - formatted["gasEstimateForL1"]
 
         return {
             "gasEstimate": formatted["gasEstimate"],
             "gasEstimateForL1": formatted["gasEstimateForL1"],
             "baseFee": formatted["baseFee"],
             "l1BaseFeeEstimate": formatted["l1BaseFeeEstimate"],
-            "gasEstimateForChild": gas_estimate_for_child
+            "gasEstimateForChild": gas_estimate_for_child,
         }
 
-    def get_force_includable_block_range(
-        self,
-        block_number_range_size: int
-    ) -> Dict[str, int]:
+    def get_force_includable_block_range(self, block_number_range_size: int) -> Dict[str, int]:
         """Get block range where delayed messages can be force-included.
 
         Uses SequencerInbox.maxTimeVariation() to determine when messages
@@ -197,10 +183,9 @@ class InboxTools:
             {
                 "targetAddr": sequencer_inbox.address,
                 "encoder": lambda: sequencer_inbox.encode_function_data("maxTimeVariation"),
-                "decoder": lambda return_data: sequencer_inbox.decode_function_result(
-                    "maxTimeVariation",
-                    return_data
-                )[0],
+                "decoder": lambda return_data: sequencer_inbox.decode_function_result("maxTimeVariation", return_data)[
+                    0
+                ],
             },
             multicall.get_block_number_input(),
             multicall.get_current_block_timestamp_input(),
@@ -208,8 +193,7 @@ class InboxTools:
 
         # Get max time variation and current block info
         [max_time_variation, current_block_number, current_block_timestamp] = multicall.multi_call(
-            multicall_input,
-            True
+            multicall_input, True
         )
 
         # If parent is Arbitrum, use L1 block number, else use actual block number
@@ -220,10 +204,7 @@ class InboxTools:
         first_eligible_timestamp = current_block_timestamp - max_time_variation["delaySeconds"]
 
         # Find first eligible block
-        first_eligible_block = self.find_first_block_below(
-            first_eligible_block_number,
-            first_eligible_timestamp
-        )
+        first_eligible_block = self.find_first_block_below(first_eligible_block_number, first_eligible_timestamp)
 
         return {
             "startBlock": first_eligible_block.number - block_number_range_size,
@@ -231,11 +212,7 @@ class InboxTools:
         }
 
     def get_events_and_increase_range(
-        self,
-        bridge_contract,
-        search_range_blocks: int,
-        max_search_range_blocks: int,
-        range_multiplier: int
+        self, bridge_contract, search_range_blocks: int, max_search_range_blocks: int, range_multiplier: int
     ) -> List[Dict[str, Any]]:
         """Recursively fetch MessageDelivered events.
 
@@ -257,10 +234,10 @@ class InboxTools:
         """
         # Initialize event fetcher
         event_fetcher = EventFetcher(self.parent_provider)
-        
+
         # Cap search range at maximum
         capped_search_range = min(search_range_blocks, max_search_range_blocks)
-        
+
         # Get block range for search
         block_range = self.get_force_includable_block_range(capped_search_range)
 
@@ -287,10 +264,7 @@ class InboxTools:
 
         # Otherwise increase range and try again
         return self.get_events_and_increase_range(
-            bridge_contract,
-            search_range_blocks * range_multiplier,
-            max_search_range_blocks,
-            range_multiplier
+            bridge_contract, search_range_blocks * range_multiplier, max_search_range_blocks, range_multiplier
         )
 
     def get_force_includable_event(
@@ -342,16 +316,12 @@ class InboxTools:
             return None
 
         # Get delayed accumulator
-        delayed_acc = bridge_contract.functions.delayedInboxAccs(
-            latest_event["event"]["messageIndex"]
-        ).call()
+        delayed_acc = bridge_contract.functions.delayedInboxAccs(latest_event["event"]["messageIndex"]).call()
 
         return {**latest_event, "delayedAcc": delayed_acc}
 
     def force_include(
-        self,
-        message_delivered_event: Optional[Dict[str, Any]] = None,
-        overrides: Optional[Dict[str, Any]] = None
+        self, message_delivered_event: Optional[Dict[str, Any]] = None, overrides: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """Force includes all eligible messages in the delayed inbox.
 
@@ -385,21 +355,21 @@ class InboxTools:
             overrides["from"] = self.parent_signer.address
 
         # sequencerInbox.forceInclusion(...)
-        tx_hash = sequencer_inbox.functions.forceInclusion(
+        tx = sequencer_inbox.functions.forceInclusion(
             event_info["event"]["messageIndex"] + 1,
             event_info["event"]["kind"],
             [event_info["blockNumber"], block.timestamp],
             event_info["event"]["baseFeeL1"],
             event_info["event"]["sender"],
             event_info["event"]["messageDataHash"],
-        ).transact(overrides)
+        ).build_transaction(overrides)
+
+        signed_tx = self.parent_signer.sign_transaction(tx)
+        tx_hash = self.parent_provider.eth.send_raw_transaction(signed_tx.rawTransaction)
 
         return self.parent_provider.eth.wait_for_transaction_receipt(tx_hash)
 
-    def send_child_signed_tx(
-        self,
-        signed_tx: Union[str, bytes]
-    ) -> Dict[str, Any]:
+    def send_child_signed_tx(self, signed_tx: Union[str, bytes]) -> Dict[str, Any]:
         """Send a child-chain-signed transaction via the delayed inbox on L1.
 
         The childChain user signs the transaction for L2 execution,
@@ -437,21 +407,19 @@ class InboxTools:
         send_data_bytes = packed_message_type + signed_tx_bytes
 
         # Build transaction
-        tx = inbox.functions.sendL2Message(send_data_bytes).build_transaction({
-            "from": self.parent_signer.address,
-            "nonce": self.parent_provider.eth.get_transaction_count(self.parent_signer.address),
-        })
+        tx = inbox.functions.sendL2Message(send_data_bytes).build_transaction(
+            {
+                "from": self.parent_signer.address,
+                "nonce": self.parent_provider.eth.get_transaction_count(self.parent_signer.address),
+            }
+        )
 
         # Sign and send transaction
         signed_tx = self.parent_signer.sign_transaction(tx)
         tx_hash = self.parent_provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return self.parent_provider.eth.wait_for_transaction_receipt(tx_hash)
 
-    def sign_child_tx(
-        self,
-        tx_request: Dict[str, Any],
-        child_signer: SignerOrProvider
-    ) -> bytes:
+    def sign_child_tx(self, tx_request: Dict[str, Any], child_signer: SignerOrProvider) -> bytes:
         """Sign a transaction for the child chain (L2).
 
         Typically, we then embed this signed Tx in the L1 delayed inbox message

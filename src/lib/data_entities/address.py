@@ -6,6 +6,7 @@ from web3.types import ChecksumAddress
 from src.lib.data_entities.constants import ADDRESS_ALIAS_OFFSET
 from src.lib.data_entities.errors import ArbSdkError
 
+
 class Address:
     """Ethereum/Arbitrum address class with L1/L2 aliasing support.
 

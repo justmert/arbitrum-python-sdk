@@ -1,141 +1,141 @@
 # Arbitrum Python SDK
 
-Python library for client-side interactions with Arbitrum. Arbitrum Python SDK provides common helper functionality as well as access to the underlying smart contract interfaces.
+[![npm version](https://badge.fury.io/js/%40arbitrum%2Fsdk.svg)](https://badge.fury.io/js/@arbitrum%2Fsdk.svg)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Below is an overview of the Arbitrum Python SDK functionality.
+A TypeScript library for client-side interactions with Arbitrum. The Arbitrum Python SDK provides essential helper functionality and direct access to underlying smart contract interfaces, enabling developers to build powerful applications on the Arbitrum network.
 
-> **Note**: Arbitrum Python SDK is NOT official and currently in alpha. It is NOT recommended for production use. Go to [Arbitrum Typescript SDK](https://github.com/OffchainLabs/arbitrum-sdk) for official library.
+> [!IMPORTANT]
+>
+> This is the code and documentation here are based based on the official [@arbitrum/sdk v4](https://github.com/OffchainLabs/arbitrum-sdk) and have been rewritten in Python. This repository is a community effort and is not officially supported by Offchain Labs.
+>
+> Please see the [disclaimer](#disclaimer) at the end of this document.
 
-### Installation
+* 📚 [Documentation](https://arbitrum-python-sdk.readthedocs.io)
+* 💡 [Tutorials](https://github.com/justmert/arbitrum-python-tutorials)
+
+## Table of Contents
+
+- [Arbitrum Python SDK](#arbitrum-python-sdk)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Key Features](#key-features)
+    - [Bridging Assets](#bridging-assets)
+    - [Cross-Chain Messages](#cross-chain-messages)
+    - [Network Configuration](#network-configuration)
+  - [Usage](#usage)
+  - [Running Integration Tests](#running-integration-tests)
+- [You can fund default accounts with ETH using the following command](#you-can-fund-default-accounts-with-eth-using-the-following-command)
+- [https://docs.arbitrum.io/run-arbitrum-node/run-local-full-chain-simulation#blockscout](#httpsdocsarbitrumiorun-arbitrum-noderun-local-full-chain-simulationblockscout)
+- [Send 5 ETH to the dev account in L2 network.](#send-5-eth-to-the-dev-account-in-l2-network)
+- [Send 5 ETH to the dev account in 12 network.](#send-5-eth-to-the-dev-account-in-12-network)
+  - [Documentation](#documentation)
+  - [License](#license)
+  - [Disclaimer](#disclaimer)
+
+## Overview
+
+Arbitrum Python SDK simplifies the process of interacting with Arbitrum chains, offering a robust set of tools for asset bridging and cross-chain messaging.
+
+## Installation
 
 ```bash
-pip install arbitrum-sdk
+pip3 install arbitrum_py
 ```
 
-### Quickstart Recipes
+## Key Features
 
-- ##### Deposit Ether Into Arbitrum
+### Bridging Assets
 
-```py
-from src.lib.data_entities.networks import get_l2_network
-from src.lib.asset_briger.eth_bridger import EthBridger
+Arbitrum Python SDK facilitates the bridging of assets between an Arbitrum chain and its parent chain. Currently supported asset bridgers:
+
+- `EthBridger`: For bridging ETH to and from an Arbitrum chain (L2 or L3)
+- `Erc20Bridger`: For bridging ERC-20 tokens to and from an Arbitrum chain (L2 or L3)
+- `EthL1L3Bridger`: For bridging ETH to an L3 directly from L1
+- `Erc20L1L3Bridger`: For bridging ERC-20 tokens to an L3 directly from L1
+
+### Cross-Chain Messages
+
+Cross-chain communication is handled through `ParentToChildMessage` and `ChildToParentMessage` classes. These encapsulate the lifecycle of messages sent between chains, typically created from transaction receipts that initiate cross-chain messages.
+
+### Network Configuration
+
+The SDK comes preconfigured for Arbitrum One, Arbitrum Nova and Arbitrum Sepolia. Custom Arbitrum networks can be registered using `register_custom_arbitrum_network`, which is required before utilizing other SDK features.
+
+## Usage
+
+Here's a basic example of using the SDK to bridge ETH:
+
+```python
+from web3 import Web3
+from eth_account import Account
+from src.lib.data_entities.networks import get_arbitrum_network
+from src.lib.asset_bridger.eth_bridger import EthBridger
 from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from web3 import Web3, HTTPProvider, Account
 
-l2_network = get_l2_network(
-    l2_chain_id  # <-- chain id of target Arbitrum chain
-)
-eth_bridger = EthBridger(l2_network)
+def bridge_eth(parent_signer: SignerOrProvider, child_chain_id: int):
+    child_network = get_arbitrum_network(child_chain_id)
+    eth_bridger = EthBridger(child_network)
 
+    deposit = eth_bridger.deposit({
+        'amount': Web3.to_wei(0.1, 'ether'),
+        'parentSigner': parent_signer,
+    })
 
-l1_provider = Web3(HTTPProvider(l1_url))
-l2_provider = Web3(HTTPProvider(l2_url))
-account = Account.from_key(private_key)
-
-l1_signer = SignerOrProvider(
-    account,  # <-- instance of web3.Account
-    l1_provider,
-)
-
-eth_deposit_tx_response = await eth_bridger.deposit({"amount": 23, "l1Signer": l1_signer, "l2Provider": l2_provider})
+    print(f"Deposit initiated: {deposit['transactionHash'].hex()}")
 ```
 
-- ##### Redeem an L1 to L2 Message
+For more detailed usage examples and API references, please refer to the [Arbitrum Python SDK documentation](https://arbitrum-python-sdk.readthedocs.io) or check out the [tutorials](https://github.com/justmert/arbitrum-python-tutorials)
 
-```py
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.message.l1_transaction import L1TransactionReceipt
-from src.lib.message.l1_to_l2_message import L1ToL2MessageStatus
-from web3 import Web3, HTTPProvider, Account
+## Running Integration Tests
 
+1. Set up test nodes by following the instructions [here](https://docs.arbitrum.io/run-arbitrum-node/run-local-full-chain-simulation) or below quick setup:
 
-l1_txn_receipt = L1TransactionReceipt(
-    txn_receipt,  # <-- web3.py transaction receipt dict of an Ethereum tx that triggered an L1 to L2 message (say depositting a token via a bridge)
-)
+  ```sh
+  # Make sure docker is installed
+  git clone -b release --recurse-submodules https://github.com/OffchainLabs/nitro-testnode.git && cd nitro-testnode
+  chmod +x ./test-node.bash && && ./test-node.bash --init --tokenbridge --l3node --l3-token-bridge --blockscout --detach
+  ```
 
-l2_provider = Web3(HTTPProvider(l2_url))
-l2_signer = SignerOrProvider(
-    account,  # <-- instance of web3.Account
-    l2_provider,
-)
+  # You can fund default accounts with ETH using the following command
+  # https://docs.arbitrum.io/run-arbitrum-node/run-local-full-chain-simulation#blockscout
 
-l1_to_l2_message = await l1_txn_receipt.get_l1_to_l2_messages(
-    l2_signer  # <-- instance of SignerOrProvider
-)[0]
+  # Send 5 ETH to the dev account in L2 network. 
+  ./test-node.bash script send-l2 --to 0x3f1Eae7D46d88F08fc2F8ed27FCb2AB183EB2d0E --ethamount 5
 
+  # Send 5 ETH to the dev account in 12 network. 
+  ./test-node.bash script send-l1 --to 0x3f1Eae7D46d88F08fc2F8ed27FCb2AB183EB2d0E --ethamount 5
+  ```
 
-res = await l1_to_l2_message.wait_for_status()
+1. Copy `.env.example` to `.env` and update relevant environment variables.
 
-if res.status == L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2:
-    # Message wasn't auto-redeemed; redeem it now:
-    response = await l1_to_l2_message.redeem()
-    receipt = await response.wait()
-```
+2. Install dependencies:
 
-- ##### Check if sequencer has included a transaction in L1 data
+  ```sh
+  pip install -r requirements.txt
+  ```
 
-```py
-from web3 import Web3, HTTPProvider
-from src.lib.message.l2_transaction import L2TransactionReceipt
-import time
+4. Generate the network configuration against your active Nitro test node:
 
-l1_provider = Web3(HTTPProvider(l1_url))
-l2_provider = Web3(HTTPProvider(l2_url))
+  ```sh
+  python3 -m scripts.gen_network
+  ```
 
-l2_txn_receipt = L2TransactionReceipt(
-    txn_receipt # <-- web3.py transaction receipt dict of an Arbitrum tx
-)
+5. Execute the integration tests:
 
-# wait 3 minutes:
-time.sleep(60 * 3)
+  ```sh
+  pytest tests
+  ```
 
-# if dataIsOnL1, sequencer has posted it and it inherits full rollup/L1 security
-data_is_on_l1 = await l2_txn_receipt.is_data_available(l2_provider, l1_provider)
-```
+## Documentation
 
-### Bridging assets
+For comprehensive guides and API documentation, visit the [Arbitrum Python SDK Documentation](https://arbitrum-python-sdk.readthedocs.io). You can also find tutorials in the [Arbitrum Python Tutorials](https://github.com/justmert/arbitrum-python-tutorials)
 
-Arbitrum Python SDK can be used to bridge assets to/from the rollup chain. The following asset bridgers are currently available:
+## License
 
-- EthBridger
-- Erc20Bridger
+Arbitrum Python SDK is released under the [Apache 2.0 License](LICENSE).
 
-All asset bridgers have the following methods:
+## Disclaimer
 
-- **deposit** - moves assets from the L1 to the L2
-- **deposit_estimate_gas** - estimates the gas required to do the deposit
-- **withdraw** - moves assets from the L2 to the L1
-- **withdraw_estimate_gas** - estimates the gas required to do the withdrawal
-  Which accept different parameters depending on the asset bridger type
-
-### Cross chain messages
-
-When assets are moved by the L1 and L2 cross chain messages are sent. The lifecycles of these messages are encapsulated in the classes `L1ToL2Message` and `L2ToL1Message`. These objects are commonly created from the receipts of transactions that send cross chain messages. A cross chain message will eventually result in a transaction being executed on the destination chain, and these message classes provide the ability to wait for that finalizing transaction to occur.
-
-### Networks
-
-Arbitrum Python SDK comes pre-configured for Mainnet and Goerli, and their Arbitrum counterparts. However, the networks functionality can be used to register networks for custom Arbitrum instances. Most of the classes in Arbitrum Python SDK depend on network objects so this must be configured before using other Arbitrum Python SDK functionality.
-
-### Inbox tools
-
-As part of normal operation the Arbitrum sequencer will send messages into the rollup chain. However, if the sequencer is unavailable and not posting batches, the inbox tools can be used to force the inclusion of transactions into the rollup chain.
-
-### Utils
-
-- **EventFetcher** - A utility to provide typing for the fetching of events
-- **MultiCaller** - A utility for executing multiple calls as part of a single RPC request. This can be useful for reducing round trips.
-- **constants** - A list of useful Arbitrum related constants
-
-### Run tests
-
-1. First, make sure you have a Nitro test node running. Follow the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
-
-2. Install the library dependencies by running `pip install -r requirements.txt`.
-
-3. After the node has started up (that could take up to 20-30 mins), run `python3 -m src.scripts.gen_network`.
-
-4. Once done, finally run `pytest tests/` to run the integration tests.
-
-### Note
-
-The Arbitrum Python SDK was converted from the Arbitrum TypeScript SDK. To avoid being prone to errors and to facilitate ease of use, some functionalities have retained the structure from the TypeScript code, which may have made the library less Pythonic. For example, the use of async in scenarios where there is no need for asynchronous behavior.
+The code contained within this package is meant for testing purposes only and does not guarantee any level of security. It has not undergone any formal audit or security analysis. Use it at your own risk. Any potential damages or security breaches occurring from the use of this code are not the responsibility of the author(s) or contributor(s) of this repository. Please exercise caution and due diligence while using this code in any environment.

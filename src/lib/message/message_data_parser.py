@@ -11,7 +11,7 @@ from src.lib.utils.helper import CaseDict
 class SubmitRetryableMessageDataParser:
     """
     Parser for retryable message data from InboxMessageDelivered events.
-    
+
     This class provides functionality to parse event data emitted in InboxMessageDelivered events
     for messages of type L1MessageType_submitRetryableTx. It handles both string and bytes input
     formats and returns a structured representation of the message data.
@@ -21,14 +21,14 @@ class SubmitRetryableMessageDataParser:
     def parse(event_data: Union[str, bytes]) -> CaseDict:
         """
         Parse the event data from an InboxMessageDelivered event.
-        
+
         This method decodes the data field in InboxMessageDelivered for messages of kind
         L1MessageType_submitRetryableTx. It handles both hex string and bytes input formats.
-        
+
         Args:
             event_data: The data field from the InboxMessageDelivered event.
                        Can be either a hex string (with or without '0x' prefix) or bytes.
-        
+
         Returns:
             CaseDict: A dictionary-like object containing the parsed data with the following fields:
                 - destAddress (str): The destination address in checksum format
@@ -40,7 +40,7 @@ class SubmitRetryableMessageDataParser:
                 - gasLimit (int): The gas limit for the transaction
                 - maxFeePerGas (int): The maximum fee per gas in wei
                 - data (str): The call data as a hex string with '0x' prefix
-        
+
         Example:
             >>> parser = SubmitRetryableMessageDataParser()
             >>> event_data = "0x..."  # hex string from event
@@ -86,10 +86,10 @@ class SubmitRetryableMessageDataParser:
         def address_from_big_number(bn: int) -> HexStr:
             """
             Convert a big number to an Ethereum address.
-            
+
             Args:
                 bn: The big number to convert
-                
+
             Returns:
                 The checksum address
             """

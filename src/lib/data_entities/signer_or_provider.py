@@ -27,26 +27,22 @@ class SignerOrProvider:
     Example:
         >>> from eth_account import Account
         >>> from web3 import Web3
-        >>> 
+        >>>
         >>> # Create with both signer and provider
         >>> account = Account.create()
         >>> w3 = Web3(Web3.HTTPProvider('http://localhost:8545'))
         >>> signer_provider = SignerOrProvider(account=account, provider=w3)
-        >>> 
+        >>>
         >>> # Get current balance
         >>> balance = signer_provider.get_balance()
-        >>> 
+        >>>
         >>> # Sign and send a transaction
         >>> tx = {'to': '0x...', 'value': 1000000000000000000}
         >>> signed = signer_provider.sign_transaction(tx)
         >>> tx_hash = signer_provider.provider.eth.send_raw_transaction(signed)
     """
 
-    def __init__(
-        self,
-        account: Optional[LocalAccount] = None,
-        provider: Optional[Web3] = None
-    ) -> None:
+    def __init__(self, account: Optional[LocalAccount] = None, provider: Optional[Web3] = None) -> None:
         """Initialize a new SignerOrProvider instance.
 
         Args:
@@ -140,17 +136,12 @@ class SignerOrProvider:
         return self.get_chain_id()
 
     @overload
-    def get_balance(self) -> Wei:
-        ...
+    def get_balance(self) -> Wei: ...
 
     @overload
-    def get_balance(self, block_identifier: Union[BlockNumber, str]) -> Wei:
-        ...
+    def get_balance(self, block_identifier: Union[BlockNumber, str]) -> Wei: ...
 
-    def get_balance(
-        self,
-        block_identifier: Optional[Union[BlockNumber, str]] = None
-    ) -> Wei:
+    def get_balance(self, block_identifier: Optional[Union[BlockNumber, str]] = None) -> Wei:
         """Get the balance of the signer account.
 
         Args:
@@ -168,8 +159,19 @@ class SignerOrProvider:
         if not self.account:
             raise AttributeError("No account set")
         address = cast(Union[Address, ChecksumAddress, ENS], self.address)
-        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'], 
-                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        block = cast(
+            Optional[
+                Union[
+                    Literal["latest", "earliest", "pending", "safe", "finalized"],
+                    BlockNumber,
+                    Hash32,
+                    HexStr,
+                    HexBytes,
+                    int,
+                ]
+            ],
+            block_identifier,
+        )
         return self.provider.eth.get_balance(address, block)
 
     @property
@@ -195,8 +197,19 @@ class SignerOrProvider:
         if not self.account:
             raise AttributeError("No account set")
         address = cast(Union[Address, ChecksumAddress, ENS], self.address)
-        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
-                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        block = cast(
+            Optional[
+                Union[
+                    Literal["latest", "earliest", "pending", "safe", "finalized"],
+                    BlockNumber,
+                    Hash32,
+                    HexStr,
+                    HexBytes,
+                    int,
+                ]
+            ],
+            block_identifier,
+        )
         return self.provider.eth.get_transaction_count(address, block)
 
     @property
@@ -224,8 +237,19 @@ class SignerOrProvider:
         """
         if not self.provider:
             raise AttributeError("No provider set")
-        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
-                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        block = cast(
+            Optional[
+                Union[
+                    Literal["latest", "earliest", "pending", "safe", "finalized"],
+                    BlockNumber,
+                    Hash32,
+                    HexStr,
+                    HexBytes,
+                    int,
+                ]
+            ],
+            block_identifier,
+        )
         return self.provider.eth.estimate_gas(transaction, block)
 
     def get_block_number(self) -> int:
@@ -245,9 +269,17 @@ class SignerOrProvider:
         """
         if not self.provider:
             raise AttributeError("No provider set")
-        block = cast(Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
-                         BlockNumber, Hash32, HexStr, HexBytes, int], 
-                    block_identifier if block_identifier is not None else 'latest')
+        block = cast(
+            Union[
+                Literal["latest", "earliest", "pending", "safe", "finalized"],
+                BlockNumber,
+                Hash32,
+                HexStr,
+                HexBytes,
+                int,
+            ],
+            block_identifier if block_identifier is not None else "latest",
+        )
         return cast(BlockData, self.provider.eth.get_block(block))
 
     def get_transaction(self, transaction_hash: Hash32) -> TxData:
@@ -293,8 +325,19 @@ class SignerOrProvider:
         """
         if not self.provider:
             raise AttributeError("No provider set")
-        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
-                         BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        block = cast(
+            Optional[
+                Union[
+                    Literal["latest", "earliest", "pending", "safe", "finalized"],
+                    BlockNumber,
+                    Hash32,
+                    HexStr,
+                    HexBytes,
+                    int,
+                ]
+            ],
+            block_identifier,
+        )
         return self.provider.eth.call(transaction, block)
 
     def get_code(self, address: HexStr, block_identifier: Optional[Union[BlockNumber, str]] = None) -> bytes:
@@ -306,8 +349,19 @@ class SignerOrProvider:
         if not self.provider:
             raise AttributeError("No provider set")
         addr = cast(Union[Address, ChecksumAddress, ENS], address)
-        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
-                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        block = cast(
+            Optional[
+                Union[
+                    Literal["latest", "earliest", "pending", "safe", "finalized"],
+                    BlockNumber,
+                    Hash32,
+                    HexStr,
+                    HexBytes,
+                    int,
+                ]
+            ],
+            block_identifier,
+        )
         return self.provider.eth.get_code(addr, block)
 
     def get_transaction_count(self, address: HexStr, block_identifier: Optional[Union[BlockNumber, str]] = None) -> int:
@@ -319,8 +373,19 @@ class SignerOrProvider:
         if not self.provider:
             raise AttributeError("No provider set")
         addr = cast(Union[Address, ChecksumAddress, ENS], address)
-        block = cast(Optional[Union[Literal['latest', 'earliest', 'pending', 'safe', 'finalized'],
-                                  BlockNumber, Hash32, HexStr, HexBytes, int]], block_identifier)
+        block = cast(
+            Optional[
+                Union[
+                    Literal["latest", "earliest", "pending", "safe", "finalized"],
+                    BlockNumber,
+                    Hash32,
+                    HexStr,
+                    HexBytes,
+                    int,
+                ]
+            ],
+            block_identifier,
+        )
         return self.provider.eth.get_transaction_count(addr, block)
 
 
@@ -337,9 +402,7 @@ class SignerProviderUtils:
     """
 
     @staticmethod
-    def is_signer(
-        signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]
-    ) -> bool:
+    def is_signer(signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]) -> bool:
         """Check if an object is a signer.
 
         In TypeScript, signers are detected by checking for the signMessage method.
@@ -359,14 +422,12 @@ class SignerProviderUtils:
             >>> w3 = Web3(Web3.HTTPProvider('...'))
             >>> SignerProviderUtils.is_signer(w3)  # False
         """
-        
+
         signer = SignerProviderUtils.get_signer(signer_or_provider)
         return signer is not None
 
     @staticmethod
-    def get_signer(
-        signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]
-    ) -> Optional[LocalAccount]:
+    def get_signer(signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]) -> Optional[LocalAccount]:
         """Get the signer from a signer/provider object if available.
 
         Args:
@@ -382,9 +443,7 @@ class SignerProviderUtils:
         return None
 
     @staticmethod
-    def get_signer_or_throw(
-        signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]
-    ) -> LocalAccount:
+    def get_signer_or_throw(signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]) -> LocalAccount:
         """Get the signer from an object or raise an error.
 
         Args:
@@ -402,9 +461,7 @@ class SignerProviderUtils:
         return signer
 
     @staticmethod
-    def get_provider(
-        signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]
-    ) -> Optional[Web3]:
+    def get_provider(signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]) -> Optional[Web3]:
         """Get the provider from a signer/provider object if available.
 
         Args:
@@ -420,9 +477,7 @@ class SignerProviderUtils:
         return None
 
     @staticmethod
-    def get_provider_or_throw(
-        signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]
-    ) -> Web3:
+    def get_provider_or_throw(signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3]) -> Web3:
         """Get the provider from an object or raise an error.
 
         Args:
@@ -440,9 +495,7 @@ class SignerProviderUtils:
         return provider
 
     @staticmethod
-    def signer_has_provider(
-        signer: Union[LocalAccount, SignerOrProvider]
-    ) -> bool:
+    def signer_has_provider(signer: Union[LocalAccount, SignerOrProvider]) -> bool:
         """Check if a signer object also has an associated provider.
 
         Args:
@@ -457,8 +510,7 @@ class SignerProviderUtils:
 
     @staticmethod
     def check_network_matches(
-        signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3],
-        chain_id: int
+        signer_or_provider: Union[SignerOrProvider, LocalAccount, Account, Web3], chain_id: int
     ) -> None:
         """Check if a provider is connected to the expected network.
 

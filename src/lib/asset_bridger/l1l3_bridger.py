@@ -601,21 +601,21 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         if "from" not in params:
             tx["from"] = l1_signer.get_address()
 
-        if 'nonce' not in tx:
-            tx['nonce'] = l1_signer.provider.eth.get_transaction_count(l1_signer.get_address())
+        if "nonce" not in tx:
+            tx["nonce"] = l1_signer.provider.eth.get_transaction_count(l1_signer.get_address())
 
-        if 'gas' not in tx:
+        if "gas" not in tx:
             gas_estimate = l1_signer.provider.eth.estimate_gas(tx)
-            tx['gas'] = gas_estimate
+            tx["gas"] = gas_estimate
 
-        if 'gasPrice' not in tx:
-            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+        if "gasPrice" not in tx:
+            if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
                 pass
             else:
-                tx['gasPrice'] = l1_signer.provider.eth.gas_price
+                tx["gasPrice"] = l1_signer.provider.eth.gas_price
 
-        if 'chainId' not in tx:
-            tx['chainId'] = l1_signer.provider.eth.chain_id
+        if "chainId" not in tx:
+            tx["chainId"] = l1_signer.provider.eth.chain_id
 
         signed_tx = l1_signer.sign_transaction(tx)
         return l1_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -648,21 +648,21 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         if "from" not in params:
             tx["from"] = l1_signer.get_address()
 
-        if 'nonce' not in tx:
-            tx['nonce'] = l1_signer.provider.eth.get_transaction_count(l1_signer.get_address())
+        if "nonce" not in tx:
+            tx["nonce"] = l1_signer.provider.eth.get_transaction_count(l1_signer.get_address())
 
-        if 'gas' not in tx:
+        if "gas" not in tx:
             gas_estimate = l1_signer.provider.eth.estimate_gas(tx)
-            tx['gas'] = gas_estimate
+            tx["gas"] = gas_estimate
 
-        if 'gasPrice' not in tx:
-            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+        if "gasPrice" not in tx:
+            if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
                 pass
             else:
-                tx['gasPrice'] = l1_signer.provider.eth.gas_price
+                tx["gasPrice"] = l1_signer.provider.eth.gas_price
 
-        if 'chainId' not in tx:
-            tx['chainId'] = l1_signer.provider.eth.chain_id
+        if "chainId" not in tx:
+            tx["chainId"] = l1_signer.provider.eth.chain_id
 
         signed_tx = l1_signer.sign_transaction(tx)
         tx_hash = l1_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -755,21 +755,21 @@ class Erc20L1L3Bridger(BaseL1L3Bridger):
         if "from" not in params:
             tx["from"] = params["l1Signer"].get_address()
 
-        if 'nonce' not in tx:
-            tx['nonce'] = params["l1Signer"].provider.eth.get_transaction_count(params["l1Signer"].get_address())
+        if "nonce" not in tx:
+            tx["nonce"] = params["l1Signer"].provider.eth.get_transaction_count(params["l1Signer"].get_address())
 
-        if 'gas' not in tx:
+        if "gas" not in tx:
             gas_estimate = params["l1Signer"].provider.eth.estimate_gas(tx)
-            tx['gas'] = gas_estimate
+            tx["gas"] = gas_estimate
 
-        if 'gasPrice' not in tx:
-            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+        if "gasPrice" not in tx:
+            if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
                 pass
             else:
-                tx['gasPrice'] = params["l1Signer"].provider.eth.gas_price
+                tx["gasPrice"] = params["l1Signer"].provider.eth.gas_price
 
-        if 'chainId' not in tx:
-            tx['chainId'] = params["l1Signer"].provider.eth.chain_id
+        if "chainId" not in tx:
+            tx["chainId"] = params["l1Signer"].provider.eth.chain_id
 
         signed_tx = params["l1Signer"].sign_transaction(tx)
         tx_hash = params["l1Signer"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -1302,21 +1302,21 @@ class EthL1L3Bridger(BaseL1L3Bridger):
         if "from" not in params:
             tx["from"] = params["l1Signer"].get_address()
 
-        if 'nonce' not in tx:
-            tx['nonce'] = params["l1Signer"].provider.eth.get_transaction_count(params["l1Signer"].get_address())
+        if "nonce" not in tx:
+            tx["nonce"] = params["l1Signer"].provider.eth.get_transaction_count(params["l1Signer"].get_address())
 
-        if 'gas' not in tx:
+        if "gas" not in tx:
             gas_estimate = params["l1Signer"].provider.eth.estimate_gas(tx)
-            tx['gas'] = gas_estimate
+            tx["gas"] = gas_estimate
 
-        if 'gasPrice' not in tx:
-            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+        if "gasPrice" not in tx:
+            if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
                 pass
             else:
-                tx['gasPrice'] = params["l1Signer"].provider.eth.gas_price
+                tx["gasPrice"] = params["l1Signer"].provider.eth.gas_price
 
-        if 'chainId' not in tx:
-            tx['chainId'] = params["l1Signer"].provider.eth.chain_id
+        if "chainId" not in tx:
+            tx["chainId"] = params["l1Signer"].provider.eth.chain_id
 
         signed_tx = params["l1Signer"].sign_transaction(tx)
         tx_hash = params["l1Signer"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)

@@ -73,9 +73,11 @@ def arg_serializer_constructor(provider: Any) -> Callable[[List[PrimitiveOrArray
         >>> serializer = arg_serializer_constructor(provider)
         >>> result = serializer(['0x123...', 42, True])
     """
+
     def serialize_params_with_index(params: List[PrimitiveOrArray]) -> bytes:
         def address_to_index(address: str) -> int:
             return get_address_index(address, provider)
+
         return serialize_params(params, address_to_index)
 
     return serialize_params_with_index
@@ -140,10 +142,7 @@ def format_primitive(value: PrimitiveType) -> bytes:
         raise ArbSdkError("Unsupported type for format_primitive()")
 
 
-def serialize_params(
-    params: List[PrimitiveOrArray],
-    address_to_index: Callable[[str], int] = lambda addr: -1
-) -> bytes:
+def serialize_params(params: List[PrimitiveOrArray], address_to_index: Callable[[str], int] = lambda addr: -1) -> bytes:
     """
     Serialize parameters according to the Arbitrum byte serialization schema.
 

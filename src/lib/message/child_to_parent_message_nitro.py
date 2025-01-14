@@ -31,11 +31,11 @@ child_block_cache_lock = threading.Lock()
 def get_child_block_range_cache_key(child_chain_id: int, l1_block_number: int) -> str:
     """
     Create a unique cache key for the child block range lookup.
-    
+
     Args:
         child_chain_id: The chain ID of the child chain
         l1_block_number: The L1 block number to create a cache key for
-        
+
     Returns:
         A unique string key combining chain ID and block number
     """
@@ -45,7 +45,7 @@ def get_child_block_range_cache_key(child_chain_id: int, l1_block_number: int) -
 def set_child_block_range_cache(key: str, value: List[Optional[int]]) -> None:
     """
     Cache the child block range under the given key.
-    
+
     Args:
         key: The cache key to store the value under
         value: The block range values to cache
@@ -54,18 +54,16 @@ def set_child_block_range_cache(key: str, value: List[Optional[int]]) -> None:
 
 
 def get_block_ranges_for_l1_block_with_cache(
-    parent_provider: Web3,
-    child_provider: Web3,
-    for_l1_block: int
+    parent_provider: Web3, child_provider: Web3, for_l1_block: int
 ) -> List[Optional[int]]:
     """
     Get block ranges for an L1 block using a shared cache to avoid repeated calls.
-    
+
     Args:
         parent_provider: Web3 provider instance for the parent chain
         child_provider: Web3 provider instance for the child chain
         for_l1_block: The L1 block number to get ranges for
-        
+
     Returns:
         List of block ranges, where each element can be None
     """
@@ -91,7 +89,7 @@ def get_block_ranges_for_l1_block_with_cache(
 class ChildToParentMessageNitro:
     """
     Base functionality for 'nitro' child->parent messages.
-    
+
     This class provides the core functionality for handling messages sent from a child chain
     to its parent chain in the Arbitrum Nitro protocol.
     """
@@ -99,24 +97,24 @@ class ChildToParentMessageNitro:
     def __init__(self, event: dict) -> None:
         """
         Initialize a new ChildToParentMessageNitro instance.
-        
+
         Args:
             event: The ChildToParentTx event dictionary from the child chain
         """
         self.event = event
 
     @classmethod
-    def from_event(cls, parent_signer_or_provider: Web3, 
-                  event: dict, 
-                  parent_provider: Optional[Web3] = None) -> Union['ChildToParentMessageReaderNitro', 'ChildToParentMessageWriterNitro']:
+    def from_event(
+        cls, parent_signer_or_provider: Web3, event: dict, parent_provider: Optional[Web3] = None
+    ) -> Union["ChildToParentMessageReaderNitro", "ChildToParentMessageWriterNitro"]:
         """
         Create a message reader or writer based on the provided signer/provider.
-        
+
         Args:
             parent_signer_or_provider: Signer or provider for the parent chain
             event: The event data containing message details
             parent_provider: Optional override provider for the parent chain
-            
+
         Returns:
             Either a reader or writer instance based on input type
         """
@@ -131,18 +129,18 @@ class ChildToParentMessageNitro:
         filter_dict: dict,
         position: Optional[int] = None,
         destination: Optional[str] = None,
-        hash: Optional[str] = None
+        hash: Optional[str] = None,
     ) -> List[dict]:
         """
         Fetch Child->Parent events from the child chain.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
             filter_dict: Dictionary containing filter parameters (fromBlock, toBlock)
             position: Optional position to filter events by
             destination: Optional destination address to filter events by
             hash: Optional hash to filter events by
-            
+
         Returns:
             List of matching event dictionaries
         """
@@ -176,7 +174,7 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     Read-only logic for child->parent messages in Nitro. Replaces L2ToL1MessageReaderNitro.
     """
 
-    def __init__(self, parent_provider:     web3.main.Web3, event: CaseDict) -> None:
+    def __init__(self, parent_provider: web3.main.Web3, event: CaseDict) -> None:
         super().__init__(event)
         self.parent_provider = parent_provider
         self.send_root_hash = None
@@ -185,13 +183,13 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         self.outbox_address = None
         self.l1_batch_number = None
 
-    def get_outbox_proof(self, child_provider:     web3.main.Web3) -> List[bytes]:
+    def get_outbox_proof(self, child_provider: web3.main.Web3) -> List[bytes]:
         """
         Equivalent to getOutboxProof in the TS code. Constructs a proof to execute the message.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-        
+
         Returns:
             The outbox proof
         """
@@ -219,13 +217,13 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         )
         return outbox_proof_params["proof"]
 
-    def has_executed(self, child_provider:     web3.main.Web3) -> bool:
+    def has_executed(self, child_provider: web3.main.Web3) -> bool:
         """
         Checks if the message is already executed by calling Outbox.isSpent(position).
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-        
+
         Returns:
             Whether the message has been executed
         """
@@ -237,13 +235,13 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         )
         return outbox_contract.functions.isSpent(self.event["position"]).call()
 
-    def status(self, child_provider:     web3.main.Web3) -> ChildToParentMessageStatus:
+    def status(self, child_provider: web3.main.Web3) -> ChildToParentMessageStatus:
         """
         Returns the status of this message (UNCONFIRMED, CONFIRMED, or EXECUTED).
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-        
+
         Returns:
             The status of the message
         """
@@ -259,10 +257,10 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         For a classic RollupUserLogic NodeCreated event.
         Replaces parseNodeCreatedAssertion from TS code.
-        
+
         Args:
             fetched_event: The event data
-        
+
         Returns:
             The parsed assertion data
         """
@@ -277,10 +275,10 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         For a BoldRollupUserLogic AssertionCreated event (BoLD).
         Replaces parseAssertionCreatedEvent from TS code.
-        
+
         Args:
             fetched_event: The event data
-        
+
         Returns:
             The parsed assertion data
         """
@@ -296,24 +294,26 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         Distinguishes between NodeCreated (legacy) vs. AssertionCreated (BoLD).
         In TS, we look for 'event.challengeManager != undefined'.
-        
+
         Args:
             fetched_event: The event data
-        
+
         Returns:
             Whether the event is an AssertionCreated log
         """
         # We'll look for 'assertionHash' or 'challengeManager' or do a simpler check here:
         return "assertionHash" in fetched_event["event"]
 
-    def get_block_from_assertion_log(self, child_provider:     web3.main.Web3, fetched_event: Optional[FetchedEvent]=None) -> AttributeDict:
+    def get_block_from_assertion_log(
+        self, child_provider: web3.main.Web3, fetched_event: Optional[FetchedEvent] = None
+    ) -> AttributeDict:
         """
         Merges logic from getBlockFromNodeLog + getBlockFromAssertionLog in TS.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
             fetched_event: The event data
-        
+
         Returns:
             The block data
         """
@@ -345,12 +345,12 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         """
         Merges getBlockFromNodeNum with the BoLD path using getAssertion.
         In TS, we do rollup.getNode(...) vs rollup.getAssertion(...).
-        
+
         Args:
             rollup_contract: The rollup contract instance
             assertion_id: The assertion ID
             child_provider: Web3 provider for the child chain
-        
+
         Returns:
             The block data
         """
@@ -457,10 +457,10 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     def get_batch_number(self, child_provider) -> Optional[int]:
         """
         findBatchContainingBlock parallels TS logic, but might fail if the block doesn't exist yet.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-        
+
         Returns:
             The batch number
         """
@@ -477,14 +477,14 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
                 pass
         return self.l1_batch_number
 
-    def get_send_props(self, child_provider:     web3.main.Web3) -> Dict[str, Optional[Union[int, str, bool]]]:
+    def get_send_props(self, child_provider: web3.main.Web3) -> Dict[str, Optional[Union[int, str, bool]]]:
         """
         Merges logic from getSendProps in TS: checks whether the node is confirmed or not.
         If so, we store sendRootSize, sendRootHash, sendRootConfirmed, etc.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-        
+
         Returns:
             The send properties
         """
@@ -539,15 +539,15 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
     ) -> ChildToParentMessageStatus:
         """
         Wait repeatedly until the outbox entry (assertion) is confirmed, so the message can be executed.
-        
+
         Warning:
             This operation may take a very long time (1 week+) as outbox entries
             are only created when the corresponding node is confirmed.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
             retry_delay: Milliseconds to wait between status checks
-            
+
         Returns:
             Final message status (either EXECUTED or CONFIRMED)
         """
@@ -564,10 +564,10 @@ class ChildToParentMessageReaderNitro(ChildToParentMessageNitro):
         getFirstExecutableBlock from the TS code:
         - If message can be or is already executed, return None
         - Otherwise, find the earliest block in which it can be executed
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-        
+
         Returns:
             The first executable block number
         """
@@ -654,19 +654,19 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
     Replaces L2ToL1MessageWriterNitro.
     """
 
-    def __init__(self, parent_signer: SignerOrProvider, event: CaseDict, parent_provider: None=None) -> None:
+    def __init__(self, parent_signer: SignerOrProvider, event: CaseDict, parent_provider: None = None) -> None:
         super().__init__(parent_provider if parent_provider else parent_signer.provider, event)
         self.parent_signer = parent_signer
 
-    def execute(self, child_provider:     web3.main.Web3, overrides: None=None) -> AttributeDict:
+    def execute(self, child_provider: web3.main.Web3, overrides: None = None) -> AttributeDict:
         """
         Executes the Child->Parent message on the parent chain once the outbox entry is confirmed.
         Throws if message is not yet CONFIRMED.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
             overrides: Optional transaction overrides
-        
+
         Returns:
             The transaction receipt
         """
@@ -686,7 +686,7 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
 
         if overrides is None:
             overrides = {}
-        
+
         if "from" not in overrides:
             overrides["from"] = self.parent_signer.account.address
 
@@ -701,25 +701,23 @@ class ChildToParentMessageWriterNitro(ChildToParentMessageReaderNitro):
             self.event["callvalue"],
             self.event["data"],
         )
-        if 'nonce' not in overrides:
-            overrides['nonce'] = self.parent_signer.get_nonce()
+        if "nonce" not in overrides:
+            overrides["nonce"] = self.parent_signer.get_nonce()
 
-        if 'chainId' not in overrides:
-            overrides['chainId'] = self.parent_signer.provider.eth.chain_id
+        if "chainId" not in overrides:
+            overrides["chainId"] = self.parent_signer.provider.eth.chain_id
 
         tx = execute_tx.build_transaction(overrides)
 
-        if 'gas' not in tx:
+        if "gas" not in tx:
             gas_estimate = self.parent_signer.provider.eth.estimate_gas(tx)
-            tx['gas'] = gas_estimate
+            tx["gas"] = gas_estimate
 
-        if 'gasPrice' not in tx:
-            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+        if "gasPrice" not in tx:
+            if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
                 pass
             else:
-                tx['gasPrice'] = self.parent_signer.provider.eth.gas_price
-
-
+                tx["gasPrice"] = self.parent_signer.provider.eth.gas_price
 
         signed_tx = self.parent_signer.account.sign_transaction(tx)
         tx_hash = self.parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)

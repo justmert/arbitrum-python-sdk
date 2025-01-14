@@ -24,7 +24,7 @@ from src.lib.utils.lib import get_base_fee
 class ParentToChildMessageCreator:
     """
     Creates retryable tickets by directly calling the Inbox contract on the Parent chain.
-    
+
     This class handles the creation and management of cross-chain messages from a parent
     chain to a child chain in the Arbitrum ecosystem. It provides functionality to create
     retryable tickets, estimate gas costs, generate transaction requests, and handle both
@@ -34,10 +34,10 @@ class ParentToChildMessageCreator:
     def __init__(self, parent_signer: Any) -> None:
         """
         Initialize the message creator with a parent chain signer.
-        
+
         Args:
             parent_signer: The parent-chain signer object that must have a provider
-            
+
         Raises:
             MissingProviderArbSdkError: If the provided signer lacks a provider
         """
@@ -50,29 +50,27 @@ class ParentToChildMessageCreator:
         params: Dict[str, Any],
         parent_provider: Web3,
         child_provider: Web3,
-        retryable_gas_overrides: Optional[GasOverrides] = None
+        retryable_gas_overrides: Optional[GasOverrides] = None,
     ) -> Dict[str, Any]:
         """
         Get current gas estimates for creating a retryable ticket on the child chain.
-        
+
         This method calculates the gas parameters needed for creating a retryable ticket,
         including maxSubmissionCost, maxFeePerGas, gasLimit, and deposit amounts.
-        
+
         Args:
             params: Parameters for the retryable ticket
             parent_provider: Web3 provider for the Parent chain
             child_provider: Web3 provider for the Child chain
             retryable_gas_overrides: Optional gas override parameters
-            
+
         Returns:
             Dictionary containing gas estimation parameters including maxSubmissionCost,
             maxFeePerGas, gasLimit, and deposit
         """
         base_fee = get_base_fee(parent_provider)
         gas_estimator = ParentToChildMessageGasEstimator(child_provider)
-        return gas_estimator.estimate_all(
-            params, base_fee, parent_provider, retryable_gas_overrides
-        )
+        return gas_estimator.estimate_all(params, base_fee, parent_provider, retryable_gas_overrides)
 
     @staticmethod
     def get_ticket_creation_request_call_data(
@@ -84,18 +82,18 @@ class ParentToChildMessageCreator:
     ) -> bytes:
         """
         Prepare calldata for creating a retryable ticket.
-        
+
         This method generates the appropriate contract call data based on whether
         the child chain uses ETH or ERC20 tokens natively. It encodes the function
         call parameters according to the contract's ABI.
-        
+
         Args:
             params: Parameters for the retryable ticket
             estimates: Gas estimates for the transaction
             excess_fee_refund_address: Address to refund excess fees
             call_value_refund_address: Address to refund unused call value
             native_token_is_eth: Whether the child chain uses ETH natively
-            
+
         Returns:
             Encoded contract call data as bytes
         """
@@ -145,24 +143,21 @@ class ParentToChildMessageCreator:
 
     @staticmethod
     def get_ticket_creation_request(
-        params: Dict[str, Any],
-        parent_provider: Web3,
-        child_provider: Web3,
-        options: Optional[GasOverrides] = None
+        params: Dict[str, Any], parent_provider: Web3, child_provider: Web3, options: Optional[GasOverrides] = None
     ) -> Dict[str, Union[Dict[str, Any], Callable[[], bool]]]:
         """
         Generate a transaction request for creating a retryable ticket.
-        
+
         This method prepares all necessary parameters and data for creating
         a retryable ticket transaction. It handles the preparation of gas
         estimates, contract call data, and transaction parameters.
-        
+
         Args:
             params: Parameters for the retryable ticket
             parent_provider: The parent chain provider
             child_provider: The child chain provider
             options: Optional gas override parameters
-            
+
         Returns:
             Dictionary containing:
                 - txRequest: Transaction parameters (to, data, value, from)
@@ -231,24 +226,21 @@ class ParentToChildMessageCreator:
         }
 
     def create_retryable_ticket(
-        self,
-        params: Dict[str, Any],
-        child_provider: Web3,
-        options: Optional[GasOverrides] = None
+        self, params: Dict[str, Any], child_provider: Web3, options: Optional[GasOverrides] = None
     ) -> ParentTransactionReceipt:
         """
         Send a transaction on the parent chain to create a retryable ticket.
-        
+
         This method handles the actual submission of the transaction to create
         a retryable ticket on the parent chain. It processes the transaction
         parameters and waits for the transaction to be confirmed.
-        
+
         Args:
             params: Either a ParentToChildMessageParams dict or a
                    ParentToChildTransactionRequest
             child_provider: A web3 provider for the child chain
             options: Optional gas override parameters
-            
+
         Returns:
             Transaction receipt wrapped in a ParentTransactionReceipt object
         """

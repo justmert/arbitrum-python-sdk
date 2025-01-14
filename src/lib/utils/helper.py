@@ -17,20 +17,21 @@ from src.lib.data_entities.signer_or_provider import SignerOrProvider
 from src.lib.utils.arb_provider import ArbitrumProvider
 from src import PROJECT_DIRECTORY
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 def format_contract_output(contract: Contract, function_name: str, output: Any) -> Union[Dict[str, Any], Any]:
     """
     Format contract function output according to ABI specification.
-    
+
     Args:
         contract: Web3 Contract instance
         function_name: Name of the function to format output for
         output: Raw output from contract function call
-        
+
     Returns:
         Formatted output according to ABI specification
-        
+
     Raises:
         ValueError: If function not found in contract ABI
     """
@@ -44,7 +45,11 @@ def format_contract_output(contract: Contract, function_name: str, output: Any) 
     def format_output(abi_outputs: List[Dict[str, Any]], output_values: List[Any]) -> Union[Dict[str, Any], Any]:
         if not isinstance(abi_outputs, list) or not abi_outputs:
             return output_values
-        if len(abi_outputs) == 1 and abi_outputs[0].get("type", "").startswith("tuple") and not abi_outputs[0].get("name"):
+        if (
+            len(abi_outputs) == 1
+            and abi_outputs[0].get("type", "").startswith("tuple")
+            and not abi_outputs[0].get("name")
+        ):
             return format_output(abi_outputs[0].get("components", []), output_values)
 
         formatted_output: Dict[str, Any] = {}
@@ -83,6 +88,7 @@ def get_contract_address(sender_address: Union[str, HexAddress], nonce: Nonce) -
     hashed_data = Web3.solidity_keccak(["bytes"], [encoded_data])
     contract_address = hashed_data[-20:].hex()
     return Web3.to_checksum_address(contract_address)
+
 
 def parse_raw_tx(raw_tx):
     tx = parse_raw_tx_pyevm(raw_tx)
@@ -188,10 +194,11 @@ def create_contract_instance(contract_name: str) -> Contract:
     contract = w3.eth.contract(abi=abi)
     return cast(Contract, contract)
 
+
 def load_contract_by_abi(
     contract_data: Dict[str, Any],
     provider: Optional[Union[Web3, SignerOrProvider, ArbitrumProvider]] = None,
-    address: Optional[Union[str, Contract, Address]] = None
+    address: Optional[Union[str, Contract, Address]] = None,
 ):
     abi = contract_data.get("abi")
     if not abi:
@@ -213,14 +220,16 @@ def load_contract_by_abi(
         contract = web3_provider.eth.contract(address=contract_address, abi=abi)
         return cast(Contract, contract)
 
-    contract = web3_provider.eth.contract(abi=abi, bytecode=bytecode) if bytecode else web3_provider.eth.contract(abi=abi)
+    contract = (
+        web3_provider.eth.contract(abi=abi, bytecode=bytecode) if bytecode else web3_provider.eth.contract(abi=abi)
+    )
     return cast(Contract, contract)
 
 
 def load_contract(
     contract_name: str,
     provider: Optional[Union[Web3, SignerOrProvider, ArbitrumProvider]] = None,
-    address: Optional[Union[str, Contract, Address]] = None
+    address: Optional[Union[str, Contract, Address]] = None,
 ) -> Contract:
     """
     Load a contract instance
@@ -242,7 +251,7 @@ def load_contract(
     web3_provider = get_normalized_provider(provider)
     if web3_provider is None:
         raise ContractLoadError("No valid provider found")
-        
+
     abi, bytecode = load_contract_data(contract_name)
 
     if address is not None:
@@ -250,7 +259,9 @@ def load_contract(
         contract = web3_provider.eth.contract(address=contract_address, abi=abi)
         return cast(Contract, contract)
 
-    contract = web3_provider.eth.contract(abi=abi, bytecode=bytecode) if bytecode else web3_provider.eth.contract(abi=abi)
+    contract = (
+        web3_provider.eth.contract(abi=abi, bytecode=bytecode) if bytecode else web3_provider.eth.contract(abi=abi)
+    )
     return cast(Contract, contract)
 
 
@@ -276,14 +287,14 @@ def deploy_abi_contract(
     try:
         tx_params = {"from": deployer_address, **tx_params}
         constructor_args = constructor_args or []
-        
+
         tx = contract.constructor(*constructor_args).build_transaction(tx_params)
 
         signed_tx = deployer.account.sign_transaction(tx)
         tx_hash = web3_provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-        
+
         tx_receipt = web3_provider.eth.wait_for_transaction_receipt(tx_hash)
-        
+
         if not tx_receipt.contractAddress:
             raise ContractLoadError("Contract deployment failed: no contract address in receipt")
         deployed_contract = web3_provider.eth.contract(address=tx_receipt.contractAddress, abi=abi)
@@ -331,6 +342,7 @@ def snake_to_camel(name):
     camel_case_name = components[0] + "".join(special_cases.get(x, x.title()) for x in components[1:])
     return camel_case_name
 
+
 def camel_to_snake(name):
     components = []
     for i, char in enumerate(name):
@@ -338,6 +350,7 @@ def camel_to_snake(name):
             components.append("_")
         components.append(char.lower())
     return "".join(components)
+
 
 class CaseDict:
     def __init__(self, x):
@@ -356,11 +369,11 @@ class CaseDict:
     @classmethod
     def snake_to_camel(cls, name):
         return snake_to_camel(name)
-    
+
     @classmethod
     def camel_to_snake(cls, name):
         return camel_to_snake(name)
-    
+
     def __getattr__(self, name):
         try:
             return super().__getattribute__(name)
@@ -414,6 +427,7 @@ class CaseDict:
             return value.address
         else:
             return value
+
 
 class CaseDictEncoder(json.JSONEncoder):
     def default(self, obj: Any) -> Any:

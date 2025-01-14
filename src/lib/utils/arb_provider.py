@@ -87,7 +87,6 @@ class ArbFormatter:
         return ArbBlockWithTransactions(**formatted_block)
 
 
-
 class ArbitrumProvider:
     """
     An Arbitrum-aware provider that wraps a Web3 provider.
@@ -102,7 +101,7 @@ class ArbitrumProvider:
     :type network: Optional[Any]
     """
 
-    def __init__(self, provider: Union[SignerOrProvider, 'ArbitrumProvider', Any], network: Optional[Any] = None):
+    def __init__(self, provider: Union[SignerOrProvider, "ArbitrumProvider", Any], network: Optional[Any] = None):
         if isinstance(provider, SignerOrProvider):
             provider = provider.provider
         elif isinstance(provider, ArbitrumProvider):

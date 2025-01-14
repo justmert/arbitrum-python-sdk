@@ -17,7 +17,7 @@ from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import CaseDict, load_contract
 
 
-T = TypeVar('T')  # For generic type hints
+T = TypeVar("T")  # For generic type hints
 
 
 class FetchedEvent(CaseDict):
@@ -125,9 +125,7 @@ class EventFetcher:
         elif isinstance(provider, ArbitrumProvider):
             self.provider = provider.provider
         else:
-            raise ArbSdkError(
-                f"Invalid provider type for EventFetcher: {type(provider)}"
-            )
+            raise ArbSdkError(f"Invalid provider type for EventFetcher: {type(provider)}")
 
     def get_events(
         self,
@@ -176,8 +174,7 @@ class EventFetcher:
         # 1. Build or retrieve the contract instance
         if isinstance(contract_factory, str):
             contract_address = filter.get(
-                "address",
-                Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
+                "address", Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
             )
             contract = load_contract(
                 provider=self.provider,
@@ -188,8 +185,7 @@ class EventFetcher:
             contract = contract_factory
         else:
             raise ArbSdkError(
-                f"Invalid contract_factory type: {type(contract_factory)}. "
-                "Must be string name or Contract instance"
+                f"Invalid contract_factory type: {type(contract_factory)}. " "Must be string name or Contract instance"
             )
 
         # 2. Get the event object
@@ -202,10 +198,7 @@ class EventFetcher:
 
         # 3. Create and execute the event filter
         try:
-            event_filter = event_abi().create_filter(
-                argument_filters=argument_filters,
-                **filter
-            )
+            event_filter = event_abi().create_filter(argument_filters=argument_filters, **filter)
             logs = event_filter.get_all_entries()
         except Exception as e:
             raise ArbSdkError(f"Failed to fetch events: {str(e)}") from e

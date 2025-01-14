@@ -24,7 +24,7 @@ from src.lib.utils.arb_provider import ArbitrumProvider
 from src.lib.utils.helper import load_contract
 
 
-T = TypeVar('T')  # For generic type hints
+T = TypeVar("T")  # For generic type hints
 
 
 def wait(ms: int) -> None:
@@ -71,10 +71,7 @@ def get_base_fee(provider: Web3) -> Wei:
 
 
 def get_transaction_receipt(
-    provider: Web3,
-    tx_hash: HexStr,
-    confirmations: Optional[int] = None,
-    timeout: Optional[int] = None
+    provider: Web3, tx_hash: HexStr, confirmations: Optional[int] = None, timeout: Optional[int] = None
 ) -> Optional[TxReceipt]:
     """
     Retrieve a transaction receipt with optional confirmation count or timeout.
@@ -104,16 +101,13 @@ def get_transaction_receipt(
         ...     timeout=30000
         ... )
     """
-    print('confirmations:', confirmations)
+    print("confirmations:", confirmations)
     if confirmations or timeout:
         try:
             # Convert timeout from ms to seconds if provided
             timeout_seconds = (timeout / 1000) if timeout else None
 
-            receipt = provider.eth.wait_for_transaction_receipt(
-                tx_hash,
-                timeout=timeout_seconds
-            )
+            receipt = provider.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout_seconds)
 
             if confirmations:
                 latest_block_num = provider.eth.block_number
@@ -123,18 +117,14 @@ def get_transaction_receipt(
         except TimeExhausted:
             return None
         except Exception as e:
-            raise ArbSdkError(
-                f"Error waiting for transaction receipt: {str(e)}"
-            ) from e
+            raise ArbSdkError(f"Error waiting for transaction receipt: {str(e)}") from e
     else:
         try:
             return provider.eth.get_transaction_receipt(tx_hash)
         except TransactionNotFound:
             return None
         except Exception as e:
-            raise ArbSdkError(
-                f"Error getting transaction receipt: {str(e)}"
-            ) from e
+            raise ArbSdkError(f"Error getting transaction receipt: {str(e)}") from e
 
 
 def is_defined(value: Optional[T]) -> bool:
@@ -243,15 +233,11 @@ def get_first_block_for_l1_block(
 
     # Validate block range
     if min_arbitrum_block >= max_arbitrum_block:
-        raise ArbSdkError(
-            f"Invalid block range: min ({min_arbitrum_block}) >= "
-            f"max ({max_arbitrum_block})"
-        )
+        raise ArbSdkError(f"Invalid block range: min ({min_arbitrum_block}) >= " f"max ({max_arbitrum_block})")
 
     if min_arbitrum_block < nitro_genesis:
         raise ArbSdkError(
-            f"min_arbitrum_block ({min_arbitrum_block}) cannot be below "
-            f"Nitro genesis block ({nitro_genesis})"
+            f"min_arbitrum_block ({min_arbitrum_block}) cannot be below " f"Nitro genesis block ({nitro_genesis})"
         )
 
     start = min_arbitrum_block
@@ -307,7 +293,7 @@ def get_block_ranges_for_l1_block(
         >>> if start and end:
         ...     print(f"L2 blocks {start} to {end} correspond to L1 block 15000000")
     """
-    
+
     current_l2_block = arbitrum_provider.eth.block_number
 
     if not max_arbitrum_block or max_arbitrum_block == "latest":
@@ -320,15 +306,15 @@ def get_block_ranges_for_l1_block(
             for_l1_block,
             allow_greater=False,
             min_arbitrum_block=min_arbitrum_block,
-            max_arbitrum_block=max_arbitrum_block
+            max_arbitrum_block=max_arbitrum_block,
         ),
         get_first_block_for_l1_block(
             arbitrum_provider,
             BlockNumber(for_l1_block + 1),
             allow_greater=True,
             min_arbitrum_block=min_arbitrum_block,
-            max_arbitrum_block=max_arbitrum_block
-        )
+            max_arbitrum_block=max_arbitrum_block,
+        ),
     ]
 
     if not results[0]:
@@ -340,10 +326,7 @@ def get_block_ranges_for_l1_block(
     return results[0], cast(BlockNumber, max_arbitrum_block)
 
 
-def get_native_token_decimals(
-    parent_provider: Web3,
-    child_network: ArbitrumNetwork
-) -> int:
+def get_native_token_decimals(parent_provider: Web3, child_network: ArbitrumNetwork) -> int:
     """
     Get the number of decimals for the chain's native token.
 
@@ -375,15 +358,10 @@ def get_native_token_decimals(
         )
         return token.functions.decimals().call()
     except Exception as e:
-        raise ArbSdkError(
-            f"Failed to get native token decimals: {str(e)}"
-        ) from e
+        raise ArbSdkError(f"Failed to get native token decimals: {str(e)}") from e
 
 
-def scale_from_18_decimals_to_native_token_decimals(
-    amount: int,
-    decimals: int
-) -> int:
+def scale_from_18_decimals_to_native_token_decimals(amount: int, decimals: int) -> int:
     """
     Scale an amount from 18 decimals to native token decimals.
 

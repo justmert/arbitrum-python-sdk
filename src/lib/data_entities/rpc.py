@@ -43,7 +43,7 @@ class ArbBlock(Dict[str, Any]):
             self[key] = value
 
         # Ensure Arbitrum-specific fields are present
-        if not all(hasattr(self, field) for field in ['sendRoot', 'sendCount', 'l1BlockNumber']):
+        if not all(hasattr(self, field) for field in ["sendRoot", "sendCount", "l1BlockNumber"]):
             raise ValueError("Missing required Arbitrum block fields")
 
 
@@ -61,9 +61,9 @@ class ArbBlockWithTransactions(ArbBlock):
 
     def __init__(self, block_data: Dict[str, Any]):
         super().__init__(block_data)
-        if 'transactions' not in self:
+        if "transactions" not in self:
             raise ValueError("Missing transactions field in block data")
-        if not isinstance(self['transactions'], list):
+        if not isinstance(self["transactions"], list):
             raise ValueError("Transactions field must be a list")
 
 
@@ -96,11 +96,11 @@ class ArbTransactionReceipt(Dict[str, Any]):
         super().__init__()
         # Copy standard receipt fields
         for key, value in receipt_data.items():
-            if key == 'from':
-                self['from_'] = value  # Handle Python keyword
+            if key == "from":
+                self["from_"] = value  # Handle Python keyword
             else:
                 self[key] = value
 
         # Ensure Arbitrum-specific fields are present
-        if not all(field in self for field in ['l1BlockNumber', 'gasUsedForL1']):
+        if not all(field in self for field in ["l1BlockNumber", "gasUsedForL1"]):
             raise ValueError("Missing required Arbitrum transaction receipt fields")

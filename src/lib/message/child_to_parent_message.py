@@ -14,7 +14,7 @@ from src.lib.data_entities.signer_or_provider import SignerProviderUtils
 class ChildToParentMessage:
     """
     Base functionality for Child-to-Parent messages.
-    
+
     This class provides the core functionality for handling messages sent from a child
     chain to its parent chain in the Arbitrum ecosystem. It supports both Classic and
     Nitro message formats.
@@ -24,10 +24,10 @@ class ChildToParentMessage:
     def is_classic(event: Dict[str, Any]) -> bool:
         """
         Check if the event is from the Classic format.
-        
+
         Args:
             event: Event data containing transaction information
-            
+
         Returns:
             True if the event is in Classic format, False if Nitro
         """
@@ -35,18 +35,16 @@ class ChildToParentMessage:
 
     @staticmethod
     def from_event(
-        parent_signer_or_provider: Any,
-        event: Dict[str, Any],
-        parent_provider: Optional[BaseProvider] = None
+        parent_signer_or_provider: Any, event: Dict[str, Any], parent_provider: Optional[BaseProvider] = None
     ) -> Union["ChildToParentMessageReader", "ChildToParentMessageWriter"]:
         """
         Create a message reader or writer based on the provided signer or provider.
-        
+
         Args:
             parent_signer_or_provider: Signer or provider for the parent chain
             event: Event data containing the Child-to-Parent message information
             parent_provider: Optional override provider for the parent chain
-            
+
         Returns:
             ChildToParentMessageWriter if a signer is provided,
             ChildToParentMessageReader if a provider is provided
@@ -67,10 +65,10 @@ class ChildToParentMessage:
     ) -> List[Dict[str, Any]]:
         """
         Get event logs for Child-to-Parent transactions.
-        
+
         This method retrieves events from both Classic and Nitro formats within
         the specified block range.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
             filter: Block range filter containing fromBlock and toBlock
@@ -78,10 +76,10 @@ class ChildToParentMessage:
             destination: Destination address to filter events
             hash: Transaction hash to filter events
             index_in_batch: Index in batch (Classic only)
-            
+
         Returns:
             List of event logs matching the specified criteria
-        
+
         Raises:
             ArbSdkError: If an unrecognized block tag is provided
         """
@@ -144,7 +142,7 @@ class ChildToParentMessage:
 class ChildToParentMessageReader(ChildToParentMessage):
     """
     Provides read-only access for Child-to-Parent messages.
-    
+
     This class handles reading and querying the status of messages sent from
     a child chain to its parent chain.
     """
@@ -152,7 +150,7 @@ class ChildToParentMessageReader(ChildToParentMessage):
     def __init__(self, parent_provider: BaseProvider, event: Dict[str, Any]) -> None:
         """
         Initialize a read-only message handler.
-        
+
         Args:
             parent_provider: Provider for the parent chain
             event: Event data containing the message information
@@ -170,10 +168,10 @@ class ChildToParentMessageReader(ChildToParentMessage):
     def get_outbox_proof(self, child_provider: Web3) -> Union[Dict[str, Any], List[str], None]:
         """
         Get the outbox proof for the message.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-            
+
         Returns:
             Proof information for Classic format, merkle proof for Nitro format,
             or None if proof is not available
@@ -186,10 +184,10 @@ class ChildToParentMessageReader(ChildToParentMessage):
     def status(self, child_provider: Web3) -> ChildToParentMessageStatus:
         """
         Get the current status of the message.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-            
+
         Returns:
             Current status of the Child-to-Parent message
         """
@@ -198,20 +196,18 @@ class ChildToParentMessageReader(ChildToParentMessage):
         else:
             return self.classic_reader.status(child_provider)
 
-    def wait_until_ready_to_execute(
-        self, child_provider: Web3, retry_delay: int = 500
-    ) -> ChildToParentMessageStatus:
+    def wait_until_ready_to_execute(self, child_provider: Web3, retry_delay: int = 500) -> ChildToParentMessageStatus:
         """
         Wait until the message is ready to be executed.
-        
+
         Warning:
             This operation may take a very long time (1 week+) as outbox entries
             are only created when the corresponding node is confirmed.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
             retry_delay: Milliseconds to wait between status checks
-            
+
         Returns:
             Final message status (either EXECUTED or CONFIRMED)
         """
@@ -223,10 +219,10 @@ class ChildToParentMessageReader(ChildToParentMessage):
     def get_first_executable_block(self, child_provider: Web3) -> Optional[int]:
         """
         Get the first block where this message can be executed.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
-            
+
         Returns:
             Block number where message becomes executable, or None if already
             executable or executed
@@ -240,20 +236,17 @@ class ChildToParentMessageReader(ChildToParentMessage):
 class ChildToParentMessageWriter(ChildToParentMessageReader):
     """
     Provides read and write access for Child-to-Parent messages.
-    
+
     This class extends ChildToParentMessageReader to add the ability to
     execute messages on the parent chain.
     """
 
     def __init__(
-        self,
-        parent_signer: Any,
-        event: Dict[str, Any],
-        parent_provider: Optional[BaseProvider] = None
+        self, parent_signer: Any, event: Dict[str, Any], parent_provider: Optional[BaseProvider] = None
     ) -> None:
         """
         Initialize a message handler with write capabilities.
-        
+
         Args:
             parent_signer: Signer for the parent chain
             event: Event data containing the message information
@@ -266,24 +259,20 @@ class ChildToParentMessageWriter(ChildToParentMessageReader):
             )
             self.nitro_writer = None
         else:
-            self.nitro_writer = nitro.ChildToParentMessageWriterNitro(
-                parent_signer, event, parent_provider
-            )
+            self.nitro_writer = nitro.ChildToParentMessageWriterNitro(parent_signer, event, parent_provider)
             self.classic_writer = None
 
-    def execute(
-        self, child_provider: Web3, overrides: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    def execute(self, child_provider: Web3, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Execute the Child-to-Parent message on the parent chain.
-        
+
         Args:
             child_provider: Web3 provider for the child chain
             overrides: Optional transaction parameter overrides
-            
+
         Returns:
             Transaction receipt
-            
+
         Raises:
             Exception: If the outbox entry has not been created
         """

@@ -47,6 +47,7 @@ class RetryableMessageParams:
         """Validate and convert input types after initialization."""
         # Convert address strings to checksum format
         from web3 import Web3
+
         self.destAddress = Web3.to_checksum_address(self.destAddress)
         self.excessFeeRefundAddress = Web3.to_checksum_address(self.excessFeeRefundAddress)
         self.callValueRefundAddress = Web3.to_checksum_address(self.callValueRefundAddress)

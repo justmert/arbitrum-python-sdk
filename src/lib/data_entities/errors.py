@@ -31,11 +31,7 @@ class ArbSdkError(Exception):
         # Build the stack trace string
         if inner is not None:
             # Get the inner exception's formatted stack trace
-            inner_stack = ''.join(traceback.format_exception(
-                type(inner),
-                inner,
-                inner.__traceback__
-            ))
+            inner_stack = "".join(traceback.format_exception(type(inner), inner, inner.__traceback__))
             self.stack = f"{message}\nCaused By: {inner_stack}"
         else:
             self.stack = message
@@ -67,6 +63,4 @@ class MissingProviderArbSdkError(ArbSdkError):
             signer_name: Identifier for the signer that lacks a provider
         """
         self.signer_name = signer_name
-        super().__init__(
-            f"{signer_name} does not have a connected provider and one is required."
-        )
+        super().__init__(f"{signer_name} does not have a connected provider and one is required.")

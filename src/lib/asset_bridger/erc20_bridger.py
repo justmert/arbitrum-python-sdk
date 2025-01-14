@@ -47,8 +47,9 @@ from src.lib.utils.lib import (
     scale_from_18_decimals_to_native_token_decimals,
 )
 
-DepositParams = TypeVar('DepositParams')
-WithdrawParams = TypeVar('WithdrawParams')
+DepositParams = TypeVar("DepositParams")
+WithdrawParams = TypeVar("WithdrawParams")
+
 
 class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
     """Bridger for moving ERC20 tokens between parent and child chains.
@@ -83,7 +84,7 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         self.tokenBridge = child_network.tokenBridge
 
     @classmethod
-    def from_provider(cls, child_provider: Web3) -> 'Erc20Bridger':
+    def from_provider(cls, child_provider: Web3) -> "Erc20Bridger":
         """Create an Erc20Bridger instance from a child chain provider.
 
         Args:
@@ -202,23 +203,23 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         if "from" not in transaction:
             transaction["from"] = params["parentSigner"].account.address
 
+        if "nonce" not in transaction:
+            transaction["nonce"] = params["parentSigner"].provider.eth.get_transaction_count(
+                params["parentSigner"].account.address
+            )
 
-        if 'nonce' not in transaction:
-            transaction['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
-
-        if 'gas' not in transaction:
+        if "gas" not in transaction:
             gas_estimate = params["parentSigner"].provider.eth.estimate_gas(transaction)
-            transaction['gas'] = gas_estimate
+            transaction["gas"] = gas_estimate
 
-        if 'gasPrice' not in transaction:
-            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+        if "gasPrice" not in transaction:
+            if "maxPriorityFeePerGas" in transaction or "maxFeePerGas" in transaction:
                 pass
             else:
-                transaction['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+                transaction["gasPrice"] = params["parentSigner"].provider.eth.gas_price
 
-        if 'chainId' not in transaction:
-            transaction['chainId'] = params["parentSigner"].provider.eth.chain_id
-
+        if "chainId" not in transaction:
+            transaction["chainId"] = params["parentSigner"].provider.eth.chain_id
 
         signed_tx = params["parentSigner"].account.sign_transaction(transaction)
         tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -285,22 +286,23 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         if "from" not in transaction:
             transaction["from"] = params["parentSigner"].account.address
 
-        if 'nonce' not in transaction:
-            transaction['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
+        if "nonce" not in transaction:
+            transaction["nonce"] = params["parentSigner"].provider.eth.get_transaction_count(
+                params["parentSigner"].account.address
+            )
 
-        if 'gas' not in transaction:
+        if "gas" not in transaction:
             gas_estimate = params["parentSigner"].provider.eth.estimate_gas(transaction)
-            transaction['gas'] = gas_estimate
+            transaction["gas"] = gas_estimate
 
-        if 'gasPrice' not in transaction:
-            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+        if "gasPrice" not in transaction:
+            if "maxPriorityFeePerGas" in transaction or "maxFeePerGas" in transaction:
                 pass
             else:
-                transaction['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+                transaction["gasPrice"] = params["parentSigner"].provider.eth.gas_price
 
-        if 'chainId' not in transaction:
-            transaction['chainId'] = params["parentSigner"].provider.eth.chain_id
-
+        if "chainId" not in transaction:
+            transaction["chainId"] = params["parentSigner"].provider.eth.chain_id
 
         signed_tx = params["parentSigner"].account.sign_transaction(transaction)
         tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -402,8 +404,7 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         )
 
     def get_parent_token_contract(self, parent_provider: Web3, parent_token_addr: Address) -> Contract:
-        """Returns a contract object pointing to the parent ERC20 token.
-        """
+        """Returns a contract object pointing to the parent ERC20 token."""
         return load_contract(
             provider=parent_provider,
             contract_name="ERC20",
@@ -733,21 +734,23 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         if "from" not in transaction:
             transaction["from"] = params["parentSigner"].account.address
 
-        if 'nonce' not in transaction:
-            transaction['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
+        if "nonce" not in transaction:
+            transaction["nonce"] = params["parentSigner"].provider.eth.get_transaction_count(
+                params["parentSigner"].account.address
+            )
 
-        if 'gas' not in transaction:
+        if "gas" not in transaction:
             gas_estimate = params["parentSigner"].provider.eth.estimate_gas(transaction)
-            transaction['gas'] = gas_estimate
+            transaction["gas"] = gas_estimate
 
-        if 'gasPrice' not in transaction:
-            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+        if "gasPrice" not in transaction:
+            if "maxPriorityFeePerGas" in transaction or "maxFeePerGas" in transaction:
                 pass
             else:
-                transaction['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+                transaction["gasPrice"] = params["parentSigner"].provider.eth.gas_price
 
-        if 'chainId' not in transaction:
-            transaction['chainId'] = params["parentSigner"].provider.eth.chain_id
+        if "chainId" not in transaction:
+            transaction["chainId"] = params["parentSigner"].provider.eth.chain_id
 
         signed_tx = params["parentSigner"].account.sign_transaction(transaction)
         tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -842,21 +845,23 @@ class Erc20Bridger(AssetBridger[DepositParams, WithdrawParams]):
         if "from" not in tx:
             tx["from"] = params["childSigner"].account.address
 
-        if 'nonce' not in tx:
-            tx['nonce'] = params["childSigner"].provider.eth.get_transaction_count(params["childSigner"].account.address)
+        if "nonce" not in tx:
+            tx["nonce"] = params["childSigner"].provider.eth.get_transaction_count(
+                params["childSigner"].account.address
+            )
 
-        if 'gas' not in tx:
+        if "gas" not in tx:
             gas_estimate = params["childSigner"].provider.eth.estimate_gas(tx)
-            tx['gas'] = gas_estimate
+            tx["gas"] = gas_estimate
 
-        if 'gasPrice' not in tx:
-            if 'maxPriorityFeePerGas' in tx or 'maxFeePerGas' in tx:
+        if "gasPrice" not in tx:
+            if "maxPriorityFeePerGas" in tx or "maxFeePerGas" in tx:
                 pass
             else:
-                tx['gasPrice'] = params["childSigner"].provider.eth.gas_price
+                tx["gasPrice"] = params["childSigner"].provider.eth.gas_price
 
-        if 'chainId' not in tx:
-            tx['chainId'] = params["childSigner"].provider.eth.chain_id
+        if "chainId" not in tx:
+            tx["chainId"] = params["childSigner"].provider.eth.chain_id
 
         signed_tx = params["childSigner"].account.sign_transaction(tx)
         tx_hash = params["childSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -982,23 +987,23 @@ class AdminErc20Bridger(Erc20Bridger):
         if "from" not in transaction:
             transaction["from"] = params["parentSigner"].account.address
 
+        if "nonce" not in transaction:
+            transaction["nonce"] = params["parentSigner"].provider.eth.get_transaction_count(
+                params["parentSigner"].account.address
+            )
 
-        if 'nonce' not in transaction:
-            transaction['nonce'] = params["parentSigner"].provider.eth.get_transaction_count(params["parentSigner"].account.address)
-
-        if 'gas' not in transaction:
+        if "gas" not in transaction:
             gas_estimate = params["parentSigner"].provider.eth.estimate_gas(transaction)
-            transaction['gas'] = gas_estimate
+            transaction["gas"] = gas_estimate
 
-        if 'gasPrice' not in transaction:
-            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+        if "gasPrice" not in transaction:
+            if "maxPriorityFeePerGas" in transaction or "maxFeePerGas" in transaction:
                 pass
             else:
-                transaction['gasPrice'] = params["parentSigner"].provider.eth.gas_price
+                transaction["gasPrice"] = params["parentSigner"].provider.eth.gas_price
 
-        if 'chainId' not in transaction:
-            transaction['chainId'] = params["parentSigner"].provider.eth.chain_id
-
+        if "chainId" not in transaction:
+            transaction["chainId"] = params["parentSigner"].provider.eth.chain_id
 
         signed_tx = params["parentSigner"].account.sign_transaction(transaction)
         tx_hash = params["parentSigner"].provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -1163,21 +1168,21 @@ class AdminErc20Bridger(Erc20Bridger):
             "from": parent_signer.account.address,
         }
 
-        if 'nonce' not in register_tx:
-            register_tx['nonce'] = parent_signer.provider.eth.get_transaction_count(parent_signer.account.address)
+        if "nonce" not in register_tx:
+            register_tx["nonce"] = parent_signer.provider.eth.get_transaction_count(parent_signer.account.address)
 
-        if 'gas' not in register_tx:
+        if "gas" not in register_tx:
             gas_estimate = parent_signer.provider.eth.estimate_gas(register_tx)
-            register_tx['gas'] = gas_estimate
+            register_tx["gas"] = gas_estimate
 
-        if 'gasPrice' not in register_tx:
-            if 'maxPriorityFeePerGas' in register_tx or 'maxFeePerGas' in register_tx:
+        if "gasPrice" not in register_tx:
+            if "maxPriorityFeePerGas" in register_tx or "maxFeePerGas" in register_tx:
                 pass
             else:
-                register_tx['gasPrice'] = parent_signer.provider.eth.gas_price
+                register_tx["gasPrice"] = parent_signer.provider.eth.gas_price
 
-        if 'chainId' not in register_tx:
-            register_tx['chainId'] = parent_signer.provider.eth.chain_id
+        if "chainId" not in register_tx:
+            register_tx["chainId"] = parent_signer.provider.eth.chain_id
 
         signed_tx = parent_signer.account.sign_transaction(register_tx)
         tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -1213,7 +1218,10 @@ class AdminErc20Bridger(Erc20Bridger):
         return [a["event"] for a in events]
 
     def get_child_gateway_set_events(
-        self, child_provider: Web3, filter_dict: Dict[str, Any], custom_network_child_gateway_router: Optional[Address] = None
+        self,
+        child_provider: Web3,
+        filter_dict: Dict[str, Any],
+        custom_network_child_gateway_router: Optional[Address] = None,
     ) -> List[Dict[str, Any]]:
         """Get all the GatewaySet events on the child chain's L2GatewayRouter within a given block range.
 
@@ -1233,9 +1241,7 @@ class AdminErc20Bridger(Erc20Bridger):
 
         self.check_child_network(child_provider)
 
-        child_gateway_router_address = (
-            custom_network_child_gateway_router or self.tokenBridge.childGatewayRouter
-        )
+        child_gateway_router_address = custom_network_child_gateway_router or self.tokenBridge.childGatewayRouter
         event_fetcher = EventFetcher(child_provider)
 
         events = event_fetcher.get_events(
@@ -1312,21 +1318,21 @@ class AdminErc20Bridger(Erc20Bridger):
             "from": parent_signer.account.address,
         }
 
-        if 'nonce' not in transaction:
-            transaction['nonce'] = parent_signer.provider.eth.get_transaction_count(parent_signer.account.address)
+        if "nonce" not in transaction:
+            transaction["nonce"] = parent_signer.provider.eth.get_transaction_count(parent_signer.account.address)
 
-        if 'gas' not in transaction:
+        if "gas" not in transaction:
             gas_estimate = parent_signer.provider.eth.estimate_gas(transaction)
-            transaction['gas'] = gas_estimate
+            transaction["gas"] = gas_estimate
 
-        if 'gasPrice' not in transaction:
-            if 'maxPriorityFeePerGas' in transaction or 'maxFeePerGas' in transaction:
+        if "gasPrice" not in transaction:
+            if "maxPriorityFeePerGas" in transaction or "maxFeePerGas" in transaction:
                 pass
             else:
-                transaction['gasPrice'] = parent_signer.provider.eth.gas_price
+                transaction["gasPrice"] = parent_signer.provider.eth.gas_price
 
-        if 'chainId' not in transaction:
-            transaction['chainId'] = parent_signer.provider.eth.chain_id
+        if "chainId" not in transaction:
+            transaction["chainId"] = parent_signer.provider.eth.chain_id
 
         signed_tx = parent_signer.account.sign_transaction(transaction)
         tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)

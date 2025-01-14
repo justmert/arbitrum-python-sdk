@@ -18,19 +18,22 @@ from src.lib.utils.helper import CaseDict, create_contract_instance, load_contra
 
 class EventArgs(TypedDict, total=False):
     """Base type for event arguments."""
+
     pass
 
 
-T = TypeVar('T', bound=EventArgs)
+T = TypeVar("T", bound=EventArgs)
 
 
 class TypedEvent(Protocol[T]):
     """Protocol for typed events, similar to TypeScript's TypedEvent."""
+
     args: T
 
 
 class ContractEventProcessor(Protocol):
     """Protocol for contract event processing interface."""
+
     def process_log(self, log: LogReceipt) -> EventData: ...
     def create_filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
@@ -58,23 +61,18 @@ def parse_typed_log(
         ABIFunctionNotFound: If contract ABI is invalid
     """
     contract = create_contract_instance(contract_name)
-    
+
     try:
         event = getattr(contract.events, event_name)
     except ABIFunctionNotFound:
         raise ValueError(f"Event {event_name} not found in contract {contract_name}")
 
     # Get event signature
-    event_abi = next(
-        (e for e in contract.abi if e.get("type") == "event" and e.get("name") == event_name),
-        None
-    )
+    event_abi = next((e for e in contract.abi if e.get("type") == "event" and e.get("name") == event_name), None)
     if not event_abi:
         raise ValueError(f"Event {event_name} not found in contract ABI")
 
-    event_signature = Web3.keccak(
-        text=f"{event_name}({','.join(inp['type'] for inp in event_abi['inputs'])})"
-    ).hex()
+    event_signature = Web3.keccak(text=f"{event_name}({','.join(inp['type'] for inp in event_abi['inputs'])})").hex()
 
     try:
         # Check if log matches event signature
@@ -115,10 +113,7 @@ def parse_typed_logs(
         ValueError: If event not found in contract ABI
         ABIFunctionNotFound: If contract ABI is invalid
     """
-    return [
-        log_args for log in logs
-        if (log_args := parse_typed_log(contract_name, log, event_name)) is not None
-    ]
+    return [log_args for log in logs if (log_args := parse_typed_log(contract_name, log, event_name)) is not None]
 
 
 def get_event_signature(contract_name: str, event_name: str) -> HexStr:
@@ -138,14 +133,9 @@ def get_event_signature(contract_name: str, event_name: str) -> HexStr:
         ValueError: If event not found in contract ABI
     """
     contract = load_contract(contract_name)
-    event_abi = next(
-        (e for e in contract.abi if e.get("type") == "event" and e.get("name") == event_name),
-        None
-    )
+    event_abi = next((e for e in contract.abi if e.get("type") == "event" and e.get("name") == event_name), None)
     if not event_abi:
         raise ValueError(f"Event {event_name} not found in {contract_name}")
 
-    signature = Web3.keccak(
-        text=f"{event_name}({','.join(inp['type'] for inp in event_abi['inputs'])})"
-    ).hex()
+    signature = Web3.keccak(text=f"{event_name}({','.join(inp['type'] for inp in event_abi['inputs'])})").hex()
     return cast(HexStr, signature)
