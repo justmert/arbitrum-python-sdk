@@ -57,7 +57,7 @@ pygments_dark_style = "github-dark"
 # html_additional_pages = {}
 
 # Add custom CSS
-html_css_files = ['custom.css']
+html_css_files = ["custom.css"]
 
 # AutoDoc settings
 autodoc_default_options = {

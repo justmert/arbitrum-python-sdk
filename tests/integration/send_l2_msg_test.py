@@ -5,9 +5,9 @@ from web3 import Web3
 from web3.exceptions import TransactionNotFound
 
 from scripts.test_setup import setup_testing_env
-from src.lib.data_entities.networks import get_arbitrum_network
-from src.lib.inbox.inbox import InboxTools
-from src.lib.utils.helper import get_contract_address, parse_raw_tx
+from arbitrum_py.data_entities.networks import get_arbitrum_network
+from arbitrum_py.inbox.inbox import InboxTools
+from arbitrum_py.utils.helper import get_contract_address, parse_raw_tx
 
 
 @pytest.fixture(scope="module")

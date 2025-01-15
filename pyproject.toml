@@ -17,20 +17,26 @@ classifiers = [
     "Programming Language :: Python :: 3.9"
 ]
 dependencies = [
-    "web3>=6.3.0,<7",
+    "web3>=6.3.0,<=6.15",
     "rlp==3.0.0",
     "eth-utils==2.3.1",
     "python-dotenv==1.0.0",
-    "pytest>=7.4.4,<8",
     "eth-typing>=3.5.2,<4",
     "eth-abi>=5.1.0,<6",
     "pyyaml==6.0.1",
-    "mock==5.1.0",
     "addict==2.4.0",
-    "py-evm<0.11,>=0.10.0b6",
+    "py-evm<0.11,>=0.10.0b6"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.4,<8",
+    "mock==5.1.0",
     "mypy==1.8.0",
     "types-setuptools"
 ]
 
 [project.urls]
-Homepage = "https://github.com/justmert/arbitrum-python-sdk"
+homepage = "https://github.com/justmert/arbitrum-python-sdk"
+documentation = "https://arbitrum-python-sdk.readthedocs.io"
+repository = "https://github.com/justmert/arbitrum-python-sdk"

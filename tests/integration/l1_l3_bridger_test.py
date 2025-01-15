@@ -10,22 +10,22 @@ from web3 import Web3
 
 from scripts.setup_common import get_local_networks_from_file, get_signer
 from scripts.test_setup import setup_testing_env
-from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
-from src.lib.asset_bridger.l1l3_bridger import Erc20L1L3Bridger, EthL1L3Bridger
-from src.lib.data_entities.address import Address
-from src.lib.data_entities.networks import (
+from arbitrum_py.asset_bridger.erc20_bridger import Erc20Bridger
+from arbitrum_py.asset_bridger.l1_l3_bridger import Erc20L1L3Bridger, EthL1L3Bridger
+from arbitrum_py.data_entities.address import Address
+from arbitrum_py.data_entities.networks import (
     ArbitrumNetwork,
     assert_arbitrum_network_has_token_bridge,
     get_arbitrum_network,
     register_custom_arbitrum_network,
 )
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.message.parent_to_child_message import (
+from arbitrum_py.data_entities.signer_or_provider import SignerOrProvider
+from arbitrum_py.message.parent_to_child_message import (
     ParentToChildMessageStatus,
     ParentToChildMessageWriter,
 )
-from src.lib.utils.helper import deploy_abi_contract, load_contract
-from src.lib.utils.lib import get_native_token_decimals
+from arbitrum_py.utils.helper import deploy_abi_contract, load_contract
+from arbitrum_py.utils.lib import get_native_token_decimals
 from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
     is_arbitrum_network_with_custom_fee_token,
 )
@@ -101,7 +101,10 @@ def deploy_teleport_contracts(parent_signer: Any, child_signer: Any):  # done
         provider=child_signer.provider,
         deployer=child_signer,
         contract_name="L2ForwarderContractsDeployer",
-        constructor_args=[Address(pred_parent_teleporter).apply_alias().value, parent_signer.chain_id],
+        constructor_args=[
+            Address(pred_parent_teleporter).apply_alias().value,
+            parent_signer.chain_id,
+        ],
     )
 
     parent_teleporter = deploy_abi_contract(
@@ -130,7 +133,10 @@ def fund_actual_l1_custom_fee_token(  # done
     token_contract = load_contract(provider=deployer_wallet.provider, contract_name="ERC20", address=l1_fee_token)
 
     tx = token_contract.functions.transfer(parent_signer.account.address, Web3.to_wei(10, "ether")).build_transaction(
-        {"from": deployer_wallet.account.address}
+        {
+            "from": deployer_wallet.account.address,
+            "nonce": parent_signer.provider.eth.get_transaction_count(deployer_wallet.account.address),
+        }
     )
     signed_tx = deployer_wallet.account.sign_transaction(tx)
     tx_hash = deployer_wallet.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -281,7 +287,11 @@ class TestL1ToL3Bridging:
                 return bridger.deposit(
                     {
                         "l1Signer": l1s,
-                        "txRequest": {"to": l1s.account.address, "value": Web3.to_wei(0.1, "ether"), "data": "0x"},
+                        "txRequest": {
+                            "to": l1s.account.address,
+                            "value": Web3.to_wei(0.1, "ether"),
+                            "data": "0x",
+                        },
                     }
                 )
 
@@ -383,7 +393,12 @@ class TestERC20Bridging:
             contract_name="TestERC20",
         )
 
-        tx = parent_token.functions.mint().build_transaction({"from": parent_signer.account.address})
+        tx = parent_token.functions.mint().build_transaction(
+            {
+                "from": parent_signer.account.address,
+                "nonce": parent_signer.provider.eth.get_transaction_count(parent_signer.account.address),
+            }
+        )
         signed_tx = parent_signer.account.sign_transaction(tx)
         tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
@@ -709,7 +724,10 @@ class TestERC20Bridging:
             False,
             False,
             lambda l1s, l2s, l3s: l1l3_bridger.approve_token(
-                {"txRequest": {"to": parent_token.address, "value": amount, "data": ""}, "l1Signer": l1s}
+                {
+                    "txRequest": {"to": parent_token.address, "value": amount, "data": ""},
+                    "l1Signer": l1s,
+                }
             ),
             test_state=test_state,
         )
@@ -732,7 +750,10 @@ class TestERC20Bridging:
             False,
             False,
             lambda l1s, l2s, l3s: l1l3_bridger.approve_gas_token(
-                {"txRequest": {"to": parent_token.address, "value": amount, "data": ""}, "l1Signer": l1s}
+                {
+                    "txRequest": {"to": parent_token.address, "value": amount, "data": ""},
+                    "l1Signer": l1s,
+                }
             ),
             test_state=test_state,
         )
@@ -762,7 +783,10 @@ class TestERC20Bridging:
             False,
             False,
             lambda l1s, l2s, l3s: l1l3_bridger.deposit(
-                {"l1Signer": l1s, "txRequest": {"to": l1s.account.address, "value": amount, "data": ""}}
+                {
+                    "l1Signer": l1s,
+                    "txRequest": {"to": l1s.account.address, "value": amount, "data": ""},
+                }
             ),
             test_state=test_state,
         )
@@ -773,7 +797,12 @@ class TestERC20Bridging:
             True,
             True,
             lambda l1s, l2s, l3s: l1l3_bridger.get_deposit_status(
-                {"txHash": "0x0", "l1Provider": l1s.provider, "l2Provider": l2s.provider, "l3Provider": l3s.provider}
+                {
+                    "txHash": "0x0",
+                    "l1Provider": l1s.provider,
+                    "l2Provider": l2s.provider,
+                    "l3Provider": l3s.provider,
+                }
             ),
             test_state=test_state,
         )

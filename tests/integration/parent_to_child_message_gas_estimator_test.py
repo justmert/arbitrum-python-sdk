@@ -1,7 +1,7 @@
 import pytest
 
 from scripts.test_setup import setup_testing_env
-from src.lib.message.parent_to_child_message_gas_estimator import (
+from arbitrum_py.message.parent_to_child_message_gas_estimator import (
     ParentToChildMessageGasEstimator,
 )
 from tests.integration.custom_fee_token.mocha_extensions import (

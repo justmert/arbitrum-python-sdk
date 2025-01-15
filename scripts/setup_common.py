@@ -5,18 +5,18 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.utils.helper import CaseDict
+from arbitrum_py.data_entities.errors import ArbSdkError
+from arbitrum_py.utils.helper import CaseDict
 
 from typing import Dict, Optional
 
 from web3 import Account, HTTPProvider, Web3
 from web3.middleware import geth_poa_middleware
 
-from src.lib.asset_bridger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
-from src.lib.asset_bridger.eth_bridger import EthBridger
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
+from arbitrum_py.asset_bridger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
+from arbitrum_py.asset_bridger.eth_bridger import EthBridger
+from arbitrum_py.data_entities.errors import ArbSdkError
+from arbitrum_py.data_entities.signer_or_provider import SignerOrProvider, SignerProviderUtils
 
 
 IS_TESTING_ORBIT_CHAINS = os.getenv("ORBIT_TEST") == "1"

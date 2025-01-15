@@ -5,9 +5,9 @@ from web3 import Web3
 from web3.exceptions import ContractCustomError
 
 from scripts.test_setup import setup_testing_env
-from src.lib.data_entities.retryable_data import RetryableDataTools
-from src.lib.utils.helper import deploy_abi_contract, load_contract
-from src.lib.utils.lib import (
+from arbitrum_py.data_entities.retryable_data import RetryableDataTools
+from arbitrum_py.utils.helper import deploy_abi_contract, load_contract
+from arbitrum_py.utils.lib import (
     get_native_token_decimals,
     scale_from_18_decimals_to_native_token_decimals,
 )
@@ -161,7 +161,12 @@ def test_erc20_deposit_comparison():
         contract_name="TestERC20",
     )
 
-    tx = test_token.functions.mint().build_transaction({"from": parent_signer.account.address})
+    tx = test_token.functions.mint().build_transaction(
+        {
+            "from": parent_signer.account.address,
+            "nonce": parent_signer.provider.eth.get_transaction_count(parent_signer.account.address),
+        }
+    )
     signed_tx = parent_signer.account.sign_transaction(tx)
     tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
     parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)

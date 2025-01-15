@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from web3 import Web3
 
-from src.lib.utils.lib import (
+from arbitrum_py.utils.lib import (
     scale_from_18_decimals_to_native_token_decimals,
     scale_from_native_token_decimals_to_18_decimals,
 )

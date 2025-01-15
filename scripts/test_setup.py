@@ -2,29 +2,31 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Optional
-
 from web3 import Account, HTTPProvider, Web3
-
-# from web3.middleware import geth_poa_middleware
 from web3.middleware import construct_sign_and_send_raw_middleware, geth_poa_middleware
 
-from src.lib.asset_bridger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
-from src.lib.asset_bridger.eth_bridger import EthBridger
-from src.lib.data_entities.errors import ArbSdkError
+from arbitrum_py.asset_bridger.erc20_bridger import AdminErc20Bridger, Erc20Bridger
+from arbitrum_py.asset_bridger.eth_bridger import EthBridger
+from arbitrum_py.data_entities.errors import ArbSdkError
 
-from src.lib.data_entities.networks import (
+from arbitrum_py.data_entities.networks import (
     assert_arbitrum_network_has_token_bridge,
     get_arbitrum_network,
     register_custom_arbitrum_network,
 )
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.inbox.inbox import InboxTools
-from src.lib.utils.helper import CaseDict
+from arbitrum_py.data_entities.signer_or_provider import SignerOrProvider
+from arbitrum_py.inbox.inbox import InboxTools
+from arbitrum_py.utils.helper import CaseDict
 from tests.integration.test_helpers import fund_parent_signer
 import pytest
 
 # Import shared config and utility functions
-from scripts.setup_common import config, get_local_networks_from_file, IS_TESTING_ORBIT_CHAINS, get_signer
+from scripts.setup_common import (
+    config,
+    get_local_networks_from_file,
+    IS_TESTING_ORBIT_CHAINS,
+    get_signer,
+)
 
 # Import custom fee token helper functions without causing circular import
 from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
@@ -65,9 +67,7 @@ def setup_testing_env():
     except ArbSdkError:
         local_networks = get_local_networks_from_file()
         child_chain = local_networks["l3Network"] if IS_TESTING_ORBIT_CHAINS else local_networks["l2Network"]
-        print("registered!")
         set_child_chain = register_custom_arbitrum_network(child_chain)
-        print(set_child_chain)
 
     assert_arbitrum_network_has_token_bridge(set_child_chain)
 

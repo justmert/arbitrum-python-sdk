@@ -5,11 +5,11 @@ from eth_utils import keccak, to_bytes
 from web3 import Web3
 
 from scripts.setup_common import config, get_local_networks_from_file
-from src.lib.asset_bridger.erc20_bridger import Erc20Bridger
-from src.lib.asset_bridger.eth_bridger import EthBridger
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.utils.helper import load_contract
-from src.lib.utils.lib import get_native_token_decimals
+from arbitrum_py.asset_bridger.erc20_bridger import Erc20Bridger
+from arbitrum_py.asset_bridger.eth_bridger import EthBridger
+from arbitrum_py.data_entities.signer_or_provider import SignerOrProvider
+from arbitrum_py.utils.helper import load_contract
+from arbitrum_py.utils.lib import get_native_token_decimals
 
 
 def eth_provider():

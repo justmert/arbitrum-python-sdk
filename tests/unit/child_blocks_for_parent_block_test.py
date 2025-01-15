@@ -1,7 +1,7 @@
 from web3 import HTTPProvider, Web3
 import pytest
-from src.lib.utils.arb_provider import ArbitrumProvider
-from src.lib.utils.lib import (
+from arbitrum_py.utils.arb_provider import ArbitrumProvider
+from arbitrum_py.utils.lib import (
     get_block_ranges_for_l1_block,
     get_first_block_for_l1_block,
 )

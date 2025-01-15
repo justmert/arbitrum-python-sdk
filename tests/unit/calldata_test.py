@@ -1,7 +1,7 @@
 import pytest
 from eth_typing import HexStr
 
-from src.lib.utils.calldata import (
+from arbitrum_py.utils.calldata import (
     get_erc20_parent_address_from_parent_to_child_tx_request,
 )
 

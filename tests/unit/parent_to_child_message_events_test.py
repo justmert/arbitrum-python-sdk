@@ -2,8 +2,8 @@ import pytest
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 
-from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
-from src.lib.message.parent_transaction import ParentTransactionReceipt
+from arbitrum_py.message.parent_to_child_message import ParentToChildMessageStatus
+from arbitrum_py.message.parent_transaction import ParentTransactionReceipt
 
 
 def test_does_call_for_nitro_events():

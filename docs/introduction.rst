@@ -48,8 +48,8 @@ Example ETH Deposit to Arbitrum One
 .. code:: py
 
    from web3 import Web3
-   from src.lib.data_entities.networks import get_arbitrum_network
-   from src.lib.asset_bridger.eth_bridger import EthBridger
+   from arbitrum_py.data_entities.networks import get_arbitrum_network
+   from arbitrum_py.asset_bridger.eth_bridger import EthBridger
 
    # get the ArbitrumNetwork object using the chain id of the Arbitrum One chain
    child_network = get_arbitrum_network(42161)
@@ -71,8 +71,8 @@ Example ETH Withdrawal from Arbitrum One
 .. code:: py
 
    from web3 import Web3
-   from src.lib.data_entities.networks import get_arbitrum_network
-   from src.lib.asset_bridger.eth_bridger import EthBridger
+   from arbitrum_py.data_entities.networks import get_arbitrum_network
+   from arbitrum_py.asset_bridger.eth_bridger import EthBridger
 
    # get the ArbitrumNetwork object using the chain id of the Arbitrum One chain
    child_network = get_arbitrum_network(42161)
@@ -103,7 +103,7 @@ register it using the :ref:`register_custom_arbitrum_network <register_custom_ar
 
 .. code:: py
 
-   from src.lib.data_entities.networks import register_custom_arbitrum_network
+   from arbitrum_py.data_entities.networks import register_custom_arbitrum_network
 
    register_custom_arbitrum_network({
        'chainId': 123456, 
@@ -128,8 +128,8 @@ Redeem a Parent-to-Child Message
 
 .. code:: py
 
-   from src.lib.message.parent_transaction import ParentTransactionReceipt
-   from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
+   from arbitrum_py.message.parent_transaction import ParentTransactionReceipt
+   from arbitrum_py.message.parent_to_child_message import ParentToChildMessageStatus
 
    # Create parent transaction receipt from a transaction receipt that triggered 
    # a Parent-to-Child message (e.g., depositing a token via a bridge)
@@ -168,10 +168,10 @@ One without waiting for the sequencer:
 
 .. code:: py
 
-   from src.lib.data_entities.networks import get_arbitrum_network
-   from src.lib.inbox.inbox import InboxTools
-   from src.lib.data_entities.constants import ARB_SYS_ADDRESS
-   from src.lib.utils.helper import load_contract
+   from arbitrum_py.data_entities.networks import get_arbitrum_network
+   from arbitrum_py.inbox.inbox import InboxTools
+   from arbitrum_py.data_entities.constants import ARB_SYS_ADDRESS
+   from arbitrum_py.utils.helper import load_contract
 
    # type(parent_signer) == SignerOrProvider
    # type(child_provider) == Web3

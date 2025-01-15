@@ -7,9 +7,9 @@ import dotenv
 from web3 import Web3, HTTPProvider
 from eth_typing import URI
 
-from src.lib.data_entities.networks import map_l2_network_to_arbitrum_network
-from src.lib.utils.helper import CaseDict, load_contract
-from src import PROJECT_DIRECTORY
+from arbitrum_py.data_entities.networks import map_l2_network_to_arbitrum_network
+from arbitrum_py.utils.helper import CaseDict, load_contract
+from arbitrum_py import PROJECT_DIRECTORY
 
 env_path = os.path.join(PROJECT_DIRECTORY, ".env")
 dotenv.load_dotenv(dotenv_path=env_path)
@@ -40,7 +40,9 @@ def get_local_networks_from_container(which: str) -> Dict[str, Any]:
 
 
 def patch_networks(
-    l2_network: Dict[str, Any], l3_network: Optional[Dict[str, Any]] = None, l2_provider: Optional[Web3] = None
+    l2_network: Dict[str, Any],
+    l3_network: Optional[Dict[str, Any]] = None,
+    l2_provider: Optional[Web3] = None,
 ) -> Dict[str, Any]:
     """
     The container's files are written by the token bridge deployment step of
@@ -99,7 +101,10 @@ def main():
             l2_network=output["l2Network"], l3_network=l3_network, l2_provider=l2_provider
         )
 
-        output = {"l2Network": patched_networks["patchedL2Network"], "l3Network": patched_networks["patchedL3Network"]}
+        output = {
+            "l2Network": patched_networks["patchedL2Network"],
+            "l3Network": patched_networks["patchedL3Network"],
+        }
 
     else:
         patched_networks = patch_networks(l2_network=output["l2Network"])

@@ -4,15 +4,15 @@ from web3 import Web3
 from web3.eth.eth import TransactionNotFound
 
 from scripts.test_setup import setup_testing_env
-from src.lib.data_entities.constants import (
+from arbitrum_py.data_entities.constants import (
     ARB_RETRYABLE_TX_ADDRESS,
     NODE_INTERFACE_ADDRESS,
 )
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.message.child_transaction import ChildTransactionReceipt
-from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
-from src.lib.utils.helper import deploy_abi_contract, load_contract
-from src.lib.utils.lib import is_defined
+from arbitrum_py.data_entities.errors import ArbSdkError
+from arbitrum_py.message.child_transaction import ChildTransactionReceipt
+from arbitrum_py.message.parent_to_child_message import ParentToChildMessageStatus
+from arbitrum_py.utils.helper import deploy_abi_contract, load_contract
+from arbitrum_py.utils.lib import is_defined
 from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
     approve_parent_custom_fee_token_for_erc20_deposit,
     get_parent_custom_fee_token_allowance,
@@ -41,7 +41,9 @@ def setup_state():
     fund_child_signer(setup["childSigner"])
 
     parent_token = deploy_abi_contract(
-        provider=setup["parentSigner"].provider, deployer=setup["parentSigner"].account, contract_name="TestERC20"
+        provider=setup["parentSigner"].provider,
+        deployer=setup["parentSigner"].account,
+        contract_name="TestERC20",
     )
     tx = parent_token.functions.mint().build_transaction({"from": setup["parentSigner"].account.address})
     tx_hash = setup["parentSigner"].provider.eth.send_transaction(tx)
@@ -198,23 +200,30 @@ def test_deposit_with_low_funds_fails_first_redeem_succeeds_second(setup_state):
     )
 
     arb_retryable_tx = load_contract(
-        provider=setup_state["childSigner"].provider, contract_name="ArbRetryableTx", address=ARB_RETRYABLE_TX_ADDRESS
+        provider=setup_state["childSigner"].provider,
+        contract_name="ArbRetryableTx",
+        address=ARB_RETRYABLE_TX_ADDRESS,
     )
 
     n_interface = load_contract(
-        provider=setup_state["childSigner"].provider, contract_name="NodeInterface", address=NODE_INTERFACE_ADDRESS
+        provider=setup_state["childSigner"].provider,
+        contract_name="NodeInterface",
+        address=NODE_INTERFACE_ADDRESS,
     )
 
     gas_components = n_interface.functions.gasEstimateComponents(
         arb_retryable_tx.address,
         False,
-        arb_retryable_tx.encodeABI(fn_name="redeem", args=[result["waitRes"]["message"].retryable_creation_id]),
+        arb_retryable_tx.encode_abi(fn_name="redeem", args=[result["waitRes"]["message"].retryable_creation_id]),
     ).call()
 
     # First redeem attempt - should fail
 
     redeem_and_test(
-        setup_state, message=result["waitRes"]["message"], expected_status=0, gas_limit=gas_components[0] - 15000
+        setup_state,
+        message=result["waitRes"]["message"],
+        expected_status=0,
+        gas_limit=gas_components[0] - 15000,
     )
 
     # Second redeem attempt - should succeed

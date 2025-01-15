@@ -1,7 +1,7 @@
 import os
 
 from scripts.test_setup import setup_testing_env
-from src.lib.utils.helper import load_contract
+from arbitrum_py.utils.helper import load_contract
 from tests.integration.custom_fee_token.mocha_extensions import it_only_when_eth
 
 

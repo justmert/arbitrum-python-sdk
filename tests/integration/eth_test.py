@@ -4,13 +4,13 @@ from eth_account import Account
 from web3 import Web3
 
 from scripts.test_setup import setup_testing_env
-from src.lib.data_entities.message import ChildToParentMessageStatus
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.message.child_to_parent_message import ChildToParentMessage
-from src.lib.message.child_transaction import ChildTransactionReceipt
-from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
-from src.lib.message.parent_transaction import ParentTransactionReceipt
-from src.lib.utils.lib import (
+from arbitrum_py.data_entities.message import ChildToParentMessageStatus
+from arbitrum_py.data_entities.signer_or_provider import SignerOrProvider
+from arbitrum_py.message.child_to_parent_message import ChildToParentMessage
+from arbitrum_py.message.child_transaction import ChildTransactionReceipt
+from arbitrum_py.message.parent_to_child_message import ParentToChildMessageStatus
+from arbitrum_py.message.parent_transaction import ParentTransactionReceipt
+from arbitrum_py.utils.lib import (
     get_native_token_decimals,
     scale_from_18_decimals_to_native_token_decimals,
 )
@@ -262,7 +262,10 @@ def test_withdraw_ether_transaction_succeeds():
     assert withdraw_message is not None, "ETH withdraw query empty"
 
     withdraw_events = ChildToParentMessage.get_child_to_parent_events(
-        child_signer.provider, {"fromBlock": withdraw_eth_rec["blockNumber"], "toBlock": "latest"}, None, random_address
+        child_signer.provider,
+        {"fromBlock": withdraw_eth_rec["blockNumber"], "toBlock": "latest"},
+        None,
+        random_address,
     )
     assert len(withdraw_events) == 1, "ETH withdraw event data failed"
 

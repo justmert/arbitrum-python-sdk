@@ -6,15 +6,15 @@ from web3 import Account, Web3
 from web3.types import Wei
 
 from scripts.setup_common import config, get_signer
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.message import ChildToParentMessageStatus
-from src.lib.data_entities.networks import (
+from arbitrum_py.data_entities.errors import ArbSdkError
+from arbitrum_py.data_entities.message import ChildToParentMessageStatus
+from arbitrum_py.data_entities.networks import (
     ArbitrumNetwork,
     assert_arbitrum_network_has_token_bridge,
 )
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
-from src.lib.utils.helper import load_contract
-from src.lib.utils.lib import scale_from_18_decimals_to_native_token_decimals
+from arbitrum_py.data_entities.signer_or_provider import SignerOrProvider
+from arbitrum_py.utils.helper import load_contract
+from arbitrum_py.utils.lib import scale_from_18_decimals_to_native_token_decimals
 from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
     is_arbitrum_network_with_custom_fee_token,
 )

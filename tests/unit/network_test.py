@@ -1,8 +1,8 @@
 import pytest
 
-from src.lib.data_entities.constants import ADDRESS_ZERO
-from src.lib.data_entities.errors import ArbSdkError
-from src.lib.data_entities.networks import (
+from arbitrum_py.data_entities.constants import ADDRESS_ZERO
+from arbitrum_py.data_entities.errors import ArbSdkError
+from arbitrum_py.data_entities.networks import (
     dict_to_arbitrum_network_instance,
     get_arbitrum_network,
     get_arbitrum_networks,

@@ -2,8 +2,8 @@ import pytest
 from web3 import Web3
 
 from scripts.test_setup import setup_testing_env
-from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
-from src.lib.message.parent_to_child_message_creator import ParentToChildMessageCreator
+from arbitrum_py.message.parent_to_child_message import ParentToChildMessageStatus
+from arbitrum_py.message.parent_to_child_message_creator import ParentToChildMessageCreator
 from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
     approve_parent_custom_fee_token,
     fund_parent_custom_fee_token,

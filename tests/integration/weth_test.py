@@ -2,8 +2,8 @@ from eth_account import Account
 from web3 import Web3
 import pytest
 from scripts.test_setup import setup_testing_env
-from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
-from src.lib.utils.helper import load_contract
+from arbitrum_py.message.parent_to_child_message import ParentToChildMessageStatus
+from arbitrum_py.utils.helper import load_contract
 from tests.integration.test_helpers import (
     GatewayType,
     deposit_token,
@@ -29,14 +29,20 @@ def test_deposit_weth():
     fund_parent_signer(parent_signer, Web3.to_wei(1, "ether"))
 
     child_WETH = load_contract(
-        provider=child_signer.provider, address=child_chain.token_bridge.child_weth, contract_name="AeWETH"
+        provider=child_signer.provider,
+        address=child_chain.token_bridge.child_weth,
+        contract_name="AeWETH",
     )
     assert (child_WETH.functions.balanceOf(child_signer.account.address).call()) == 0
 
     parent_WETH = load_contract(provider=parent_signer.provider, address=parent_weth_address, contract_name="AeWETH")
 
     tx = parent_WETH.functions.deposit().build_transaction(
-        {"from": parent_signer.account.address, "value": weth_to_wrap}
+        {
+            "from": parent_signer.account.address,
+            "value": weth_to_wrap,
+            "nonce": parent_signer.provider.eth.get_transaction_count(parent_signer.account.address),
+        }
     )
     signed_tx = parent_signer.account.sign_transaction(tx)
     tx_hash = parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -66,7 +72,10 @@ def test_deposit_weth():
 
     random_addr = Account.create().address
     tx = child_weth.functions.withdrawTo(random_addr, weth_to_deposit).build_transaction(
-        {"from": child_signer.account.address}
+        {
+            "from": child_signer.account.address,
+            "nonce": child_signer.provider.eth.get_transaction_count(child_signer.account.address),
+        }
     )
     signed_tx = child_signer.account.sign_transaction(tx)
     tx_hash = child_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -90,10 +99,18 @@ def test_withdraw_weth():
     fund_child_signer(child_signer)
 
     child_weth = load_contract(
-        provider=child_signer.provider, address=child_chain.token_bridge.child_weth, contract_name="AeWETH"
+        provider=child_signer.provider,
+        address=child_chain.token_bridge.child_weth,
+        contract_name="AeWETH",
     )
 
-    tx = child_weth.functions.deposit().build_transaction({"from": child_signer.account.address, "value": weth_to_wrap})
+    tx = child_weth.functions.deposit().build_transaction(
+        {
+            "from": child_signer.account.address,
+            "value": weth_to_wrap,
+            "nonce": child_signer.provider.eth.get_transaction_count(child_signer.account.address),
+        }
+    )
     signed_tx = child_signer.account.sign_transaction(tx)
     tx_hash = child_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
     rec = child_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
@@ -106,7 +123,9 @@ def test_withdraw_weth():
             "gatewayType": GatewayType.WETH,
             "parentSigner": parent_signer,
             "parentToken": load_contract(
-                provider=parent_signer.provider, address=child_chain.token_bridge.parent_weth, contract_name="ERC20"
+                provider=parent_signer.provider,
+                address=child_chain.token_bridge.parent_weth,
+                contract_name="ERC20",
             ),
             "childSigner": child_signer,
             "startBalance": weth_to_wrap,

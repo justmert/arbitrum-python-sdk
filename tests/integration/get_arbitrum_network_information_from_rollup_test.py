@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from web3 import Web3, constants
 from web3.providers.rpc import HTTPProvider
 
-from src.lib.data_entities.networks import (
+from arbitrum_py.data_entities.networks import (
     get_arbitrum_network,
     get_arbitrum_network_information_from_rollup,
 )
@@ -50,7 +50,8 @@ class TestGetArbitrumNetworkInformationFromRollup:
     def test_fetches_xai_information(self):
         """Test fetching information about Xai"""
         network_info = get_arbitrum_network_information_from_rollup(
-            "0xC47DacFbAa80Bd9D8112F4e8069482c2A3221336", Web3(HTTPProvider("https://arb1.arbitrum.io/rpc"))
+            "0xC47DacFbAa80Bd9D8112F4e8069482c2A3221336",
+            Web3(HTTPProvider("https://arb1.arbitrum.io/rpc")),
         )
 
         parent_chain_id = network_info["parentChainId"]

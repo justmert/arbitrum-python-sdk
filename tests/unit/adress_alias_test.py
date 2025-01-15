@@ -1,7 +1,7 @@
 from web3 import Web3
 import pytest
-from src.lib.data_entities.address import Address
-from src.lib.data_entities.constants import ADDRESS_ALIAS_OFFSET
+from arbitrum_py.data_entities.address import Address
+from arbitrum_py.data_entities.constants import ADDRESS_ALIAS_OFFSET
 
 ADDRESS_ALIAS_OFFSET_INT = int(ADDRESS_ALIAS_OFFSET, 16)
 MAX_ADDR_INT = 2**160 - 1

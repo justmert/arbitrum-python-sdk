@@ -1,6 +1,6 @@
 from web3 import Web3
 import pytest
-from src.lib.message.message_data_parser import SubmitRetryableMessageDataParser
+from arbitrum_py.message.message_data_parser import SubmitRetryableMessageDataParser
 
 
 def test_does_parse_l1_to_l2_message():

@@ -6,10 +6,10 @@ from web3 import Web3
 from web3.exceptions import ContractLogicError
 
 from scripts.test_setup import setup_testing_env
-from src.lib.data_entities.signer_or_provider import (
+from arbitrum_py.data_entities.signer_or_provider import (
     SignerOrProvider,
 )
-from src.lib.message.child_transaction import ChildTransactionReceipt
+from arbitrum_py.message.child_transaction import ChildTransactionReceipt
 from tests.integration.test_helpers import (
     fund_child_signer,
     fund_parent_signer,
@@ -106,7 +106,9 @@ def test_find_l1_batch_info():
 
         if l1_batch_number and l1_batch_number > 0:
             l1_batch_confirmations = wait_for_l1_batch_confirmations(
-                arb_tx_receipt, l2_provider, timeout_ms=60_000  # For L3s, also wait for batch to land on L1
+                arb_tx_receipt,
+                l2_provider,
+                timeout_ms=60_000,  # For L3s, also wait for batch to land on L1
             )
 
             assert l1_batch_confirmations > 0, "Missing confirmations"

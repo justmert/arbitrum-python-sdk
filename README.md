@@ -7,9 +7,9 @@ A TypeScript library for client-side interactions with Arbitrum. The Arbitrum Py
 
 > [!IMPORTANT]
 >
-> This is the code and documentation here are based based on the official [@arbitrum/sdk v4](https://github.com/OffchainLabs/arbitrum-sdk) and have been rewritten in Python. This repository is a community effort and is not officially supported by Offchain Labs.
+> This is the code and documentation here are based on the official [@arbitrum/sdk v4](https://github.com/OffchainLabs/arbitrum-sdk) and have been rewritten in Python. Based release version: [v4.0.2](https://github.com/OffchainLabs/arbitrum-sdk/tree/v4.0.2)
 >
-> Please see the [disclaimer](#disclaimer) at the end of this document.
+> This repository is a community effort and is not officially supported by Offchain Labs. Please see the [disclaimer](#disclaimer) at the end of this document.
 
 * 📚 [Documentation](https://arbitrum-python-sdk.readthedocs.io)
 * 💡 [Tutorials](https://github.com/justmert/arbitrum-python-tutorials)
@@ -70,9 +70,9 @@ Here's a basic example of using the SDK to bridge ETH:
 ```python
 from web3 import Web3
 from eth_account import Account
-from src.lib.data_entities.networks import get_arbitrum_network
-from src.lib.asset_bridger.eth_bridger import EthBridger
-from src.lib.data_entities.signer_or_provider import SignerOrProvider
+from arbitrum_py.data_entities.networks import get_arbitrum_network
+from arbitrum_py.asset_bridger.eth_bridger import EthBridger
+from arbitrum_py.data_entities.signer_or_provider import SignerOrProvider
 
 def bridge_eth(parent_signer: SignerOrProvider, child_chain_id: int):
     child_network = get_arbitrum_network(child_chain_id)
@@ -88,7 +88,7 @@ def bridge_eth(parent_signer: SignerOrProvider, child_chain_id: int):
 
 For more detailed usage examples and API references, please refer to the [Arbitrum Python SDK documentation](https://arbitrum-python-sdk.readthedocs.io) or check out the [tutorials](https://github.com/justmert/arbitrum-python-tutorials)
 
-## Running Integration Tests
+## Running Tests
 
 1. Set up test nodes by following the instructions [here](https://docs.arbitrum.io/run-arbitrum-node/run-local-full-chain-simulation) or below quick setup:
 

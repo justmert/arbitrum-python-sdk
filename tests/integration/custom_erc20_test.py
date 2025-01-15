@@ -3,9 +3,9 @@ from eth_account import Account
 from web3 import Web3, constants
 
 from scripts.test_setup import setup_testing_env
-from src.lib.data_entities.networks import assert_arbitrum_network_has_token_bridge
-from src.lib.message.parent_to_child_message import ParentToChildMessageStatus
-from src.lib.utils.helper import deploy_abi_contract, load_contract
+from arbitrum_py.data_entities.networks import assert_arbitrum_network_has_token_bridge
+from arbitrum_py.message.parent_to_child_message import ParentToChildMessageStatus
+from arbitrum_py.utils.helper import deploy_abi_contract, load_contract
 from tests.integration.custom_fee_token.custom_fee_token_test_helpers import (
     is_arbitrum_network_with_custom_fee_token,
 )
@@ -38,7 +38,10 @@ def skip_if_mainnet(request, setup_state):
 
 def test_register_custom_token(setup_state):
     parent_token, child_token = register_custom_token(
-        setup_state.child_chain, setup_state.parent_signer, setup_state.child_signer, setup_state.admin_erc20_bridger
+        setup_state.child_chain,
+        setup_state.parent_signer,
+        setup_state.child_signer,
+        setup_state.admin_erc20_bridger,
     )
     setup_state.parent_custom_token = parent_token
 
@@ -47,6 +50,10 @@ def test_deposit(setup_state):
     tx = setup_state.parent_custom_token.functions.mint().build_transaction(
         {"from": setup_state.parent_signer.account.address}
     )
+    if "nonce" not in tx:
+        tx["nonce"] = setup_state.parent_signer.provider.eth.get_transaction_count(
+            setup_state.parent_signer.account.address
+        )
     signed_tx = setup_state.parent_signer.account.sign_transaction(tx)
     tx_hash = setup_state.parent_signer.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
     setup_state.parent_signer.provider.eth.wait_for_transaction_receipt(tx_hash)
@@ -143,7 +150,10 @@ def register_custom_token(child_chain, parent_signer, child_signer, admin_erc20_
         provider=child_signer.provider,
         contract_name="TestArbCustomToken",
         deployer=child_signer.account,
-        constructor_args=[child_chain.token_bridge.child_custom_gateway, parent_custom_token.address],
+        constructor_args=[
+            child_chain.token_bridge.child_custom_gateway,
+            parent_custom_token.address,
+        ],
     )
 
     # Load gateway contracts
