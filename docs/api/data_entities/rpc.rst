@@ -1,9 +1,9 @@
 Rpc
 ===
 
-.. currentmodule:: src.lib.data_entities.rpc
+.. currentmodule:: arbitrum_py.data_entities.rpc
 
-.. automodule:: src.lib.data_entities.rpc
+.. automodule:: arbitrum_py.data_entities.rpc
     :members:
     :undoc-members:
     :show-inheritance:

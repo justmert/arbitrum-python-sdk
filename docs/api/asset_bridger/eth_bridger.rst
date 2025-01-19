@@ -1,9 +1,9 @@
 EthBridger
 ==========
 
-.. currentmodule:: src.lib.asset_bridger.eth_bridger
+.. currentmodule:: arbitrum_py.asset_bridger.eth_bridger
 
-.. automodule:: src.lib.asset_bridger.eth_bridger
+.. automodule:: arbitrum_py.asset_bridger.eth_bridger
     :members:
     :undoc-members:
     :show-inheritance:

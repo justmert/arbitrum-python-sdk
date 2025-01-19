@@ -1,9 +1,9 @@
 Errors
 ======
 
-.. currentmodule:: src.lib.data_entities.errors
+.. currentmodule:: arbitrum_py.data_entities.errors
 
-.. automodule:: src.lib.data_entities.errors
+.. automodule:: arbitrum_py.data_entities.errors
     :members:
     :undoc-members:
     :show-inheritance:

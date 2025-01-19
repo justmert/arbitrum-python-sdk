@@ -1,9 +1,9 @@
 Networks
 ========
 
-.. currentmodule:: src.lib.data_entities.networks
+.. currentmodule:: arbitrum_py.data_entities.networks
 
-.. automodule:: src.lib.data_entities.networks
+.. automodule:: arbitrum_py.data_entities.networks
     :members:
     :undoc-members:
     :show-inheritance:

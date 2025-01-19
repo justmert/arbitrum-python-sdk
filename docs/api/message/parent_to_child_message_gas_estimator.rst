@@ -1,9 +1,9 @@
 ParentToChildMessageGasEstimator
 ================================
 
-.. currentmodule:: src.lib.message.parent_to_child_message_gas_estimator
+.. currentmodule:: arbitrum_py.message.parent_to_child_message_gas_estimator
 
-.. automodule:: src.lib.message.parent_to_child_message_gas_estimator
+.. automodule:: arbitrum_py.message.parent_to_child_message_gas_estimator
     :members:
     :undoc-members:
     :show-inheritance:

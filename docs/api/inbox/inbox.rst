@@ -1,9 +1,9 @@
 Inbox
 =====
 
-.. currentmodule:: src.lib.inbox.inbox
+.. currentmodule:: arbitrum_py.inbox.inbox
 
-.. automodule:: src.lib.inbox.inbox
+.. automodule:: arbitrum_py.inbox.inbox
     :members:
     :undoc-members:
     :show-inheritance:

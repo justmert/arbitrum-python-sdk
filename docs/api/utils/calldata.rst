@@ -1,9 +1,9 @@
 Calldata
 ========
 
-.. currentmodule:: src.lib.utils.calldata
+.. currentmodule:: arbitrum_py.utils.calldata
 
-.. automodule:: src.lib.utils.calldata
+.. automodule:: arbitrum_py.utils.calldata
     :members:
     :undoc-members:
     :show-inheritance:

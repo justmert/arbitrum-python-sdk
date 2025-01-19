@@ -1,9 +1,9 @@
 ByteSerializeParams
 ===================
 
-.. currentmodule:: src.lib.utils.byte_serialize_params
+.. currentmodule:: arbitrum_py.utils.byte_serialize_params
 
-.. automodule:: src.lib.utils.byte_serialize_params
+.. automodule:: arbitrum_py.utils.byte_serialize_params
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,9 +1,9 @@
 Multicall
 =========
 
-.. currentmodule:: src.lib.utils.multicall
+.. currentmodule:: arbitrum_py.utils.multicall
 
-.. automodule:: src.lib.utils.multicall
+.. automodule:: arbitrum_py.utils.multicall
     :members:
     :undoc-members:
     :show-inheritance:

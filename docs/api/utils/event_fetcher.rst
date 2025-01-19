@@ -1,9 +1,9 @@
 EventFetcher
 ============
 
-.. currentmodule:: src.lib.utils.event_fetcher
+.. currentmodule:: arbitrum_py.utils.event_fetcher
 
-.. automodule:: src.lib.utils.event_fetcher
+.. automodule:: arbitrum_py.utils.event_fetcher
     :members:
     :undoc-members:
     :show-inheritance:

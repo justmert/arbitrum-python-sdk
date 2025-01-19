@@ -1,9 +1,9 @@
 Helper
 ======
 
-.. currentmodule:: src.lib.utils.helper
+.. currentmodule:: arbitrum_py.utils.helper
 
-.. automodule:: src.lib.utils.helper
+.. automodule:: arbitrum_py.utils.helper
     :members:
     :undoc-members:
     :show-inheritance:

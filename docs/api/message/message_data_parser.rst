@@ -1,9 +1,9 @@
 MessageDataParser
 =================
 
-.. currentmodule:: src.lib.message.message_data_parser
+.. currentmodule:: arbitrum_py.message.message_data_parser
 
-.. automodule:: src.lib.message.message_data_parser
+.. automodule:: arbitrum_py.message.message_data_parser
     :members:
     :undoc-members:
     :show-inheritance:

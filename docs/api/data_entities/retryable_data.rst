@@ -1,9 +1,9 @@
 RetryableData
 =============
 
-.. currentmodule:: src.lib.data_entities.retryable_data
+.. currentmodule:: arbitrum_py.data_entities.retryable_data
 
-.. automodule:: src.lib.data_entities.retryable_data
+.. automodule:: arbitrum_py.data_entities.retryable_data
     :members:
     :undoc-members:
     :show-inheritance:

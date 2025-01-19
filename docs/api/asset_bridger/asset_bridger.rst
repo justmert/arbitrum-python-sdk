@@ -1,9 +1,9 @@
 AssetBridger
 ============
 
-.. currentmodule:: src.lib.asset_bridger.asset_bridger
+.. currentmodule:: arbitrum_py.asset_bridger.asset_bridger
 
-.. automodule:: src.lib.asset_bridger.asset_bridger
+.. automodule:: arbitrum_py.asset_bridger.asset_bridger
     :members:
     :undoc-members:
     :show-inheritance:

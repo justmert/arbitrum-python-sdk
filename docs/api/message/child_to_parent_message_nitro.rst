@@ -1,9 +1,9 @@
 ChildToParentMessageNitro
 =========================
 
-.. currentmodule:: src.lib.message.child_to_parent_message_nitro
+.. currentmodule:: arbitrum_py.message.child_to_parent_message_nitro
 
-.. automodule:: src.lib.message.child_to_parent_message_nitro
+.. automodule:: arbitrum_py.message.child_to_parent_message_nitro
     :members:
     :undoc-members:
     :show-inheritance:

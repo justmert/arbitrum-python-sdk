@@ -1,9 +1,9 @@
 Lib
 ===
 
-.. currentmodule:: src.lib.utils.lib
+.. currentmodule:: arbitrum_py.utils.lib
 
-.. automodule:: src.lib.utils.lib
+.. automodule:: arbitrum_py.utils.lib
     :members:
     :undoc-members:
     :show-inheritance:

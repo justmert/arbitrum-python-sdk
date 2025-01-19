@@ -1,9 +1,9 @@
 ERC20Bridger
 =============
 
-.. currentmodule:: src.lib.asset_bridger.erc20_bridger
+.. currentmodule:: arbitrum_py.asset_bridger.erc20_bridger
 
-.. automodule:: src.lib.asset_bridger.erc20_bridger
+.. automodule:: arbitrum_py.asset_bridger.erc20_bridger
     :members:
     :undoc-members:
     :show-inheritance:

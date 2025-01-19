@@ -1,9 +1,9 @@
 Event
 =====
 
-.. currentmodule:: src.lib.data_entities.event
+.. currentmodule:: arbitrum_py.data_entities.event
 
-.. automodule:: src.lib.data_entities.event
+.. automodule:: arbitrum_py.data_entities.event
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,9 +1,9 @@
 ArbProvider
 ===========
 
-.. currentmodule:: src.lib.utils.arb_provider
+.. currentmodule:: arbitrum_py.utils.arb_provider
 
-.. automodule:: src.lib.utils.arb_provider
+.. automodule:: arbitrum_py.utils.arb_provider
     :members:
     :undoc-members:
     :show-inheritance:

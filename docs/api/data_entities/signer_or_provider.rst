@@ -1,9 +1,9 @@
 SignerOrProvider
 ================
 
-.. currentmodule:: src.lib.data_entities.signer_or_provider
+.. currentmodule:: arbitrum_py.data_entities.signer_or_provider
 
-.. automodule:: src.lib.data_entities.signer_or_provider
+.. automodule:: arbitrum_py.data_entities.signer_or_provider
     :members:
     :undoc-members:
     :show-inheritance:

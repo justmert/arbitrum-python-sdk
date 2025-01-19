@@ -1,9 +1,9 @@
 Address
 =======
 
-.. currentmodule:: src.lib.data_entities.address
+.. currentmodule:: arbitrum_py.data_entities.address
 
-.. automodule:: src.lib.data_entities.address
+.. automodule:: arbitrum_py.data_entities.address
     :members:
     :undoc-members:
     :show-inheritance:

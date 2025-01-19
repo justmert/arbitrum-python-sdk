@@ -1,9 +1,9 @@
 ChildToParentMessage
 ====================
 
-.. currentmodule:: src.lib.message.child_to_parent_message
+.. currentmodule:: arbitrum_py.message.child_to_parent_message
 
-.. automodule:: src.lib.message.child_to_parent_message
+.. automodule:: arbitrum_py.message.child_to_parent_message
     :members:
     :undoc-members:
     :show-inheritance:
